@@ -1,0 +1,45 @@
+# ==========================================
+# .NET Build and Deployment Artifacts
+# ==========================================
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+bcl/
+BuildProcessTemplates/
+
+# ==========================================
+# Visual Studio Settings & Cache
+# ==========================================
+.vs/
+*.user
+*.userosscache
+*.suo
+*.suo.tmp
+*.sln.docstates
+*.vshost.exe
+*.vshost.exe.config
+*.manifest
+*.bak
+
+# ==========================================
+# JetBrains Rider / VS Code Artifacts
+# ==========================================
+.idea/
+.vscode/
+*.sln.iml
+
+# ==========================================
+# Operating System Files
+# ==========================================
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# ==========================================
+# Local Configuration / Security Safeguards
+# ==========================================
+/Api/appsettings.Development.json
