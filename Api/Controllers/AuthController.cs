@@ -1,0 +1,33 @@
+﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
+using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
+using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
+
+namespace Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class AuthController(ISender mediator) : ControllerBase
+{
+    [HttpPost("register/student")]
+    public async Task<IActionResult> RegisterStudent([FromBody] RegisterStudentCommand command)
+    {
+        var userId = await mediator.Send(command);
+        return Ok(new { UserId = userId, Message = "Student registered successfully." });
+    }
+
+    [HttpPost("register/provider")]
+    public async Task<IActionResult> RegisterProvider([FromBody] RegisterProviderCommand command)
+    {
+        var userId = await mediator.Send(command);
+        return Ok(new { UserId = userId, Message = "Provider registered successfully." });
+    }
+
+    [HttpPost("register/professor")]
+    public async Task<IActionResult> RegisterProfessor([FromBody] RegisterProfessorCommand command)
+    {
+        var userId = await mediator.Send(command);
+        return Ok(new { UserId = userId, Message = "Professor registered successfully." });
+    }
+}
