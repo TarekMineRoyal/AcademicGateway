@@ -4,7 +4,6 @@ using MediatR;
 
 namespace AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 
-// Note: Using C# 12 Primary Constructors here for dependency injection
 public class RegisterStudentCommandHandler(
     IIdentityService identityService,
     IApplicationDbContext dbContext)
@@ -12,19 +11,14 @@ public class RegisterStudentCommandHandler(
 {
     public async Task<string> Handle(RegisterStudentCommand request, CancellationToken cancellationToken)
     {
-        // 1. Create the base Identity User
         var (succeeded, userId, errors) = await identityService.CreateUserAsync(
             request.Username,
             request.Email,
             request.Password);
 
-        if (!succeeded)
-        {
-            // In a real app, you might throw a custom ValidationException here
-            throw new Exception($"User creation failed: {string.Join(", ", errors)}");
-        }
+        if (!succeeded) throw new Exception($"User creation failed: {string.Join(", ", errors)}");
 
-        // 2. Create the Domain Profile using the generated UserId
+        // Create the profile
         var studentProfile = new Student
         {
             UserId = userId,
@@ -33,12 +27,22 @@ public class RegisterStudentCommandHandler(
             GraduationYear = request.GraduationYear
         };
 
-        dbContext.Students.Add(studentProfile);
+        // Map the skills
+        if (request.SkillIds.Any())
+        {
+            foreach (var skillId in request.SkillIds)
+            {
+                studentProfile.StudentSkills.Add(new StudentSkill
+                {
+                    StudentId = userId,
+                    SkillId = skillId
+                });
+            }
+        }
 
-        // 3. Save to database
+        dbContext.Students.Add(studentProfile);
         await dbContext.SaveChangesAsync(cancellationToken);
 
-        // Return the new User ID to the API controller
         return userId;
     }
 }

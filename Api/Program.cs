@@ -2,7 +2,10 @@ using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,13 +24,35 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 })
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
-// 4. Register our Custom Interfaces and Services
+// 4. Configure JWT Authentication
+var jwtSecret = builder.Configuration["JwtSettings:Secret"];
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
+        ValidAudience = builder.Configuration["JwtSettings:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!))
+    };
+});
+
+
+// 5. Register our Custom Interfaces and Services
 // This links the IApplicationDbContext to the instantiated ApplicationDbContext above
 builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
 // This registers our Identity wrapper
 builder.Services.AddTransient<IIdentityService, IdentityService>();
 
-// 5. Register MediatR
+// 6. Register MediatR
 // We tell MediatR to scan the assembly where RegisterStudentCommand lives to find all our handlers
 builder.Services.AddMediatR(cfg =>
     cfg.RegisterServicesFromAssembly(typeof(RegisterStudentCommand).Assembly));

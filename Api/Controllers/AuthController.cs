@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
 using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
+using AcademicGateway.Application.Features.Users.Commands.Login;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -29,5 +30,16 @@ public class AuthController(ISender mediator) : ControllerBase
     {
         var userId = await mediator.Send(command);
         return Ok(new { UserId = userId, Message = "Professor registered successfully." });
+    }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> Login([FromBody] LoginCommand command)
+    {
+        var token = await mediator.Send(command);
+
+        if (token == null)
+            return Unauthorized(new { Message = "Invalid email or password." });
+
+        return Ok(new { Token = token });
     }
 }

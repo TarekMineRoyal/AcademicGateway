@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using System.Collections.Generic;
 
 namespace AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 
@@ -11,4 +12,7 @@ public record RegisterStudentCommand : IRequest<string>
     public string Major { get; init; } = string.Empty;
     public string? Specialty { get; init; }
     public int? GraduationYear { get; init; }
+
+    // List of selected skills
+    public List<Guid> SkillIds { get; init; } = new();
 }
