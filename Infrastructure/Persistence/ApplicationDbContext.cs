@@ -21,6 +21,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<Professor> Professors => Set<Professor>();
     public DbSet<Skill> Skills => Set<Skill>();
     public DbSet<StudentSkill> StudentSkills => Set<StudentSkill>();
+    public DbSet<Major> Majors => Set<Major>();
+    public DbSet<Specialty> Specialties => Set<Specialty>();
+    public DbSet<StudentMajor> StudentMajors => Set<StudentMajor>();
+    public DbSet<StudentSpecialty> StudentSpecialties => Set<StudentSpecialty>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -80,6 +84,53 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             entity.HasOne(ss => ss.Skill)
                   .WithMany(s => s.StudentSkills)
                   .HasForeignKey(ss => ss.SkillId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // 1-to-Many Configuration: Major to Specialties
+        // ==========================================
+        builder.Entity<Specialty>(entity =>
+        {
+            entity.HasOne(s => s.Major)
+                  .WithMany(m => m.Specialties)
+                  .HasForeignKey(s => s.MajorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // Many-to-Many Configuration: StudentMajors
+        // ==========================================
+        builder.Entity<StudentMajor>(entity =>
+        {
+            entity.HasKey(sm => new { sm.StudentId, sm.MajorId });
+
+            entity.HasOne(sm => sm.Student)
+                  .WithMany(s => s.StudentMajors)
+                  .HasForeignKey(sm => sm.StudentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(sm => sm.Major)
+                  .WithMany(m => m.StudentMajors)
+                  .HasForeignKey(sm => sm.MajorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // Many-to-Many Configuration: StudentSpecialties
+        // ==========================================
+        builder.Entity<StudentSpecialty>(entity =>
+        {
+            entity.HasKey(ss => new { ss.StudentId, ss.SpecialtyId });
+
+            entity.HasOne(ss => ss.Student)
+                  .WithMany(s => s.StudentSpecialties)
+                  .HasForeignKey(ss => ss.StudentId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(ss => ss.Specialty)
+                  .WithMany(s => s.StudentSpecialties)
+                  .HasForeignKey(ss => ss.SpecialtyId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

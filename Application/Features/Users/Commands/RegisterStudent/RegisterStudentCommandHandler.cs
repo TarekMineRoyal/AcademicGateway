@@ -18,16 +18,40 @@ public class RegisterStudentCommandHandler(
 
         if (!succeeded) throw new Exception($"User creation failed: {string.Join(", ", errors)}");
 
-        // Create the profile
+        // 1. Create the base profile
         var studentProfile = new Student
         {
             UserId = userId,
-            Major = request.Major,
-            Specialty = request.Specialty,
             GraduationYear = request.GraduationYear
         };
 
-        // Map the skills
+        // 2. Map the Majors
+        if (request.MajorIds.Any())
+        {
+            foreach (var majorId in request.MajorIds)
+            {
+                studentProfile.StudentMajors.Add(new StudentMajor
+                {
+                    StudentId = userId,
+                    MajorId = majorId
+                });
+            }
+        }
+
+        // 3. Map the Specialties
+        if (request.SpecialtyIds.Any())
+        {
+            foreach (var specialtyId in request.SpecialtyIds)
+            {
+                studentProfile.StudentSpecialties.Add(new StudentSpecialty
+                {
+                    StudentId = userId,
+                    SpecialtyId = specialtyId
+                });
+            }
+        }
+
+        // 4. Map the Skills
         if (request.SkillIds.Any())
         {
             foreach (var skillId in request.SkillIds)
