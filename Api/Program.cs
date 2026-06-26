@@ -1,7 +1,10 @@
+using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
+using FluentValidation;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -52,10 +55,16 @@ builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequir
 // This registers our Identity wrapper
 builder.Services.AddTransient<IIdentityService, IdentityService>();
 
-// 6. Register MediatR
-// We tell MediatR to scan the assembly where RegisterStudentCommand lives to find all our handlers
-builder.Services.AddMediatR(cfg =>
-    cfg.RegisterServicesFromAssembly(typeof(RegisterStudentCommand).Assembly));
+// 6. Register MediatR & FluentValidation
+// Scans the assembly for all AbstractValidators
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterStudentCommandValidator>();
+
+builder.Services.AddMediatR(cfg => {
+    cfg.RegisterServicesFromAssembly(typeof(RegisterStudentCommand).Assembly);
+
+    // Injects our Validation Pipeline so it runs before handlers
+    cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+});
 
 
 builder.Services.AddControllers();
@@ -73,11 +82,31 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
-// Authentication MUST come before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers();
+
+// ==========================================
+// Database Migration & Seeding execution
+// ==========================================
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+
+        // This will automatically apply any pending migrations
+        await context.Database.MigrateAsync();
+
+        // This runs the seeder we just created
+        await ApplicationDbContextSeed.SeedSampleDataAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+    }
+}
 
 app.Run();
