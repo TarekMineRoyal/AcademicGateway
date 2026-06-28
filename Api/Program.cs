@@ -6,6 +6,7 @@ using AcademicGateway.Infrastructure.Persistence;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
@@ -26,6 +27,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(options =>
 {
     options.User.RequireUniqueEmail = true;
 })
+    .AddRoles<IdentityRole>() // Explicitly adding support for Identity Roles
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
 // 4. Configure JWT Authentication
@@ -146,8 +148,12 @@ using (var scope = app.Services.CreateScope())
         // This will automatically apply any pending migrations
         await context.Database.MigrateAsync();
 
-        // This runs the seeder we just created
-        await ApplicationDbContextSeed.SeedSampleDataAsync(context);
+        // Resolve Identity Dependencies for the new Seeder signature
+        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // This runs the updated seeder with required role capabilities
+        await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context);
     }
     catch (Exception ex)
     {

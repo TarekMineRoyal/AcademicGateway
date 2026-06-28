@@ -26,6 +26,13 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<StudentMajor> StudentMajors => Set<StudentMajor>();
     public DbSet<StudentSpecialty> StudentSpecialties => Set<StudentSpecialty>();
 
+    // New Mini-Sprint 2 DbSets
+    public DbSet<Reviewer> Reviewers => Set<Reviewer>();
+    public DbSet<ProviderApplication> ProviderApplications => Set<ProviderApplication>();
+    public DbSet<ProjectTemplate> ProjectTemplates => Set<ProjectTemplate>();
+    public DbSet<ProjectTemplateSkill> ProjectTemplateSkills => Set<ProjectTemplateSkill>();
+    public DbSet<TechSupportAccount> TechSupportAccounts => Set<TechSupportAccount>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         // Crucial: Identity needs its own internal mappings configured first
@@ -62,6 +69,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             entity.HasOne<ApplicationUser>()
                   .WithOne()
                   .HasForeignKey<Professor>(p => p.UserId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Reviewer Configuration
+        builder.Entity<Reviewer>(entity =>
+        {
+            entity.HasKey(r => r.Id);
+            entity.HasOne<ApplicationUser>()
+                  .WithOne()
+                  .HasForeignKey<Reviewer>(r => r.IdentityUserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -131,6 +148,74 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             entity.HasOne(ss => ss.Specialty)
                   .WithMany(s => s.StudentSpecialties)
                   .HasForeignKey(ss => ss.SpecialtyId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // Mini-Sprint 2 Workflow Entity Configurations
+        // ==========================================
+
+        // Provider Application Mappings
+        builder.Entity<ProviderApplication>(entity =>
+        {
+            entity.HasKey(pa => pa.Id);
+
+            entity.HasOne(pa => pa.Provider)
+                  .WithMany()
+                  .HasForeignKey(pa => pa.ProviderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pa => pa.ReviewedBy)
+                  .WithMany()
+                  .HasForeignKey(pa => pa.ReviewedById)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Project Template Mappings
+        builder.Entity<ProjectTemplate>(entity =>
+        {
+            entity.HasKey(pt => pt.Id);
+
+            entity.HasOne(pt => pt.Provider)
+                  .WithMany()
+                  .HasForeignKey(pt => pt.ProviderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pt => pt.ApprovedBy)
+                  .WithMany()
+                  .HasForeignKey(pt => pt.ApprovedById)
+                  .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Project Template Skills Join Table Mappings
+        builder.Entity<ProjectTemplateSkill>(entity =>
+        {
+            entity.HasKey(pts => new { pts.ProjectTemplateId, pts.SkillId });
+
+            entity.HasOne(pts => pts.ProjectTemplate)
+                  .WithMany(t => t.TemplateSkills)
+                  .HasForeignKey(pts => pts.ProjectTemplateId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pts => pts.Skill)
+                  .WithMany()
+                  .HasForeignKey(pts => pts.SkillId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Tech Support Account Mappings
+        builder.Entity<TechSupportAccount>(entity =>
+        {
+            entity.HasKey(ts => ts.Id);
+
+            entity.HasOne(ts => ts.Provider)
+                  .WithMany()
+                  .HasForeignKey(ts => ts.ProviderId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ApplicationUser>()
+                  .WithOne()
+                  .HasForeignKey<TechSupportAccount>(ts => ts.IdentityUserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

@@ -7,6 +7,7 @@ namespace AcademicGateway.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
+    // Existing DbSets
     DbSet<Student> Students { get; }
     DbSet<Provider> Providers { get; }
     DbSet<Professor> Professors { get; }
@@ -16,6 +17,11 @@ public interface IApplicationDbContext
     DbSet<Specialty> Specialties { get; }
     DbSet<StudentMajor> StudentMajors { get; }
     DbSet<StudentSpecialty> StudentSpecialties { get; }
+    DbSet<Reviewer> Reviewers { get; }
+    DbSet<ProviderApplication> ProviderApplications { get; }
+    DbSet<ProjectTemplate> ProjectTemplates { get; }
+    DbSet<ProjectTemplateSkill> ProjectTemplateSkills { get; }
+    DbSet<TechSupportAccount> TechSupportAccounts { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
