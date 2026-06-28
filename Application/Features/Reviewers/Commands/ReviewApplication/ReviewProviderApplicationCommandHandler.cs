@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Domain.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -13,17 +14,16 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
 {
     public async Task Handle(ReviewProviderApplicationCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the incoming application alongside its matching core Provider profile
+        // 1. Fetch the application target
         var application = await context.ProviderApplications
-            .Include(pa => pa.Provider)
-            .FirstOrDefaultAsync(pa => pa.Id == request.ApplicationId, cancellationToken);
+            .FirstOrDefaultAsync(a => a.Id == request.ApplicationId, cancellationToken);
 
         if (application == null)
         {
             throw new KeyNotFoundException($"Provider application with ID '{request.ApplicationId}' was not found.");
         }
 
-        // 2. Retrieve the Reviewer entity associated with the authenticated Identity User
+        // 2. Fetch the reviewer profile executing the command
         var reviewer = await context.Reviewers
             .FirstOrDefaultAsync(r => r.IdentityUserId == request.ReviewerIdentityUserId, cancellationToken);
 
@@ -32,23 +32,28 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
             throw new KeyNotFoundException($"Reviewer domain profile for Identity User ID '{request.ReviewerIdentityUserId}' was not found.");
         }
 
-        // 3. Apply state machine logic using domain guard clauses
+        // 3. Execute state transition updates
         if (request.IsApproved)
         {
             application.Approve(reviewer.Id);
 
-            // Business Rule: Transition the primary Provider entity status to verified 
-            if (application.Provider != null)
+            // CASCADING FIX: Fetch the underlying provider and flip their verification flag to true
+            var provider = await context.Providers
+                .FirstOrDefaultAsync(p => p.UserId == application.ProviderId, cancellationToken);
+
+            if (provider != null)
             {
-                application.Provider.IsVerified = true;
+                // If your Provider entity uses a method like provider.Verify(), invoke that here instead!
+                typeof(Domain.Entities.Provider)
+                    .GetProperty(nameof(Domain.Entities.Provider.IsVerified))?
+                    .SetValue(provider, true);
             }
         }
         else
         {
-            application.Reject(reviewer.Id, request.RejectionReason ?? "No specific rejection details provided by reviewer.");
+            application.Reject(reviewer.Id, request.RejectionReason ?? "No reason provided.");
         }
 
-        // 4. Save updates to the persistence layer
         await context.SaveChangesAsync(cancellationToken);
     }
 }
