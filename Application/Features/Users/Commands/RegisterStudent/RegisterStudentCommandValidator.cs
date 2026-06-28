@@ -32,6 +32,10 @@ public class RegisterStudentCommandValidator : AbstractValidator<RegisterStudent
         RuleFor(x => x.SpecialtyIds)
             .MustAsync(SpecialtiesMustBelongToSelectedMajors)
             .WithMessage("One or more selected specialties do not belong to your chosen majors.");
+
+        RuleFor(x => x.SkillIds)
+        .MustAsync(SkillsMustExistInDatabase)
+        .WithMessage("One or more selected skills do not exist.");
     }
 
     // Custom Database Cross-Reference Rule
@@ -52,5 +56,19 @@ public class RegisterStudentCommandValidator : AbstractValidator<RegisterStudent
 
         // Ensure EVERY specialty the user picked exists in the valid list
         return specialtyIds.All(id => validSpecialtyIdsForMajors.Contains(id));
+    }
+
+    private async Task<bool> SkillsMustExistInDatabase(
+    List<Guid> skillIds,
+    CancellationToken cancellationToken)
+    {
+        if (skillIds == null || !skillIds.Any())
+            return true;
+
+        var existingSkillCount = await _context.Skills
+            .Where(s => skillIds.Contains(s.Id))
+            .CountAsync(cancellationToken);
+
+        return existingSkillCount == skillIds.Count;
     }
 }

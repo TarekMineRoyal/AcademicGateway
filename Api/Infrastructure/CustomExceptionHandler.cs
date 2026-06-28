@@ -7,34 +7,38 @@ namespace Api.Infrastructure;
 public class CustomExceptionHandler : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(
-        HttpContext httpContext,
-        Exception exception,
-        CancellationToken cancellationToken)
+    HttpContext httpContext,
+    Exception exception,
+    CancellationToken cancellationToken)
     {
-        // Intercept ONLY our FluentValidation exceptions
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        var problemDetails = new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "An Error Occurred",
+            Detail = exception.Message // <-- This will show the exact error text
+        };
+
         if (exception is ValidationException validationException)
         {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-
-            var problemDetails = new ProblemDetails
-            {
-                Status = StatusCodes.Status400BadRequest,
-                Title = "Validation Failed",
-                Detail = "One or more validation errors occurred."
-            };
-
-            // Group the FluentValidation errors by property name
+            problemDetails.Title = "Validation Failed";
             problemDetails.Extensions["errors"] = validationException.Errors
                 .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
-                .ToDictionary(failureGroup => failureGroup.Key, failureGroup => failureGroup.ToArray());
-
-            await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
-
-            // Return true to signal that we have fully handled the exception
-            return true;
+                .ToDictionary(g => g.Key, g => g.ToArray());
+        }
+        else
+        {
+            // For non-validation exceptions, include the full stack trace or inner exceptions
+            problemDetails.Extensions["exceptionType"] = exception.GetType().Name;
+            problemDetails.Extensions["stackTrace"] = exception.StackTrace;
+            if (exception.InnerException != null)
+            {
+                problemDetails.Extensions["innerException"] = exception.InnerException.Message;
+            }
         }
 
-        // Return false to let ASP.NET Core handle standard 500 exceptions
-        return false;
+        await httpContext.Response.WriteAsJsonAsync(problemDetails, cancellationToken);
+        return true; // Force it to handle everything cleanly for now
     }
 }
