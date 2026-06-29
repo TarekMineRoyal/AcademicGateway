@@ -30,12 +30,11 @@ public class CreateTechSupportAccountCommandHandler(
             throw new InvalidOperationException("Unverified providers are not permitted to provision technical support accounts.");
         }
 
-        // 2. Delegate secure identity credential generation to the Infrastructure Identity Service
-        // FIX: Explicitly deconstructing all 3 elements returned by your service tuple
+        // Pass request.Email for both Username/Email, and request.Password as the password ---
         var (succeeded, identityUserId, errors) = await identityService.CreateUserAsync(
-            request.Email,
-            request.Password,
-            "TechSupport");
+            request.Email,     // userName
+            request.Email,     // email
+            request.Password); // password
 
         if (!succeeded)
         {
