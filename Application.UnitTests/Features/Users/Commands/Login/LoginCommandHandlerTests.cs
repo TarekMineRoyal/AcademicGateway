@@ -39,20 +39,22 @@ public class LoginCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_Should_Return_Null_When_Credentials_Are_Invalid()
+    public async Task Handle_Should_ThrowUnauthorizedAccessException_When_Credentials_Are_Invalid() // 1. Updated the name
     {
         // Arrange
-        var command = new LoginCommand("test@example.com", "WrongPassword!");
+        var command = new LoginCommand("wrong@academicgateway.com", "wrongpassword");
 
-        // Setup the mock to return null (simulating a failed login)
-        _identityServiceMock
-            .Setup(x => x.AuthenticateAsync(command.Email, command.Password))
+        // Mock the identity service to return null/empty, simulating a failed login
+        _identityServiceMock.Setup(x => x.AuthenticateAsync(command.Email, command.Password))
             .ReturnsAsync((string?)null);
 
         // Act
-        var result = await _handler.Handle(command, CancellationToken.None);
+        // 2. Wrap the execution in a Func so FluentAssertions can catch the exception
+        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
 
         // Assert
-        result.Should().BeNull();
+        // 3. Assert the exact exception and message
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+                 .WithMessage("Invalid email or password.");
     }
 }

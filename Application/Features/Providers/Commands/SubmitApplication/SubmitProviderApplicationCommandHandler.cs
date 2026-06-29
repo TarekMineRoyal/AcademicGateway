@@ -41,6 +41,9 @@ public class SubmitProviderApplicationCommandHandler(IApplicationDbContext conte
             request.CompanyDetails,
             request.VerificationDocumentsUrl);
 
+        // 4. Advance the state from Draft to PendingReview ---
+        application.SubmitForReview();
+
         context.ProviderApplications.Add(application);
         await context.SaveChangesAsync(cancellationToken);
 
