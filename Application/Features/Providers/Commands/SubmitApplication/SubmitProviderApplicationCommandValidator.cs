@@ -17,17 +17,20 @@ public class SubmitProviderApplicationCommandValidator : AbstractValidator<Submi
         // Ensure ProviderId is present and matches a legitimate profile record in our system
         RuleFor(x => x.ProviderId)
             .NotEmpty().WithMessage("Provider ID is required.")
+            .MaximumLength(128).WithMessage("Provider ID cannot exceed 128 characters.")
             .MustAsync(ProviderMustExist).WithMessage("The specified Provider profile does not exist.");
 
         // Ensure corporate profiles provide substantial operational text data
         RuleFor(x => x.CompanyDetails)
             .NotEmpty().WithMessage("Company details are required.")
-            .MinimumLength(10).WithMessage("Company details must be at least 10 characters.");
+            .MinimumLength(10).WithMessage("Company details must be at least 10 characters.")
+            .MaximumLength(2000).WithMessage("Company details cannot exceed 2000 characters.");
 
         // Enforce secure asset locations for uploaded compliance auditing documentation
         RuleFor(x => x.VerificationDocumentsUrl)
             .NotEmpty().WithMessage("Verification documents URL is required.")
-            .Matches(@"^https?://").WithMessage("Verification documents URL must start with http:// or https://");
+            .Matches(@"^https?://").WithMessage("Verification documents URL must start with http:// or https://")
+            .MaximumLength(500).WithMessage("Verification documents URL cannot exceed 500 characters.");
     }
 
     // Database Cross-Reference Rule

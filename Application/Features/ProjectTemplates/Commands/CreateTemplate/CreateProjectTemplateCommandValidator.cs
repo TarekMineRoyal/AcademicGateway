@@ -1,11 +1,22 @@
-﻿using FluentValidation;
+﻿using AcademicGateway.Application.Common.Interfaces;
+using FluentValidation;
+using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateTemplate;
 
 public class CreateProjectTemplateCommandValidator : AbstractValidator<CreateProjectTemplateCommand>
 {
-    public CreateProjectTemplateCommandValidator()
+    private readonly IApplicationDbContext _context;
+
+    public CreateProjectTemplateCommandValidator(IApplicationDbContext context)
     {
+        _context = context;
+
         // Enforce provider tracking session context presence
         RuleFor(x => x.ProviderId)
             .NotEmpty().WithMessage("Provider ID is required.");
@@ -27,9 +38,25 @@ public class CreateProjectTemplateCommandValidator : AbstractValidator<CreatePro
             .GreaterThan(0).WithMessage("Expected duration must be at least 1 week.")
             .LessThanOrEqualTo(26).WithMessage("Expected duration cannot exceed 26 weeks (one academic semester).");
 
-        // Skill requirements validation
+        // Skill requirements validation - Added DB Check!
         RuleFor(x => x.SkillIds)
             .NotEmpty().WithMessage("At least one required skill must be specified for the project template.")
-            .Must(skills => skills != null && skills.Count <= 10).WithMessage("You cannot assign more than 10 required skills to a single template.");
+            .Must(skills => skills != null && skills.Count <= 10).WithMessage("You cannot assign more than 10 required skills to a single template.")
+            .MustAsync(SkillsMustExistInDatabase).WithMessage("One or more selected skills do not exist.");
+    }
+
+    // Custom Database Cross-Reference Rule
+    private async Task<bool> SkillsMustExistInDatabase(
+        List<Guid> skillIds,
+        CancellationToken cancellationToken)
+    {
+        if (skillIds == null || !skillIds.Any())
+            return true;
+
+        var existingSkillCount = await _context.Skills
+            .Where(s => skillIds.Contains(s.Id))
+            .CountAsync(cancellationToken);
+
+        return existingSkillCount == skillIds.Count;
     }
 }

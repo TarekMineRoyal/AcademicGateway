@@ -44,7 +44,7 @@ public class RegisterStudentCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Password)
-              .WithErrorMessage("Password must be at least 6 characters.");
+              .WithErrorMessage("Password must be at least 8 characters long.");
     }
 
     [Fact]

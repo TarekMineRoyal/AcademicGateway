@@ -1,6 +1,12 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Validations;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 
@@ -12,55 +18,45 @@ public class RegisterStudentCommandValidator : AbstractValidator<RegisterStudent
     {
         _context = context;
 
-        // Basic Validations
-        RuleFor(x => x.Email)
-            .NotEmpty().WithMessage("Email is required.")
-            .EmailAddress().WithMessage("A valid email is required.");
+        // Base Identity Validations (DRY)
+        RuleFor(x => x.Email).ValidIdentityEmail();
+        RuleFor(x => x.Username).ValidIdentityUsername();
+        RuleFor(x => x.Password).ValidIdentityPassword();
 
-        RuleFor(x => x.Username)
-            .NotEmpty().WithMessage("Username is required.")
-            .MinimumLength(3).WithMessage("Username must be at least 3 characters.");
-
-        RuleFor(x => x.Password)
-            .NotEmpty().WithMessage("Password is required.")
-            .MinimumLength(6).WithMessage("Password must be at least 6 characters.");
-
-        // Relational Validations
+        // Relational Validations - Payload Limits
         RuleFor(x => x.MajorIds)
-            .NotEmpty().WithMessage("You must select at least one Major.");
+            .NotEmpty().WithMessage("You must select at least one Major.")
+            .Must(list => list.Count <= 3).WithMessage("You can select a maximum of 3 majors.");
 
         RuleFor(x => x.SpecialtyIds)
-            .MustAsync(SpecialtiesMustBelongToSelectedMajors)
-            .WithMessage("One or more selected specialties do not belong to your chosen majors.");
+            .Must(list => list == null || list.Count <= 5).WithMessage("You can select a maximum of 5 specialties.")
+            .MustAsync(SpecialtiesMustBelongToSelectedMajors).WithMessage("One or more selected specialties do not belong to your chosen majors.");
 
         RuleFor(x => x.SkillIds)
-        .MustAsync(SkillsMustExistInDatabase)
-        .WithMessage("One or more selected skills do not exist.");
+            .Must(list => list == null || list.Count <= 20).WithMessage("You cannot select more than 20 skills.")
+            .MustAsync(SkillsMustExistInDatabase).WithMessage("One or more selected skills do not exist.");
     }
 
-    // Custom Database Cross-Reference Rule
+    // Custom Database Cross-Reference Rules
     private async Task<bool> SpecialtiesMustBelongToSelectedMajors(
         RegisterStudentCommand command,
         List<Guid> specialtyIds,
         CancellationToken cancellationToken)
     {
-        // If they didn't pick any specialties, that's perfectly fine
         if (specialtyIds == null || !specialtyIds.Any())
             return true;
 
-        // Get the IDs of all valid specialties that belong to the Majors the user selected
         var validSpecialtyIdsForMajors = await _context.Specialties
             .Where(s => command.MajorIds.Contains(s.MajorId))
             .Select(s => s.Id)
             .ToListAsync(cancellationToken);
 
-        // Ensure EVERY specialty the user picked exists in the valid list
         return specialtyIds.All(id => validSpecialtyIdsForMajors.Contains(id));
     }
 
     private async Task<bool> SkillsMustExistInDatabase(
-    List<Guid> skillIds,
-    CancellationToken cancellationToken)
+        List<Guid> skillIds,
+        CancellationToken cancellationToken)
     {
         if (skillIds == null || !skillIds.Any())
             return true;
