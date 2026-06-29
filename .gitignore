@@ -43,3 +43,4 @@ Desktop.ini
 # Local Configuration / Security Safeguards
 # ==========================================
 /Api/appsettings.Development.json
+TestResults/
