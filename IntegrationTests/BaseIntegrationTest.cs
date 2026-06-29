@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Infrastructure.Persistence;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net.Http;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests;
@@ -44,6 +45,56 @@ public abstract class BaseIntegrationTest : IAsyncLifetime
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await context.Set<TEntity>().AddAsync(entity);
         await context.SaveChangesAsync();
+    }
+
+    /// <summary>
+    /// Provisions an unauthenticated, anonymous HTTP client.
+    /// </summary>
+    protected HttpClient GetAnonymousClient()
+    {
+        return _factory.CreateClient();
+    }
+
+    /// <summary>
+    /// Provisions an authenticated HTTP client bound strictly to the 'Student' role boundary.
+    /// </summary>
+    protected HttpClient GetStudentClient(string? userId = null)
+    {
+        var client = _factory.CreateClient();
+        var resolvedUserId = userId ?? Guid.NewGuid().ToString();
+
+        client.DefaultRequestHeaders.Add("X-Test-UserId", resolvedUserId);
+        client.DefaultRequestHeaders.Add("X-Test-Role", "Student");
+
+        return client;
+    }
+
+    /// <summary>
+    /// Provisions an authenticated HTTP client bound strictly to the 'Provider' role boundary.
+    /// </summary>
+    protected HttpClient GetProviderClient(string? userId = null)
+    {
+        var client = _factory.CreateClient();
+        var resolvedUserId = userId ?? Guid.NewGuid().ToString();
+
+        client.DefaultRequestHeaders.Add("X-Test-UserId", resolvedUserId);
+        client.DefaultRequestHeaders.Add("X-Test-Role", "Provider");
+
+        return client;
+    }
+
+    /// <summary>
+    /// Provisions an authenticated HTTP client bound strictly to the 'Reviewer' role boundary.
+    /// </summary>
+    protected HttpClient GetReviewerClient(string? userId = null)
+    {
+        var client = _factory.CreateClient();
+        var resolvedUserId = userId ?? Guid.NewGuid().ToString();
+
+        client.DefaultRequestHeaders.Add("X-Test-UserId", resolvedUserId);
+        client.DefaultRequestHeaders.Add("X-Test-Role", "Reviewer");
+
+        return client;
     }
 
     public async ValueTask InitializeAsync()

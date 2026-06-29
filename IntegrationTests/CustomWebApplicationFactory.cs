@@ -1,12 +1,16 @@
 ﻿using AcademicGateway.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Npgsql;
 using Respawn;
-using Respawn.Graph;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests;
@@ -18,19 +22,15 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
     public async ValueTask InitializeAsync()
     {
-        // 1. Accessing 'Services' boots the host and triggers ConfigureWebHost
         using var scope = Services.CreateScope();
 
-        // 2. Safely extract the connection string from the initialized configuration engine
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
         _connectionString = configuration.GetConnectionString("TestConnection")
             ?? throw new InvalidOperationException("The 'TestConnection' connection string was not found in User Secrets.");
 
-        // 3. Automatically build or update the database schema using your migrations
         var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
         await context.Database.MigrateAsync();
 
-        // 4. Initialize Respawn to cache the local database structure
         await using var connection = new NpgsqlConnection(_connectionString);
         await connection.OpenAsync();
 
@@ -57,34 +57,81 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.ConfigureAppConfiguration((context, config) =>
         {
-            // Inject this test project's User Secrets and environment variables into the host configuration context
             config.AddUserSecrets<CustomWebApplicationFactory>(optional: true);
             config.AddEnvironmentVariables();
         });
 
         builder.ConfigureServices((context, services) =>
         {
-            // Intercept and remove the application's production database registration
-            var descriptor = services.SingleOrDefault(
+            // 1. Re-route database context to test database
+            var dbDescriptor = services.SingleOrDefault(
                 d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
 
-            if (descriptor != null)
+            if (dbDescriptor != null)
             {
-                services.Remove(descriptor);
+                services.Remove(dbDescriptor);
             }
 
-            // Extract the connection string safely loaded from User Secrets above
             var connString = context.Configuration.GetConnectionString("TestConnection");
 
-            // Bind the app context to use our local isolated test database string
             services.AddDbContext<ApplicationDbContext>(options =>
                 options.UseNpgsql(connString)
                        .UseSnakeCaseNamingConvention());
+
+            // 2. Intercept and mock Authentication pipeline for integration tests
+            services.Configure<AuthenticationOptions>(options =>
+            {
+                options.DefaultAuthenticateScheme = "TestAuthScheme";
+                options.DefaultChallengeScheme = "TestAuthScheme";
+            });
+
+            services.AddAuthentication("TestAuthScheme")
+                .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>("TestAuthScheme", _ => { });
         });
     }
 
     public override async ValueTask DisposeAsync()
     {
         await base.DisposeAsync();
+    }
+}
+
+/// <summary>
+/// A high-performance mock authentication handler that extracts claims dynamically 
+/// from HTTP headers supplied by our integration test clients.
+/// </summary>
+public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
+{
+    public TestAuthHandler(
+        IOptionsMonitor<AuthenticationSchemeOptions> options,
+        ILoggerFactory logger,
+        UrlEncoder encoder)
+        : base(options, logger, encoder)
+    {
+    }
+
+    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
+    {
+        // Check if the inbound test request requested authorization claims
+        if (!Request.Headers.TryGetValue("X-Test-UserId", out var userIdValues) ||
+            string.IsNullOrEmpty(userIdValues.ToString()))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("No test security context provided. Request is anonymous."));
+        }
+
+        var userId = userIdValues.ToString();
+        var claims = new List<Claim> { new Claim(ClaimTypes.NameIdentifier, userId) };
+
+        // Append the role claim if a role header is specified
+        if (Request.Headers.TryGetValue("X-Test-Role", out var roleValues) && !string.IsNullOrEmpty(roleValues.ToString()))
+        {
+            claims.Add(new Claim(ClaimTypes.Role, roleValues.ToString()));
+        }
+
+        var identity = new ClaimsIdentity(claims, "TestAuthType");
+        var principal = new ClaimsPrincipal(identity);
+        var ticket = new AuthenticationTicket(principal, "TestAuthScheme");
+
+        return Task.FromResult(AuthenticateResult.Success(ticket));
     }
 }
