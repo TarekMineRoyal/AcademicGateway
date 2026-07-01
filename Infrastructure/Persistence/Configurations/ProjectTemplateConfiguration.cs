@@ -7,21 +7,17 @@ namespace AcademicGateway.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// Relational database configuration mapping for the <see cref="ProjectTemplate"/> aggregate root.
-/// Enforces domain invariants, property constraints, and cascading lifecycle rules at the persistence tier.
 /// </summary>
 public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemplate>
 {
     public void Configure(EntityTypeBuilder<ProjectTemplate> builder)
     {
-        // Define the target table name clearly
         builder.ToTable("ProjectTemplates");
 
-        // Identity Mapping
         builder.HasKey(x => x.Id);
         builder.Property(x => x.Id)
             .ValueGeneratedNever();
 
-        // Attribute Constraints
         builder.Property(x => x.Title)
             .IsRequired()
             .HasMaxLength(200);
@@ -30,7 +26,6 @@ public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemp
             .IsRequired()
             .HasMaxLength(2000);
 
-        // State Machine Enum Conversion
         builder.Property(x => x.Status)
             .IsRequired()
             .HasConversion(
@@ -48,10 +43,9 @@ public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemp
             .HasForeignKey(x => x.ProviderId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Encapsulated Aggregate Collection Mapping
-        // Accesses the internal backing field directly bypassing the public IReadOnlyCollection exposure
+        // Configure the collection path down to the join table definitions cleanly
         builder.HasMany(x => x.ProjectTemplateSkills)
-            .WithOne()
+            .WithOne(x => x.ProjectTemplate)
             .HasForeignKey(x => x.ProjectTemplateId)
             .OnDelete(DeleteBehavior.Cascade);
 
@@ -63,7 +57,6 @@ public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemp
 
 /// <summary>
 /// Relational database configuration mapping for the <see cref="ProjectTemplateSkill"/> join entity.
-/// Establishes composite index clustering and foreign key associations with strict delete restrictions.
 /// </summary>
 public class ProjectTemplateSkillConfiguration : IEntityTypeConfiguration<ProjectTemplateSkill>
 {
@@ -71,13 +64,13 @@ public class ProjectTemplateSkillConfiguration : IEntityTypeConfiguration<Projec
     {
         builder.ToTable("ProjectTemplateSkills");
 
-        // Composite primary key configuration for the many-to-many lookup relationship
+        // Explicitly enforce the composite primary key configuration
         builder.HasKey(x => new { x.ProjectTemplateId, x.SkillId });
 
         // Associate with the master Skill lookups safely
         builder.HasOne(x => x.Skill)
             .WithMany()
             .HasForeignKey(x => x.SkillId)
-            .OnDelete(DeleteBehavior.Restrict); // Prevents cross-aggregate deletion side effects
+            .OnDelete(DeleteBehavior.Restrict);
     }
 }

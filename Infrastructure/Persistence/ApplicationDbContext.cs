@@ -63,6 +63,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
 
         // Automatically scan, instantiate, and register every single IEntityTypeConfiguration class 
         // isolated inside the Persistence/Configurations directory boundary
-        builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+        builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }

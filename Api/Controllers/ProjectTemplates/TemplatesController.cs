@@ -2,28 +2,37 @@
 using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace AcademicGateway.Api.Controllers;
+namespace Api.Controllers.ProjectTemplates;
 
+/// <summary>
+/// Manages the lifecycle of project templates, including creation by providers and retrieval of approved blueprints.
+/// </summary>
 [ApiController]
 [Route("api/[controller]")]
 public class TemplatesController(ISender mediator) : ControllerBase
 {
     /// <summary>
-    /// Drafts a new project curriculum template and maps its required technical skill sets.
+    /// Drafts a new project curriculum template and registers its required technical skill sets.
     /// </summary>
+    /// <param name="request">The template creation details.</param>
+    /// <returns>The unique identifier of the created template.</returns>
     [HttpPost]
-    [Authorize(Roles = "Provider")] // Guard: Only registered Provider corporate profiles can draft templates
+    [Authorize(Roles = "Provider")]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<ActionResult<Guid>> Create([FromBody] ApiCreateTemplateRequest request)
     {
-        // Resolve the Provider's primary security key from the authenticated token context
-        var providerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(providerId))
+        var providerIdString = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+        if (!Guid.TryParse(providerIdString, out var providerId))
         {
             return Unauthorized("Provider corporate security context could not be resolved from token metadata.");
         }
@@ -33,26 +42,27 @@ public class TemplatesController(ISender mediator) : ControllerBase
             ProviderId = providerId,
             Title = request.Title,
             Description = request.Description,
-            ExpectedDurationWeeks = request.ExpectedDurationWeeks,
             SkillIds = request.SkillIds
         };
 
         var templateId = await mediator.Send(command);
-        return CreatedAtAction(nameof(GetApproved), new { }, templateId);
+
+        // Return 201 Created with the new ID
+        return CreatedAtAction(nameof(GetApproved), new { id = templateId }, templateId);
     }
 
     /// <summary>
     /// Queries the global ecosystem marketplace repository for fully vetted and approved project curricula.
     /// </summary>
+    /// <param name="skillId">Optional filter for a specific technical skill requirement.</param>
+    /// <returns>A collection of approved project templates.</returns>
     [HttpGet("approved")]
-    [Authorize] // Open to all authenticated actors (Students browsing, Providers auditing, Reviewers monitoring)
-    public async Task<ActionResult<List<ApprovedTemplateDto>>> GetApproved(
-        [FromQuery] int? maxDurationWeeks,
-        [FromQuery] Guid? skillId)
+    [Authorize]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<ApprovedTemplateDto>>> GetApproved([FromQuery] Guid? skillId)
     {
         var query = new GetApprovedTemplatesQuery
         {
-            MaxDurationWeeks = maxDurationWeeks,
             SkillId = skillId
         };
 
@@ -61,9 +71,10 @@ public class TemplatesController(ISender mediator) : ControllerBase
     }
 }
 
-// Inline input binding transfer contract to isolate API layer signatures from Application layer models
+/// <summary>
+/// DTO for project template creation, isolated from internal domain logic.
+/// </summary>
 public record ApiCreateTemplateRequest(
     string Title,
     string Description,
-    int ExpectedDurationWeeks,
     List<Guid> SkillIds);

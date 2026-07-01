@@ -2,27 +2,34 @@
 using AcademicGateway.Application.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
-namespace AcademicGateway.Api.Controllers;
+namespace Api.Controllers.Providers;
 
+/// <summary>
+/// Manages corporate provider registration, compliance vetting, and auxiliary account management.
+/// </summary>
+[Authorize(Roles = "Provider")]
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles = "Provider")] // Guard: Restricts controller access solely to registered Provider corporate identities
 public class ProvidersController(ISender mediator) : ControllerBase
 {
     /// <summary>
     /// Submits a formal registration and compliance vetting application for verification.
     /// </summary>
+    /// <param name="request">The submission details including company info and document links.</param>
+    /// <returns>The unique identifier of the submitted application.</returns>
     [HttpPost("applications")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Guid>> SubmitApplication([FromBody] ApiSubmitApplicationRequest request)
     {
-        // Safely extract the primary identity key from the current authorization token claims
-        var providerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(providerId))
+        if (!TryGetProviderId(out var providerId))
         {
             return Unauthorized("Provider corporate security context could not be resolved from token metadata.");
         }
@@ -41,11 +48,15 @@ public class ProvidersController(ISender mediator) : ControllerBase
     /// <summary>
     /// Provisions a new auxiliary technical support mentor sub-account managed by this corporate provider.
     /// </summary>
+    /// <param name="request">The account details for the new support member.</param>
+    /// <returns>The unique identifier of the created tech support account.</returns>
     [HttpPost("tech-support")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<Guid>> CreateTechSupport([FromBody] ApiCreateTechSupportRequest request)
     {
-        var providerId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-        if (string.IsNullOrEmpty(providerId))
+        if (!TryGetProviderId(out var providerId))
         {
             return Unauthorized("Provider corporate security context could not be resolved from token metadata.");
         }
@@ -54,15 +65,22 @@ public class ProvidersController(ISender mediator) : ControllerBase
         {
             ProviderId = providerId,
             Email = request.Email,
-            Password = request.Password,
-            FullName = request.FullName
+            Password = request.Password
         };
 
         var techAccountId = await mediator.Send(command);
         return Ok(techAccountId);
     }
+
+    /// <summary>
+    /// Helper to extract and parse the Provider ID from the current claims principal.
+    /// </summary>
+    private bool TryGetProviderId(out Guid providerId)
+    {
+        var providerIdString = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirst("sub")?.Value;
+        return Guid.TryParse(providerIdString, out providerId);
+    }
 }
 
-// Separate binding contracts to securely isolate HTTP request inputs from deep Application layers
 public record ApiSubmitApplicationRequest(string CompanyDetails, string VerificationDocumentsUrl);
 public record ApiCreateTechSupportRequest(string Email, string Password, string FullName);
