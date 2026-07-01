@@ -1,5 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Domain.Entities;
+using Domain.Lookups;
+using Domain.ProjectTemplates;
+using Domain.Providers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -17,7 +19,7 @@ public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
     {
         // 1. Retrieve the requesting Provider and enforce the platform verification rule
         var provider = await context.Providers
-            .FirstOrDefaultAsync(p => p.UserId == request.ProviderId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == request.ProviderId, cancellationToken);
 
         if (provider == null)
         {

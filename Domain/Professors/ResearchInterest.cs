@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Domain.Professors;
 
-namespace Domain.Lookups;
+namespace Domain.Professors;
 
 /// <summary>
 /// Represents a specialized academic or scientific research area (e.g., Computer Vision, Quantum Computing, Behavioral Economics).

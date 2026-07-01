@@ -12,7 +12,7 @@ public class TechSupportAccount
     /// Gets the unique identifier for the Tech Support profile. 
     /// Maps 1:1 to the underlying Identity ApplicationUser identifier.
     /// </summary>
-    public string Id { get; private set; } = string.Empty;
+    public Guid Id { get; private set; } // Updated to Guid
 
     /// <summary>
     /// Gets the institutional staff or employee number assigned to this support agent for internal auditing.
@@ -43,14 +43,14 @@ public class TechSupportAccount
     /// <param name="staffNumber">The corporate or institutional employee identifier tracking number.</param>
     /// <param name="supportTier">The assignment tier designation level.</param>
     /// <exception cref="ArgumentException">Thrown when essential tracking values are missing or blank.</exception>
-    public TechSupportAccount(string id, string staffNumber, string supportTier)
+    public TechSupportAccount(Guid id, string staffNumber, string supportTier)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID cannot be empty or whitespace.", nameof(id));
+            throw new ArgumentException("Identity User ID cannot be empty.", nameof(id));
         }
 
-        Id = id.Trim();
+        Id = id;
         UpdateStaffDetails(staffNumber, supportTier);
         IsActive = true; // Accounts are initialized as active by default
     }

@@ -1,5 +1,5 @@
 ﻿using System;
-using Domain.Lookups;
+using Domain.Skills;
 
 namespace Domain.Students;
 
@@ -11,7 +11,7 @@ public class StudentSkill
     /// <summary>
     /// Gets the foreign key identifier for the associated student profile (corresponds to the unique Identity User ID).
     /// </summary>
-    public string StudentId { get; private set; } = string.Empty;
+    public Guid StudentId { get; private set; }
 
     /// <summary>
     /// Gets the navigation property for the associated student profile.
@@ -41,17 +41,10 @@ public class StudentSkill
     /// <param name="studentId">The unique Identity string identifier of the target student profile.</param>
     /// <param name="skillId">The unique identifier of the target skill.</param>
     /// <exception cref="ArgumentException">Thrown when studentId is null/whitespace or skillId is an empty Guid.</exception>
-    public StudentSkill(string studentId, Guid skillId)
+    public StudentSkill(Guid studentId, Guid skillId)
     {
-        if (string.IsNullOrWhiteSpace(studentId))
-        {
-            throw new ArgumentException("Student ID cannot be empty or whitespace.", nameof(studentId));
-        }
-
-        if (skillId == Guid.Empty)
-        {
-            throw new ArgumentException("Skill ID cannot be empty.", nameof(skillId));
-        }
+        if (studentId == Guid.Empty) throw new ArgumentException("Student ID cannot be empty.", nameof(studentId));
+        if (skillId == Guid.Empty) throw new ArgumentException("Skill ID cannot be empty.", nameof(skillId));
 
         StudentId = studentId;
         SkillId = skillId;

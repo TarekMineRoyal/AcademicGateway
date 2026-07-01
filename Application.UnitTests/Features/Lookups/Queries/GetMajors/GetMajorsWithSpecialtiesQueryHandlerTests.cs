@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Lookups.Queries.GetMajors;
-using Domain.Lookups;
+using Domain.Curriculum;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

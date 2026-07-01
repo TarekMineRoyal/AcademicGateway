@@ -2,6 +2,7 @@
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
+using Domain.Curriculum;
 using Domain.Lookups;
 using Domain.Models.Academic;
 using Domain.ProjectTemplates;

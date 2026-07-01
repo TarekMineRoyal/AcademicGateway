@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Domain.Students;
 
-namespace Domain.Lookups;
+namespace Domain.Curriculum;
 
 /// <summary>
 /// Represents an academic sub-specialty nested under a specific major (e.g., Software Engineering under Computer Science).

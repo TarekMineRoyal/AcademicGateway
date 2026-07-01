@@ -1,5 +1,5 @@
 ﻿using System;
-using Domain.Lookups;
+using Domain.Curriculum;
 
 namespace Domain.Students;
 
@@ -11,7 +11,7 @@ public class StudentSpecialty
     /// <summary>
     /// Gets the foreign key identifier for the associated student profile (corresponds to the unique Identity User ID).
     /// </summary>
-    public string StudentId { get; private set; } = string.Empty;
+    public Guid StudentId { get; private set; }
 
     /// <summary>
     /// Gets the navigation property for the associated student profile.
@@ -41,17 +41,10 @@ public class StudentSpecialty
     /// <param name="studentId">The unique Identity string identifier of the target student profile.</param>
     /// <param name="specialtyId">The unique identifier of the target sub-specialty.</param>
     /// <exception cref="ArgumentException">Thrown when studentId is null/whitespace or specialtyId is an empty Guid.</exception>
-    public StudentSpecialty(string studentId, Guid specialtyId)
+    public StudentSpecialty(Guid studentId, Guid specialtyId)
     {
-        if (string.IsNullOrWhiteSpace(studentId))
-        {
-            throw new ArgumentException("Student ID cannot be empty or whitespace.", nameof(studentId));
-        }
-
-        if (specialtyId == Guid.Empty)
-        {
-            throw new ArgumentException("Specialty ID cannot be empty.", nameof(specialtyId));
-        }
+        if (studentId == Guid.Empty) throw new ArgumentException("Student ID cannot be empty.", nameof(studentId));
+        if (specialtyId == Guid.Empty) throw new ArgumentException("Specialty ID cannot be empty.", nameof(specialtyId));
 
         StudentId = studentId;
         SpecialtyId = specialtyId;

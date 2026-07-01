@@ -1,8 +1,8 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
-using Domain.Lookups;
 using Domain.ProjectTemplates;
 using Domain.ProjectTemplates.Enums;
+using Domain.Skills;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

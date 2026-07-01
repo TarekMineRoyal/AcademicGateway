@@ -13,15 +13,10 @@ public class Reviewer
     private readonly List<ProviderApplication> _reviewedApplications = new();
 
     /// <summary>
-    /// Gets the unique internal business identifier for the Reviewer.
-    /// </summary>
-    public Guid Id { get; private set; }
-
-    /// <summary>
-    /// Gets the foreign key string identifier linking this profile to the core credentials record.
+    /// Gets the unique identifier for the Reviewer profile. 
     /// Maps 1:1 to the underlying Identity ApplicationUser identifier.
     /// </summary>
-    public string IdentityUserId { get; private set; } = string.Empty;
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// Gets the formal full legal or professional name of the reviewer.
@@ -41,18 +36,17 @@ public class Reviewer
     /// <summary>
     /// Initializes a new instance of the <see cref="Reviewer"/> profile with structural tracking parameters.
     /// </summary>
-    /// <param name="identityUserId">The unique identity credential code mapping to this profile.</param>
+    /// <param name="id">The unique Identity key linking back to the account credentials.</param>
     /// <param name="fullName">The verified professional full name of the evaluator.</param>
-    /// <exception cref="ArgumentException">Thrown when validation constraints for text identifiers fail.</exception>
-    public Reviewer(string identityUserId, string fullName)
+    /// <exception cref="ArgumentException">Thrown when validation constraints fail.</exception>
+    public Reviewer(Guid id, string fullName)
     {
-        if (string.IsNullOrWhiteSpace(identityUserId))
+        if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID reference cannot be empty or whitespace.", nameof(identityUserId));
+            throw new ArgumentException("Identity User ID reference cannot be empty.", nameof(id));
         }
 
-        Id = Guid.NewGuid();
-        IdentityUserId = identityUserId.Trim();
+        Id = id;
         UpdateFullName(fullName);
     }
 

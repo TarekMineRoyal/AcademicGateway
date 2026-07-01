@@ -18,7 +18,7 @@ public class Provider
     /// Gets the unique identifier for the Provider profile. 
     /// Maps 1:1 to the underlying Identity ApplicationUser identifier.
     /// </summary>
-    public string Id { get; private set; } = string.Empty;
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// Gets the registered corporate name of the provider organization.
@@ -64,14 +64,14 @@ public class Provider
     /// <param name="id">The unique Identity key linking back to the account credentials.</param>
     /// <param name="companyName">The legal or operational name of the company.</param>
     /// <exception cref="ArgumentException">Thrown when fundamental identity or name constraints are missing.</exception>
-    public Provider(string id, string companyName)
+    public Provider(Guid id, string companyName)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID cannot be empty or whitespace.", nameof(id));
+            throw new ArgumentException("Identity User ID cannot be empty.", nameof(id));
         }
 
-        Id = id.Trim();
+        Id = id;
         UpdateCompanyName(companyName);
         IsVerified = false; // Must pass a ProviderApplication assessment loop to become verified
     }

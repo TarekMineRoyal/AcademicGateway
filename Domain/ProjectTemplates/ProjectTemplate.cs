@@ -35,9 +35,9 @@ public class ProjectTemplate
     public ProjectTemplateStatus Status { get; private set; }
 
     /// <summary>
-    /// Gets the unique string identifier of the creating provider account.
+    /// Gets the unique identifier of the creating provider account.
     /// </summary>
-    public string ProviderId { get; private set; } = string.Empty;
+    public Guid ProviderId { get; private set; } // Updated to Guid
 
     /// <summary>
     /// Gets the operational feedback, change requests, or rejection reasons logged by the evaluating reviewer.
@@ -68,15 +68,15 @@ public class ProjectTemplate
     /// <param name="description">The core overview requirements text.</param>
     /// <param name="providerId">The identity tracker code mapping back to the owner profile.</param>
     /// <exception cref="ArgumentException">Thrown when any text parameter validation checks fail.</exception>
-    public ProjectTemplate(string title, string description, string providerId)
+    public ProjectTemplate(string title, string description, Guid providerId) // Updated to Guid
     {
-        if (string.IsNullOrWhiteSpace(providerId))
+        if (providerId == Guid.Empty)
         {
-            throw new ArgumentException("Provider ID cannot be empty or whitespace.", nameof(providerId));
+            throw new ArgumentException("Provider ID cannot be an empty Guid.", nameof(providerId));
         }
 
         Id = Guid.NewGuid();
-        ProviderId = providerId.Trim();
+        ProviderId = providerId;
         Status = ProjectTemplateStatus.Draft;
 
         UpdateDetails(title, description);
@@ -202,7 +202,7 @@ public class ProjectTemplate
 
     /// <summary>
     /// Collaborative Iteration Loop Sign-Off (Scenario 3): Executed by the Provider to reject the reviewer's 
-    /// alterations, reverting the template back to a Draft layout for manual adjustments.
+    /// proposed alterations, reverting the template back to a Draft layout for manual adjustments.
     /// </summary>
     /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingProviderAcceptance context.</exception>
     public void ProviderRejectProposedChanges()

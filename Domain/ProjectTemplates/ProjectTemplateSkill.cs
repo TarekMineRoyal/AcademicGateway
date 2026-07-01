@@ -1,5 +1,5 @@
 ﻿using System;
-using Domain.Lookups;
+using Domain.Skills;
 
 namespace Domain.ProjectTemplates;
 

@@ -1,19 +1,21 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure.Identity;
-using Domain.Lookups;
+using Domain.Curriculum;
 using Domain.Professors;
 using Domain.ProjectTemplates;
 using Domain.Providers;
+using Domain.Skills;
 using Domain.Students;
 using Domain.SystemStaff;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace AcademicGateway.Infrastructure.Persistence;
 
-// Inherits from IdentityDbContext using our custom ApplicationUser
-// AND implements the IApplicationDbContext interface for the Application layer
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
+// Inherits from IdentityDbContext supporting custom Guid types for keys
+public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityRole<Guid>, Guid>, IApplicationDbContext
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
@@ -31,7 +33,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
     public DbSet<StudentMajor> StudentMajors => Set<StudentMajor>();
     public DbSet<StudentSpecialty> StudentSpecialties => Set<StudentSpecialty>();
 
-    // New Mini-Sprint 2 DbSets
+    // Faculty & Lookup Extensions
+    public DbSet<ResearchInterest> ResearchInterests => Set<ResearchInterest>();
+    public DbSet<ProfessorResearchInterest> ProfessorResearchInterests => Set<ProfessorResearchInterest>();
+
+    // Core Workflow Mappings
     public DbSet<Reviewer> Reviewers => Set<Reviewer>();
     public DbSet<ProviderApplication> ProviderApplications => Set<ProviderApplication>();
     public DbSet<ProjectTemplate> ProjectTemplates => Set<ProjectTemplate>();
@@ -44,85 +50,78 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         base.OnModelCreating(builder);
 
         // ==========================================
-        // 1-to-1 Profile Configurations
+        // 1-to-1 Profile Extension Configurations
         // ==========================================
 
         // Student Configuration
         builder.Entity<Student>(entity =>
         {
-            entity.HasKey(s => s.UserId);
+            entity.HasKey(s => s.Id);
             entity.HasOne<ApplicationUser>()
                   .WithOne()
-                  .HasForeignKey<Student>(s => s.UserId)
+                  .HasForeignKey<Student>(s => s.Id)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Provider Configuration
         builder.Entity<Provider>(entity =>
         {
-            entity.HasKey(p => p.UserId);
+            entity.HasKey(p => p.Id);
             entity.HasOne<ApplicationUser>()
                   .WithOne()
-                  .HasForeignKey<Provider>(p => p.UserId)
+                  .HasForeignKey<Provider>(p => p.Id)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
         // Professor Configuration
         builder.Entity<Professor>(entity =>
         {
-            entity.HasKey(p => p.UserId);
+            entity.HasKey(p => p.Id);
             entity.HasOne<ApplicationUser>()
                   .WithOne()
-                  .HasForeignKey<Professor>(p => p.UserId)
+                  .HasForeignKey<Professor>(p => p.Id)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // Reviewer Configuration
+        // Reviewer Configuration (Unified to 1:1 Primary Key Strategy)
         builder.Entity<Reviewer>(entity =>
         {
             entity.HasKey(r => r.Id);
             entity.HasOne<ApplicationUser>()
                   .WithOne()
-                  .HasForeignKey<Reviewer>(r => r.IdentityUserId)
+                  .HasForeignKey<Reviewer>(r => r.Id)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Tech Support Account Configuration (Unified to 1:1 Primary Key Strategy)
+        builder.Entity<TechSupportAccount>(entity =>
+        {
+            entity.HasKey(ts => ts.Id);
+            entity.HasOne<ApplicationUser>()
+                  .WithOne()
+                  .HasForeignKey<TechSupportAccount>(ts => ts.Id)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ==========================================
-        // Many-to-Many Configuration: StudentSkills
+        // Many-to-Many Configuration: Student Relations
         // ==========================================
 
         builder.Entity<StudentSkill>(entity =>
         {
-            // Composite Primary Key
             entity.HasKey(ss => new { ss.StudentId, ss.SkillId });
 
-            // Relationship to Student
             entity.HasOne(ss => ss.Student)
                   .WithMany(s => s.StudentSkills)
                   .HasForeignKey(ss => ss.StudentId)
                   .OnDelete(DeleteBehavior.Cascade);
 
-            // Relationship to Skill
             entity.HasOne(ss => ss.Skill)
                   .WithMany(s => s.StudentSkills)
                   .HasForeignKey(ss => ss.SkillId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ==========================================
-        // 1-to-Many Configuration: Major to Specialties
-        // ==========================================
-        builder.Entity<Specialty>(entity =>
-        {
-            entity.HasOne(s => s.Major)
-                  .WithMany(m => m.Specialties)
-                  .HasForeignKey(s => s.MajorId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // ==========================================
-        // Many-to-Many Configuration: StudentMajors
-        // ==========================================
         builder.Entity<StudentMajor>(entity =>
         {
             entity.HasKey(sm => new { sm.StudentId, sm.MajorId });
@@ -138,9 +137,6 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
                   .OnDelete(DeleteBehavior.Cascade);
         });
 
-        // ==========================================
-        // Many-to-Many Configuration: StudentSpecialties
-        // ==========================================
         builder.Entity<StudentSpecialty>(entity =>
         {
             entity.HasKey(ss => new { ss.StudentId, ss.SpecialtyId });
@@ -157,7 +153,38 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
         });
 
         // ==========================================
-        // Mini-Sprint 2 Workflow Entity Configurations
+        // Many-to-Many Configuration: Professor Relations
+        // ==========================================
+
+        builder.Entity<ProfessorResearchInterest>(entity =>
+        {
+            entity.HasKey(pri => new { pri.ProfessorId, pri.ResearchInterestId });
+
+            entity.HasOne(pri => pri.Professor)
+                  .WithMany(p => p.ProfessorResearchInterests)
+                  .HasForeignKey(pri => pri.ProfessorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(pri => pri.ResearchInterest)
+                  .WithMany(r => r.ProfessorResearchInterests)
+                  .HasForeignKey(pri => pri.ResearchInterestId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // 1-to-Many Configuration: Curriculum
+        // ==========================================
+
+        builder.Entity<Specialty>(entity =>
+        {
+            entity.HasOne(s => s.Major)
+                  .WithMany(m => m.Specialties)
+                  .HasForeignKey(s => s.MajorId)
+                  .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ==========================================
+        // Core Workflow Funnel Configurations
         // ==========================================
 
         // Provider Application Mappings
@@ -166,12 +193,12 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             entity.HasKey(pa => pa.Id);
 
             entity.HasOne(pa => pa.Provider)
-                  .WithMany()
+                  .WithMany(p => p.ProviderApplications)
                   .HasForeignKey(pa => pa.ProviderId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(pa => pa.ReviewedBy)
-                  .WithMany()
+                  .WithMany(r => r.ReviewedApplications)
                   .HasForeignKey(pa => pa.ReviewedById)
                   .OnDelete(DeleteBehavior.SetNull);
         });
@@ -182,45 +209,24 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
             entity.HasKey(pt => pt.Id);
 
             entity.HasOne(pt => pt.Provider)
-                  .WithMany()
+                  .WithMany(p => p.ProjectTemplates)
                   .HasForeignKey(pt => pt.ProviderId)
                   .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(pt => pt.ApprovedBy)
-                  .WithMany()
-                  .HasForeignKey(pt => pt.ApprovedById)
-                  .OnDelete(DeleteBehavior.SetNull);
         });
 
-        // Project Template Skills Join Table Mappings
+        // Project Template Skills Join Mappings
         builder.Entity<ProjectTemplateSkill>(entity =>
         {
             entity.HasKey(pts => new { pts.ProjectTemplateId, pts.SkillId });
 
             entity.HasOne(pts => pts.ProjectTemplate)
-                  .WithMany(t => t.TemplateSkills)
+                  .WithMany(t => t.ProjectTemplateSkills)
                   .HasForeignKey(pts => pts.ProjectTemplateId)
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(pts => pts.Skill)
                   .WithMany()
                   .HasForeignKey(pts => pts.SkillId)
-                  .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        // Tech Support Account Mappings
-        builder.Entity<TechSupportAccount>(entity =>
-        {
-            entity.HasKey(ts => ts.Id);
-
-            entity.HasOne(ts => ts.Provider)
-                  .WithMany()
-                  .HasForeignKey(ts => ts.ProviderId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne<ApplicationUser>()
-                  .WithOne()
-                  .HasForeignKey<TechSupportAccount>(ts => ts.IdentityUserId)
                   .OnDelete(DeleteBehavior.Cascade);
         });
     }

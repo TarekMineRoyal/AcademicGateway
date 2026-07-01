@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using Domain.Students;
 
-namespace Domain.Lookups;
+namespace Domain.Skills;
 
 /// <summary>
 /// Represents a technical or professional skill within the gateway (e.g., C#, Project Management, Data Analysis).

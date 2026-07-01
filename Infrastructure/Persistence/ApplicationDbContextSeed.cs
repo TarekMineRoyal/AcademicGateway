@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.Lookups;
+using Domain.Skills;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;

@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
-using Domain.Lookups;
+using Domain.Curriculum;
 using FluentValidation.TestHelper;
 using MockQueryable.EntityFrameworkCore; // Added this!
 using MockQueryable.Moq;

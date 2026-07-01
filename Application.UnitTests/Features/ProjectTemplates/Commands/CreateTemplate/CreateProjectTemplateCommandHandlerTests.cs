@@ -1,9 +1,9 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateTemplate;
-using Domain.Lookups;
 using Domain.ProjectTemplates;
 using Domain.ProjectTemplates.Enums;
 using Domain.Providers;
+using Domain.Skills;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

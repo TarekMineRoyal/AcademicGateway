@@ -15,9 +15,9 @@ public class ProviderApplication
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Gets the unique string identifier of the associated provider (maps to the ApplicationUser ID).
+    /// Gets the unique identifier of the associated provider (maps to the ApplicationUser ID).
     /// </summary>
-    public string ProviderId { get; private set; } = string.Empty;
+    public Guid ProviderId { get; private set; }
 
     /// <summary>
     /// Gets the detailed metadata and operational description of the provider's firm or organization.
@@ -75,12 +75,13 @@ public class ProviderApplication
     /// <param name="providerId">The identity tracker code mapping back to the account profile.</param>
     /// <param name="companyDetails">The introductory overview specifications of the company profile.</param>
     /// <param name="verificationDocumentsUrl">The reference URI locating corporate verification paperwork.</param>
-    /// <exception cref="ArgumentException">Thrown when any required text payload parameter is empty or null.</exception>
-    public ProviderApplication(string providerId, string companyDetails, string verificationDocumentsUrl)
+    /// <param name="createdAt">The deterministic timestamp when this application transaction is initiated.</param>
+    /// <exception cref="ArgumentException">Thrown when any required parameter constraints fail validation boundaries.</exception>
+    public ProviderApplication(Guid providerId, string companyDetails, string verificationDocumentsUrl, DateTime createdAt)
     {
-        if (string.IsNullOrWhiteSpace(providerId))
+        if (providerId == Guid.Empty)
         {
-            throw new ArgumentException("Provider ID cannot be empty or whitespace.", nameof(providerId));
+            throw new ArgumentException("Provider ID cannot be an empty Guid.", nameof(providerId));
         }
 
         if (string.IsNullOrWhiteSpace(companyDetails))
@@ -94,11 +95,13 @@ public class ProviderApplication
         }
 
         Id = Guid.NewGuid();
-        ProviderId = providerId.Trim();
+        ProviderId = providerId;
         CompanyDetails = companyDetails.Trim();
         VerificationDocumentsUrl = verificationDocumentsUrl.Trim();
         Status = ProviderApplicationStatus.Draft;
-        CreatedAt = DateTime.UtcNow;
+
+        // Clock state is passed explicitly rather than calling DateTime.UtcNow internally
+        CreatedAt = createdAt;
     }
 
     /// <summary>
@@ -119,9 +122,10 @@ public class ProviderApplication
     /// Commits an approval transition, clearing legacy rejections and storing structural audit references.
     /// </summary>
     /// <param name="reviewerId">The identifier code tracking the certifying reviewer.</param>
+    /// <param name="approvedAt">The deterministic timestamp when the approval is signed off.</param>
     /// <exception cref="ArgumentException">Thrown when reviewer key validation boundaries fail.</exception>
     /// <exception cref="InvalidOperationException">Thrown if execution is attempted outside the PendingReview state context.</exception>
-    public void Approve(Guid reviewerId)
+    public void Approve(Guid reviewerId, DateTime approvedAt)
     {
         if (Status != ProviderApplicationStatus.PendingReview)
         {
@@ -133,20 +137,28 @@ public class ProviderApplication
             throw new ArgumentException("A valid reviewer ID must be provided to approve an application.", nameof(reviewerId));
         }
 
+        if (approvedAt < CreatedAt)
+        {
+            throw new ArgumentException("Approval date cannot be older than the application creation date.", nameof(approvedAt));
+        }
+
         Status = ProviderApplicationStatus.Approved;
         ReviewedById = reviewerId;
-        ReviewedAt = DateTime.UtcNow;
         RejectionReason = null;
+
+        // Provided explicitly via method argument
+        ReviewedAt = approvedAt;
     }
 
     /// <summary>
-    /// Commits a rejection transition, requiring a explanatory comment for the corporate contact.
+    /// Commits a rejection transition, requiring an explanatory comment for the corporate contact.
     /// </summary>
     /// <param name="reviewerId">The identifier code tracking the evaluating reviewer.</param>
     /// <param name="reason">The explanation framing why the verification paperwork was deemed insufficient.</param>
-    /// <exception cref="ArgumentException">Withdrawn if reason text parameters or reviewer identifiers fail criteria checks.</exception>
+    /// <param name="rejectedAt">The deterministic timestamp when the rejection is signed off.</param>
+    /// <exception cref="ArgumentException">Thrown if reason text parameters or reviewer identifiers fail criteria checks.</exception>
     /// <exception cref="InvalidOperationException">Thrown if execution is attempted outside the PendingReview state context.</exception>
-    public void Reject(Guid reviewerId, string reason)
+    public void Reject(Guid reviewerId, string reason, DateTime rejectedAt)
     {
         if (Status != ProviderApplicationStatus.PendingReview)
         {
@@ -163,9 +175,16 @@ public class ProviderApplication
             throw new ArgumentException("A rejection reason must be provided.", nameof(reason));
         }
 
+        if (rejectedAt < CreatedAt)
+        {
+            throw new ArgumentException("Rejection date cannot be older than the application creation date.", nameof(rejectedAt));
+        }
+
         Status = ProviderApplicationStatus.Rejected;
         ReviewedById = reviewerId;
-        ReviewedAt = DateTime.UtcNow;
         RejectionReason = reason.Trim();
+
+        // Provided explicitly via method argument
+        ReviewedAt = rejectedAt;
     }
 }

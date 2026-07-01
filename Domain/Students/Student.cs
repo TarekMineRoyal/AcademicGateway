@@ -18,7 +18,7 @@ public class Student
     /// Gets the unique identifier for the Student profile. 
     /// Maps 1:1 to the underlying Identity ApplicationUser identifier.
     /// </summary>
-    public string Id { get; private set; } = string.Empty;
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// Gets the targeted calendar year of graduation, if declared.
@@ -53,14 +53,14 @@ public class Student
     /// <param name="id">The unique Identity key linking back to the account credentials.</param>
     /// <param name="graduationYear">The expected calendar year of graduation.</param>
     /// <exception cref="ArgumentException">Thrown when the identity tracker reference is invalid.</exception>
-    public Student(string id, int? graduationYear = null)
+    public Student(Guid id, int? graduationYear = null)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID cannot be empty or whitespace.", nameof(id));
+            throw new ArgumentException("Identity User ID cannot be empty.", nameof(id));
         }
 
-        Id = id.Trim();
+        Id = id;
         UpdateGraduationYear(graduationYear);
     }
 
@@ -95,7 +95,7 @@ public class Student
             return; // Association already exists
         }
 
-        _studentMajors.Add(new StudentMajor(Guid.Parse(Id), majorId));
+        _studentMajors.Add(new StudentMajor(Id, majorId));
     }
 
     /// <summary>

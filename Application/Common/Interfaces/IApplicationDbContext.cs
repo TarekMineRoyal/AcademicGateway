@@ -1,7 +1,8 @@
-﻿using Domain.Lookups;
+﻿using Domain.Curriculum;
 using Domain.Professors;
 using Domain.ProjectTemplates;
 using Domain.Providers;
+using Domain.Skills;
 using Domain.Students;
 using Domain.SystemStaff;
 using Microsoft.EntityFrameworkCore;

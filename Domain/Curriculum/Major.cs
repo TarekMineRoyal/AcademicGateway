@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Domain.Students;
 
-namespace Domain.Lookups;
+namespace Domain.Curriculum;
 
 /// <summary>
 /// Represents an academic major within the gateway (e.g., Computer Science, Mechanical Engineering).

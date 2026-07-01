@@ -16,7 +16,7 @@ public class Professor
     /// Gets the unique identifier for the Professor profile. 
     /// Maps 1:1 to the underlying Identity ApplicationUser identifier.
     /// </summary>
-    public string Id { get; private set; } = string.Empty;
+    public Guid Id { get; private set; }
 
     /// <summary>
     /// Gets the formal academic title or rank (e.g., Assistant Professor, Associate Professor).
@@ -78,14 +78,14 @@ public class Professor
     /// <param name="department">The generalized institutional department assignment.</param>
     /// <param name="academicRank">The formal academic rank title.</param>
     /// <exception cref="ArgumentException">Thrown when essential tracking values are missing.</exception>
-    public Professor(string id, string department, string academicRank)
+    public Professor(Guid id, string department, string academicRank)
     {
-        if (string.IsNullOrWhiteSpace(id))
+        if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID cannot be empty or whitespace.", nameof(id));
+            throw new ArgumentException("Identity User ID cannot be empty.", nameof(id));
         }
 
-        Id = id.Trim();
+        Id = id;
         UpdateInstitutionalDetails(department, academicRank);
 
         MaxProjectCapacity = 3;

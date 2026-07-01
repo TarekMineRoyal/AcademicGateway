@@ -1,5 +1,4 @@
 ﻿using System;
-using Domain.Lookups;
 
 namespace Domain.Professors;
 
@@ -11,7 +10,7 @@ public class ProfessorResearchInterest
     /// <summary>
     /// Gets the foreign key identifier for the associated professor profile.
     /// </summary>
-    public string ProfessorId { get; private set; } = string.Empty;
+    public Guid ProfessorId { get; private set; }
 
     /// <summary>
     /// Gets the navigation property for the associated professor profile.
@@ -38,14 +37,14 @@ public class ProfessorResearchInterest
     /// <summary>
     /// Initializes a new instance of the many-to-many join tracking record.
     /// </summary>
-    /// <param name="professorId">The string user identifier for the target faculty profile.</param>
+    /// <param name="professorId">The unique user identifier for the target faculty profile.</param>
     /// <param name="researchInterestId">The unique lookup key for the research domain.</param>
     /// <exception cref="ArgumentException">Thrown if input validation constraints fail.</exception>
-    public ProfessorResearchInterest(string professorId, Guid researchInterestId)
+    public ProfessorResearchInterest(Guid professorId, Guid researchInterestId)
     {
-        if (string.IsNullOrWhiteSpace(professorId))
+        if (professorId == Guid.Empty)
         {
-            throw new ArgumentException("Professor User ID cannot be empty or whitespace.", nameof(professorId));
+            throw new ArgumentException("Professor User ID cannot be empty.", nameof(professorId));
         }
 
         if (researchInterestId == Guid.Empty)

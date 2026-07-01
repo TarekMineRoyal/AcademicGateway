@@ -1,5 +1,5 @@
 ﻿using System;
-using Domain.Lookups;
+using Domain.Curriculum;
 
 namespace Domain.Students;
 

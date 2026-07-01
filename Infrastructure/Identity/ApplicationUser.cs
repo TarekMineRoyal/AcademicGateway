@@ -2,7 +2,7 @@
 
 namespace AcademicGateway.Infrastructure.Identity;
 
-public class ApplicationUser : IdentityUser
+public class ApplicationUser : IdentityUser<Guid>
 {
     // You can add custom authentication-related properties here later if needed
     // (e.g., RefreshToken, LastLoginDate).
