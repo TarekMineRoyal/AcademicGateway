@@ -12,7 +12,9 @@ namespace AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplicat
 /// Orchestrates the state transition workflow of an external provider onboarding application.
 /// Processes administrative decisions and commits domain events atomically via aggregate root behavior.
 /// </summary>
-public class ReviewProviderApplicationCommandHandler(IApplicationDbContext context)
+public class ReviewProviderApplicationCommandHandler(
+    IApplicationDbContext context,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<ReviewProviderApplicationCommand>
 {
     /// <summary>
@@ -44,14 +46,15 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
         }
 
         // 3. Execute domain state updates using pure behavioral methods
+        // Clock timestamps are provided by the injected time provider abstraction to maintain clean, deterministic validation bounds.
         if (request.IsApproved)
         {
             // This transition automatically appends a ProviderApplicationApprovedEvent onto the aggregate outbox
-            application.Approve(reviewer.Id, DateTime.UtcNow);
+            application.Approve(reviewer.Id, dateTimeProvider.UtcNow);
         }
         else
         {
-            application.Reject(reviewer.Id, request.RejectionReason ?? "No reason provided.", DateTime.UtcNow);
+            application.Reject(reviewer.Id, request.RejectionReason ?? "No reason provided.", dateTimeProvider.UtcNow);
         }
 
         // 4. Commit all updates. The overridden SaveChangesAsync in ApplicationDbContext intercepts 

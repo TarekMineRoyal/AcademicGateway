@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Domain.Common;
 using Domain.ProjectTemplates;
+using Domain.Providers.Events; // Added namespace mapping for Phase 1 events
 using Domain.Providers.Exceptions;
 
 namespace Domain.Providers;
@@ -112,5 +113,8 @@ public class Provider : BaseEntity
     public void RevokeVerification()
     {
         IsVerified = false;
+
+        // Append critical security boundary event to cascade access lockouts across adjacent sub-domains
+        AddDomainEvent(new ProviderVerificationRevokedEvent(Id));
     }
 }

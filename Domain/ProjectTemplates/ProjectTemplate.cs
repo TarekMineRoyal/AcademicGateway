@@ -4,6 +4,7 @@ using System.Linq;
 using Domain.Common;
 using Domain.ProjectTemplates.Enums;
 using Domain.ProjectTemplates.Exceptions;
+using Domain.ProjectTemplates.Events;
 using Domain.Providers;
 
 namespace Domain.ProjectTemplates;
@@ -82,6 +83,9 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.Draft;
 
         UpdateDetails(title, description);
+
+        // Append creation domain event message natively onto the tracking queue
+        AddDomainEvent(new ProjectTemplateCreatedEvent(Id, ProviderId, Title));
     }
 
     /// <summary>
@@ -125,6 +129,9 @@ public class ProjectTemplate : BaseEntity
         }
 
         Status = ProjectTemplateStatus.PendingReview;
+
+        // Append workflow submission event to safely alert faculty reviewer pools
+        AddDomainEvent(new ProjectTemplateSubmittedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -140,6 +147,9 @@ public class ProjectTemplate : BaseEntity
 
         Status = ProjectTemplateStatus.Approved;
         ReviewerFeedback = null;
+
+        // Append terminal approval event to sync with student matching matrices and external contexts
+        AddDomainEvent(new ProjectTemplateApprovedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -162,6 +172,9 @@ public class ProjectTemplate : BaseEntity
 
         Status = ProjectTemplateStatus.ChangesRequested;
         ReviewerFeedback = feedback.Trim();
+
+        // Append state modification request event containing the precise auditor feedback payload
+        AddDomainEvent(new ProjectTemplateChangesRequestedEvent(Id, ProviderId, ReviewerFeedback));
     }
 
     /// <summary>
@@ -184,6 +197,9 @@ public class ProjectTemplate : BaseEntity
         // Shift next-action dependency over to the provider
         Status = ProjectTemplateStatus.PendingProviderAcceptance;
         ReviewerFeedback = "Reviewer has modified details. Awaiting provider confirmation.";
+
+        // Append hand-off event to notify the corporate provider that modifications require their confirmation
+        AddDomainEvent(new ProjectTemplateReviewerChangesProposedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -200,6 +216,9 @@ public class ProjectTemplate : BaseEntity
 
         Status = ProjectTemplateStatus.Approved;
         ReviewerFeedback = null;
+
+        // Append terminal approval event since provider validation elevates this blueprint directly to live service
+        AddDomainEvent(new ProjectTemplateApprovedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -216,6 +235,9 @@ public class ProjectTemplate : BaseEntity
 
         Status = ProjectTemplateStatus.Draft;
         ReviewerFeedback = "Provider declined reviewer alterations. Reverted back to draft layout.";
+
+        // Append reversion event to track collaborative iteration conflicts or alert administrative staff
+        AddDomainEvent(new ProjectTemplateReviewerChangesRejectedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -238,13 +260,16 @@ public class ProjectTemplate : BaseEntity
 
         Status = ProjectTemplateStatus.Rejected;
         ReviewerFeedback = reason.Trim();
+
+        // Append terminal rejection event documenting strict administrative refusal
+        AddDomainEvent(new ProjectTemplateRejectedPermanentlyEvent(Id, ProviderId, ReviewerFeedback));
     }
 
     /// <summary>
     /// Maps a required tracking skill competency to this template matrix.
     /// </summary>
     /// <param name="skillId">The target skill unique identifier.</param>
-    /// <exception cref="InvalidTemplateDetailsException">Thrown if the provided identifier is empty.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if the provided identifier is empty or collection limit invariants are broken.</exception>
     public void AddSkill(Guid skillId)
     {
         if (skillId == Guid.Empty)
@@ -255,6 +280,12 @@ public class ProjectTemplate : BaseEntity
         if (_projectTemplateSkills.Any(pts => pts.SkillId == skillId))
         {
             return; // Skill mapping already established
+        }
+
+        // Deep Domain Guard: Ensures aggregate root protects its layout boundaries independently of application validators
+        if (_projectTemplateSkills.Count >= 10)
+        {
+            throw new InvalidTemplateDetailsException("A single project template cannot require more than 10 technical skills.");
         }
 
         _projectTemplateSkills.Add(new ProjectTemplateSkill(Id, skillId));

@@ -15,7 +15,9 @@ namespace AcademicGateway.Application.Features.Providers.Commands.SubmitApplicat
 /// Orchestrates the business command pipeline for processing, validating, and transitioning provider onboarding application workflows.
 /// Enforces a strict 1-to-1 aggregate root allocation boundary for processing enrollment validation streams.
 /// </summary>
-public class SubmitProviderApplicationCommandHandler(IApplicationDbContext context)
+public class SubmitProviderApplicationCommandHandler(
+    IApplicationDbContext context,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<SubmitProviderApplicationCommand, Guid>
 {
     /// <summary>
@@ -67,12 +69,12 @@ public class SubmitProviderApplicationCommandHandler(IApplicationDbContext conte
         }
 
         // 3. Process a brand-new application sequence if no prior record exists
-        // Clock timestamp is passed explicitly per domain deterministic guidelines
+        // Clock timestamp is passed explicitly per domain deterministic guidelines via the injected time provider abstraction
         var newApplication = new ProviderApplication(
             request.ProviderId,
             request.CompanyDetails,
             request.VerificationDocumentsUrl,
-            DateTime.UtcNow);
+            dateTimeProvider.UtcNow);
 
         // Advance state machine out of internal draft status straight into the institutional pool
         newApplication.SubmitForReview();

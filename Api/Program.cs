@@ -3,7 +3,7 @@ using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
-using Application.Features.Students.Commands.RegisterStudent;
+using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -58,6 +58,8 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
 // This registers our Identity wrapper
 builder.Services.AddTransient<IIdentityService, IdentityService>();
+// Centralizes clock initialization workflows into a single manageable provider engine
+builder.Services.AddSingleton<IDateTimeProvider, AcademicGateway.Infrastructure.Services.DateTimeProvider>();
 
 // 6. Register MediatR & FluentValidation
 // Scans the assembly for all AbstractValidators

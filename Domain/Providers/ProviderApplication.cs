@@ -103,6 +103,9 @@ public class ProviderApplication : BaseEntity
         VerificationDocumentsUrl = verificationDocumentsUrl.Trim();
         Status = ProviderApplicationStatus.Draft;
         CreatedAt = createdAt;
+
+        // Append initial creation event to activate audit trails and analytical setups
+        AddDomainEvent(new ProviderApplicationCreatedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -117,6 +120,9 @@ public class ProviderApplication : BaseEntity
         }
 
         Status = ProviderApplicationStatus.PendingReview;
+
+        // Append submission event to cleanly populate administrative audit queues
+        AddDomainEvent(new ProviderApplicationSubmittedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -151,6 +157,9 @@ public class ProviderApplication : BaseEntity
         ReviewedById = null;
         ReviewedAt = null;
         RejectionReason = null;
+
+        // Append iterative resubmission event to allow tracking queue processing intervals
+        AddDomainEvent(new ProviderApplicationResubmittedEvent(Id, ProviderId));
     }
 
     /// <summary>
@@ -183,6 +192,7 @@ public class ProviderApplication : BaseEntity
         RejectionReason = null;
         ReviewedAt = approvedAt;
 
+        // Keeps existing original cross-aggregate bridge event to drive provider auto-verification
         AddDomainEvent(new ProviderApplicationApprovedEvent(ProviderId));
     }
 
@@ -220,5 +230,8 @@ public class ProviderApplication : BaseEntity
         ReviewedById = reviewerId;
         RejectionReason = reason.Trim();
         ReviewedAt = rejectedAt;
+
+        // Append rejection event to seamlessly trigger background workspace notification protocols
+        AddDomainEvent(new ProviderApplicationRejectedEvent(Id, ProviderId, ReviewedById.Value, RejectionReason));
     }
 }

@@ -1,6 +1,6 @@
-﻿using AcademicGateway.Application.Features.Users.Queries.GetProfessorProfile;
-using AcademicGateway.Application.Features.Users.Queries.GetProviderProfile;
-using AcademicGateway.Application.Features.Users.Queries.GetStudentProfile;
+﻿using AcademicGateway.Application.Features.Professors.Queries.GetProfessorProfile;
+using AcademicGateway.Application.Features.Providers.Queries.GetProviderProfile;
+using AcademicGateway.Application.Features.Students.Queries.GetStudentProfile;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

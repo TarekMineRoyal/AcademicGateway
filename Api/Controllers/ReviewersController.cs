@@ -1,4 +1,4 @@
-﻿using AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplication; // FIX: Pointed to Reviewers instead of Providers
+﻿using AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplication;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewTemplate;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;

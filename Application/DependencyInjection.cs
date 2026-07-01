@@ -1,4 +1,6 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Application.Common.Behaviors;
+using AcademicGateway.Application.Common.Interfaces;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System;
 using System.Linq;
@@ -20,6 +22,14 @@ public static class DependencyInjection
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
         var assembly = Assembly.GetExecutingAssembly();
+
+        // Register MediatR Handlers
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(assembly);
+
+            // Register the cross-cutting Validation Behavior
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+        });
 
         // 1. Locate all non-abstract, concrete classes implementing our custom IDomainEventHandler<> contract
         var handlerRegistrations = assembly.GetTypes()
