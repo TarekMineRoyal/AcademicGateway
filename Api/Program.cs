@@ -1,3 +1,4 @@
+using AcademicGateway.Application;
 using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
@@ -71,6 +72,7 @@ builder.Services.AddMediatR(cfg => {
 
 
 builder.Services.AddControllers();
+builder.Services.AddApplicationServices();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

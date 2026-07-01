@@ -1,5 +1,7 @@
 ﻿using System;
+using Domain.Common;
 using Domain.Providers.Enums;
+using Domain.Providers.Events;
 using Domain.SystemStaff;
 
 namespace Domain.Providers;
@@ -7,7 +9,7 @@ namespace Domain.Providers;
 /// <summary>
 /// Represents the stateful onboarding application workflow for an external provider seeking verification within the gateway.
 /// </summary>
-public class ProviderApplication
+public class ProviderApplication : BaseEntity
 {
     /// <summary>
     /// Gets the unique identifier for the provider application.
@@ -99,8 +101,6 @@ public class ProviderApplication
         CompanyDetails = companyDetails.Trim();
         VerificationDocumentsUrl = verificationDocumentsUrl.Trim();
         Status = ProviderApplicationStatus.Draft;
-
-        // Clock state is passed explicitly rather than calling DateTime.UtcNow internally
         CreatedAt = createdAt;
     }
 
@@ -143,21 +143,18 @@ public class ProviderApplication
             throw new ArgumentException("Verification documents URL cannot be empty or whitespace.", nameof(newVerificationDocumentsUrl));
         }
 
-        // Overwrite the existing record details with the new data values
         CompanyDetails = newCompanyDetails.Trim();
         VerificationDocumentsUrl = newVerificationDocumentsUrl.Trim();
-
-        // Reset the state machine back to pending review
         Status = ProviderApplicationStatus.PendingReview;
 
-        // Clear out the previous review cycle data to present a clean slate for the auditing reviewer
         ReviewedById = null;
         ReviewedAt = null;
         RejectionReason = null;
     }
 
     /// <summary>
-    /// Commits an approval transition, clearing legacy rejections and storing structural audit references.
+    /// Commits an approval transition, clearing legacy rejections, storing structural audit references,
+    /// and raising a domain event to handle multi-aggregate side effects cleanly.
     /// </summary>
     /// <param name="reviewerId">The identifier code tracking the certifying reviewer.</param>
     /// <param name="approvedAt">The deterministic timestamp when the approval is signed off.</param>
@@ -183,9 +180,10 @@ public class ProviderApplication
         Status = ProviderApplicationStatus.Approved;
         ReviewedById = reviewerId;
         RejectionReason = null;
-
-        // Provided explicitly via method argument
         ReviewedAt = approvedAt;
+
+        // Raise the pure domain event natively to propagate side effects without tight coupling
+        AddDomainEvent(new ProviderApplicationApprovedEvent(ProviderId));
     }
 
     /// <summary>
@@ -221,8 +219,6 @@ public class ProviderApplication
         Status = ProviderApplicationStatus.Rejected;
         ReviewedById = reviewerId;
         RejectionReason = reason.Trim();
-
-        // Provided explicitly via method argument
         ReviewedAt = rejectedAt;
     }
 }
