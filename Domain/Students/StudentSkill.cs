@@ -1,5 +1,6 @@
 ﻿using System;
 using Domain.Skills;
+using Domain.Students.Exceptions;
 
 namespace Domain.Students;
 
@@ -40,11 +41,18 @@ public class StudentSkill
     /// </summary>
     /// <param name="studentId">The unique Identity string identifier of the target student profile.</param>
     /// <param name="skillId">The unique identifier of the target skill.</param>
-    /// <exception cref="ArgumentException">Thrown when studentId is null/whitespace or skillId is an empty Guid.</exception>
+    /// <exception cref="InvalidStudentDetailsException">Thrown when studentId or skillId is an empty Guid.</exception>
     public StudentSkill(Guid studentId, Guid skillId)
     {
-        if (studentId == Guid.Empty) throw new ArgumentException("Student ID cannot be empty.", nameof(studentId));
-        if (skillId == Guid.Empty) throw new ArgumentException("Skill ID cannot be empty.", nameof(skillId));
+        if (studentId == Guid.Empty)
+        {
+            throw new InvalidStudentDetailsException("Student tracking identity parameters cannot be empty mapping references.");
+        }
+
+        if (skillId == Guid.Empty)
+        {
+            throw new InvalidStudentDetailsException("Competency skill tracking identity parameters cannot be empty mapping references.");
+        }
 
         StudentId = studentId;
         SkillId = skillId;

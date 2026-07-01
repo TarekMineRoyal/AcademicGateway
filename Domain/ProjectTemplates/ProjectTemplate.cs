@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Domain.Common;
 using Domain.ProjectTemplates.Enums;
+using Domain.ProjectTemplates.Exceptions;
 using Domain.Providers;
 
 namespace Domain.ProjectTemplates;
@@ -38,7 +39,7 @@ public class ProjectTemplate : BaseEntity
     /// <summary>
     /// Gets the unique identifier of the creating provider account.
     /// </summary>
-    public Guid ProviderId { get; private set; } // Updated to Guid
+    public Guid ProviderId { get; private set; }
 
     /// <summary>
     /// Gets the operational feedback, change requests, or rejection reasons logged by the evaluating reviewer.
@@ -68,12 +69,12 @@ public class ProjectTemplate : BaseEntity
     /// <param name="title">The structural title of the project blueprint.</param>
     /// <param name="description">The core overview requirements text.</param>
     /// <param name="providerId">The identity tracker code mapping back to the owner profile.</param>
-    /// <exception cref="ArgumentException">Thrown when any text parameter validation checks fail.</exception>
-    public ProjectTemplate(string title, string description, Guid providerId) // Updated to Guid
+    /// <exception cref="InvalidTemplateDetailsException">Thrown when fundamental text parameters fail validation checks.</exception>
+    public ProjectTemplate(string title, string description, Guid providerId)
     {
         if (providerId == Guid.Empty)
         {
-            throw new ArgumentException("Provider ID cannot be an empty Guid.", nameof(providerId));
+            throw new InvalidTemplateDetailsException("Provider ID cannot be an empty Guid.");
         }
 
         Id = Guid.NewGuid();
@@ -89,23 +90,23 @@ public class ProjectTemplate : BaseEntity
     /// </summary>
     /// <param name="newTitle">The updated headline title.</param>
     /// <param name="newDescription">The updated execution details description.</param>
-    /// <exception cref="ArgumentException">Thrown if any parameter text criteria checks fail.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if edits are performed on an immutable state.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if any parameter text criteria checks fail.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if edits are performed on an immutable state.</exception>
     public void UpdateDetails(string newTitle, string newDescription)
     {
         if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
         {
-            throw new InvalidOperationException($"Project templates cannot be modified while in the {Status} state.");
+            throw new InvalidTemplateStatusException(Status, nameof(UpdateDetails));
         }
 
         if (string.IsNullOrWhiteSpace(newTitle))
         {
-            throw new ArgumentException("Project template title cannot be empty or whitespace.", nameof(newTitle));
+            throw new InvalidTemplateDetailsException("Project template title cannot be empty or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(newDescription))
         {
-            throw new ArgumentException("Project template description cannot be empty or whitespace.", nameof(newDescription));
+            throw new InvalidTemplateDetailsException("Project template description cannot be empty or whitespace.");
         }
 
         Title = newTitle.Trim();
@@ -115,12 +116,12 @@ public class ProjectTemplate : BaseEntity
     /// <summary>
     /// Submits the drafted or revised project blueprint into the faculty review pool.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside the Draft or ChangesRequested state contexts.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside the Draft or ChangesRequested state contexts.</exception>
     public void SubmitForReview()
     {
         if (Status != ProjectTemplateStatus.Draft && Status != ProjectTemplateStatus.ChangesRequested)
         {
-            throw new InvalidOperationException("Only templates in Draft or ChangesRequested status can be submitted for review.");
+            throw new InvalidTemplateStatusException(Status, nameof(SubmitForReview));
         }
 
         Status = ProjectTemplateStatus.PendingReview;
@@ -129,12 +130,12 @@ public class ProjectTemplate : BaseEntity
     /// <summary>
     /// Direct Action: Approves the blueprint as-is, closing feedback loops and making it visible to the student platform.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside an active review evaluation context.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside an active review evaluation context.</exception>
     public void Approve()
     {
         if (Status != ProjectTemplateStatus.PendingReview)
         {
-            throw new InvalidOperationException("Only templates currently pending review can be approved directly.");
+            throw new InvalidTemplateStatusException(Status, nameof(Approve));
         }
 
         Status = ProjectTemplateStatus.Approved;
@@ -145,18 +146,18 @@ public class ProjectTemplate : BaseEntity
     /// Collaborative Iteration Loop: Sends the template back to the provider requesting modifications.
     /// </summary>
     /// <param name="feedback">Specific instructions detailing the required corrections.</param>
-    /// <exception cref="ArgumentException">Thrown if feedback commentary text is invalid.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingReview context.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if feedback commentary text is invalid.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside a PendingReview context.</exception>
     public void RequestChanges(string feedback)
     {
         if (Status != ProjectTemplateStatus.PendingReview)
         {
-            throw new InvalidOperationException("Changes can only be requested on templates currently pending review.");
+            throw new InvalidTemplateStatusException(Status, nameof(RequestChanges));
         }
 
         if (string.IsNullOrWhiteSpace(feedback))
         {
-            throw new ArgumentException("Feedback instructions must be provided to guide the provider's corrections.", nameof(feedback));
+            throw new InvalidTemplateDetailsException("Feedback instructions must be provided to guide the provider's corrections.");
         }
 
         Status = ProjectTemplateStatus.ChangesRequested;
@@ -169,15 +170,15 @@ public class ProjectTemplate : BaseEntity
     /// </summary>
     /// <param name="adjustedTitle">The corrected or optimized title text.</param>
     /// <param name="adjustedDescription">The corrected or optimized description content.</param>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingReview context.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside a PendingReview context.</exception>
     public void ProposeReviewerChanges(string adjustedTitle, string adjustedDescription)
     {
         if (Status != ProjectTemplateStatus.PendingReview)
         {
-            throw new InvalidOperationException("Reviewer updates can only be proposed on templates currently pending review.");
+            throw new InvalidTemplateStatusException(Status, nameof(ProposeReviewerChanges));
         }
 
-        // Apply edits directly to the entity state
+        // Apply edits directly to the entity state using internal methods
         UpdateDetails(adjustedTitle, adjustedDescription);
 
         // Shift next-action dependency over to the provider
@@ -186,15 +187,15 @@ public class ProjectTemplate : BaseEntity
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop Sign-Off (Scenario 3): Executed by the Provider to accept the reviewer's 
+    /// Collaborative Iteration Loop Sign-Off: Executed by the Provider to accept the reviewer's 
     /// proposed alterations, instantly certifying the template into active service.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingProviderAcceptance context.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside a PendingProviderAcceptance context.</exception>
     public void ProviderAcceptProposedChanges()
     {
         if (Status != ProjectTemplateStatus.PendingProviderAcceptance)
         {
-            throw new InvalidOperationException("There are no proposed reviewer modifications to accept on this template.");
+            throw new InvalidTemplateStatusException(Status, nameof(ProviderAcceptProposedChanges));
         }
 
         Status = ProjectTemplateStatus.Approved;
@@ -202,15 +203,15 @@ public class ProjectTemplate : BaseEntity
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop Sign-Off (Scenario 3): Executed by the Provider to reject the reviewer's 
+    /// Collaborative Iteration Loop Sign-Off: Executed by the Provider to reject the reviewer's 
     /// proposed alterations, reverting the template back to a Draft layout for manual adjustments.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingProviderAcceptance context.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside a PendingProviderAcceptance context.</exception>
     public void ProviderRejectProposedChanges()
     {
         if (Status != ProjectTemplateStatus.PendingProviderAcceptance)
         {
-            throw new InvalidOperationException("There are no proposed reviewer modifications to reject.");
+            throw new InvalidTemplateStatusException(Status, nameof(ProviderRejectProposedChanges));
         }
 
         Status = ProjectTemplateStatus.Draft;
@@ -221,18 +222,18 @@ public class ProjectTemplate : BaseEntity
     /// Final Action: Permanently denies the submission, locking it from subsequent corrections or resubmissions.
     /// </summary>
     /// <param name="reason">The administrative reason justifying a hard denial.</param>
-    /// <exception cref="ArgumentException">Thrown if feedback commentary text is invalid.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside a PendingReview context.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if feedback commentary text is invalid.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if executed outside a PendingReview context.</exception>
     public void RejectPermanently(string reason)
     {
         if (Status != ProjectTemplateStatus.PendingReview)
         {
-            throw new InvalidOperationException("Only templates currently pending review can be permanently rejected.");
+            throw new InvalidTemplateStatusException(Status, nameof(RejectPermanently));
         }
 
         if (string.IsNullOrWhiteSpace(reason))
         {
-            throw new ArgumentException("A strict justification reason must be logged for permanent rejection.", nameof(reason));
+            throw new InvalidTemplateDetailsException("A strict justification reason must be logged for permanent rejection.");
         }
 
         Status = ProjectTemplateStatus.Rejected;
@@ -243,12 +244,12 @@ public class ProjectTemplate : BaseEntity
     /// Maps a required tracking skill competency to this template matrix.
     /// </summary>
     /// <param name="skillId">The target skill unique identifier.</param>
-    /// <exception cref="ArgumentException">Thrown if the provided identifier is empty.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if the provided identifier is empty.</exception>
     public void AddSkill(Guid skillId)
     {
         if (skillId == Guid.Empty)
         {
-            throw new ArgumentException("Skill ID cannot be an empty Guid.", nameof(skillId));
+            throw new InvalidTemplateDetailsException("Skill ID cannot be an empty Guid.");
         }
 
         if (_projectTemplateSkills.Any(pts => pts.SkillId == skillId))

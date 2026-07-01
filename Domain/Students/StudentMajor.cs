@@ -1,5 +1,6 @@
 ﻿using System;
 using Domain.Curriculum;
+using Domain.Students.Exceptions;
 
 namespace Domain.Students;
 
@@ -40,17 +41,17 @@ public class StudentMajor
     /// </summary>
     /// <param name="studentId">The unique identifier of the target student profile.</param>
     /// <param name="majorId">The unique identifier of the target academic major.</param>
-    /// <exception cref="ArgumentException">Thrown when either studentId or majorId is an empty Guid.</exception>
+    /// <exception cref="InvalidStudentDetailsException">Thrown when either studentId or majorId is an empty Guid.</exception>
     public StudentMajor(Guid studentId, Guid majorId)
     {
         if (studentId == Guid.Empty)
         {
-            throw new ArgumentException("Student ID cannot be empty.", nameof(studentId));
+            throw new InvalidStudentDetailsException("Student tracking identity parameters cannot be empty mapping references.");
         }
 
         if (majorId == Guid.Empty)
         {
-            throw new ArgumentException("Major ID cannot be empty.", nameof(majorId));
+            throw new InvalidStudentDetailsException("Academic major tracking identity parameters cannot be empty mapping references.");
         }
 
         StudentId = studentId;

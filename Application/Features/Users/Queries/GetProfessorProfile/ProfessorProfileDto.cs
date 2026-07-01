@@ -2,6 +2,6 @@
 
 public record ProfessorProfileDto
 {
-    public string UserId { get; init; } = string.Empty;
+    public Guid UserId { get; init; }
     public string AcademicDepartment { get; init; } = string.Empty;
 }

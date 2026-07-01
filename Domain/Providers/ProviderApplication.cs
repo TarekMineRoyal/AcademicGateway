@@ -2,6 +2,7 @@
 using Domain.Common;
 using Domain.Providers.Enums;
 using Domain.Providers.Events;
+using Domain.Providers.Exceptions;
 using Domain.SystemStaff;
 
 namespace Domain.Providers;
@@ -78,22 +79,22 @@ public class ProviderApplication : BaseEntity
     /// <param name="companyDetails">The introductory overview specifications of the company profile.</param>
     /// <param name="verificationDocumentsUrl">The reference URI locating corporate verification paperwork.</param>
     /// <param name="createdAt">The deterministic timestamp when this application transaction is initiated.</param>
-    /// <exception cref="ArgumentException">Thrown when any required parameter constraints fail validation boundaries.</exception>
+    /// <exception cref="InvalidApplicationDetailsException">Thrown when any required parameter constraints fail validation boundaries.</exception>
     public ProviderApplication(Guid providerId, string companyDetails, string verificationDocumentsUrl, DateTime createdAt)
     {
         if (providerId == Guid.Empty)
         {
-            throw new ArgumentException("Provider ID cannot be an empty Guid.", nameof(providerId));
+            throw new InvalidApplicationDetailsException("Provider ID cannot be an empty Guid.");
         }
 
         if (string.IsNullOrWhiteSpace(companyDetails))
         {
-            throw new ArgumentException("Company details cannot be empty or whitespace.", nameof(companyDetails));
+            throw new InvalidApplicationDetailsException("Company details cannot be empty or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(verificationDocumentsUrl))
         {
-            throw new ArgumentException("Verification documents URL cannot be empty or whitespace.", nameof(verificationDocumentsUrl));
+            throw new InvalidApplicationDetailsException("Verification documents URL cannot be empty or whitespace.");
         }
 
         Id = Guid.NewGuid();
@@ -107,12 +108,12 @@ public class ProviderApplication : BaseEntity
     /// <summary>
     /// Transitions the application into the evaluation pool.
     /// </summary>
-    /// <exception cref="InvalidOperationException">Thrown if execution is attempted outside the Draft state context.</exception>
+    /// <exception cref="InvalidApplicationStatusException">Thrown if execution is attempted outside the Draft state context.</exception>
     public void SubmitForReview()
     {
         if (Status != ProviderApplicationStatus.Draft)
         {
-            throw new InvalidOperationException("Only draft applications can be submitted for review.");
+            throw new InvalidApplicationStatusException(Status, nameof(SubmitForReview));
         }
 
         Status = ProviderApplicationStatus.PendingReview;
@@ -124,23 +125,23 @@ public class ProviderApplication : BaseEntity
     /// </summary>
     /// <param name="newCompanyDetails">The corrected descriptive overview of the company profile.</param>
     /// <param name="newVerificationDocumentsUrl">The new reference URI locating corporate verification paperwork.</param>
-    /// <exception cref="InvalidOperationException">Thrown if executed outside of a Rejected state context.</exception>
-    /// <exception cref="ArgumentException">Thrown if input validation constraints fail validation boundaries.</exception>
+    /// <exception cref="InvalidApplicationStatusException">Thrown if executed outside of a Rejected state context.</exception>
+    /// <exception cref="InvalidApplicationDetailsException">Thrown if input validation constraints fail validation boundaries.</exception>
     public void Resubmit(string newCompanyDetails, string newVerificationDocumentsUrl)
     {
         if (Status != ProviderApplicationStatus.Rejected)
         {
-            throw new InvalidOperationException("Only explicitly rejected applications can be resubmitted.");
+            throw new InvalidApplicationStatusException(Status, nameof(Resubmit));
         }
 
         if (string.IsNullOrWhiteSpace(newCompanyDetails))
         {
-            throw new ArgumentException("Company details cannot be empty or whitespace.", nameof(newCompanyDetails));
+            throw new InvalidApplicationDetailsException("Company details cannot be empty or whitespace.");
         }
 
         if (string.IsNullOrWhiteSpace(newVerificationDocumentsUrl))
         {
-            throw new ArgumentException("Verification documents URL cannot be empty or whitespace.", nameof(newVerificationDocumentsUrl));
+            throw new InvalidApplicationDetailsException("Verification documents URL cannot be empty or whitespace.");
         }
 
         CompanyDetails = newCompanyDetails.Trim();
@@ -158,23 +159,23 @@ public class ProviderApplication : BaseEntity
     /// </summary>
     /// <param name="reviewerId">The identifier code tracking the certifying reviewer.</param>
     /// <param name="approvedAt">The deterministic timestamp when the approval is signed off.</param>
-    /// <exception cref="ArgumentException">Thrown when reviewer key validation boundaries fail.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if execution is attempted outside the PendingReview state context.</exception>
+    /// <exception cref="InvalidApplicationDetailsException">Thrown when reviewer key validation boundaries fail.</exception>
+    /// <exception cref="InvalidApplicationStatusException">Thrown if execution is attempted outside the PendingReview state context.</exception>
     public void Approve(Guid reviewerId, DateTime approvedAt)
     {
         if (Status != ProviderApplicationStatus.PendingReview)
         {
-            throw new InvalidOperationException("Only pending applications can be approved.");
+            throw new InvalidApplicationStatusException(Status, nameof(Approve));
         }
 
         if (reviewerId == Guid.Empty)
         {
-            throw new ArgumentException("A valid reviewer ID must be provided to approve an application.", nameof(reviewerId));
+            throw new InvalidApplicationDetailsException("A valid reviewer ID must be provided to approve an application.");
         }
 
         if (approvedAt < CreatedAt)
         {
-            throw new ArgumentException("Approval date cannot be older than the application creation date.", nameof(approvedAt));
+            throw new InvalidApplicationDetailsException("Approval date cannot be older than the application creation date.");
         }
 
         Status = ProviderApplicationStatus.Approved;
@@ -182,7 +183,6 @@ public class ProviderApplication : BaseEntity
         RejectionReason = null;
         ReviewedAt = approvedAt;
 
-        // Raise the pure domain event natively to propagate side effects without tight coupling
         AddDomainEvent(new ProviderApplicationApprovedEvent(ProviderId));
     }
 
@@ -192,28 +192,28 @@ public class ProviderApplication : BaseEntity
     /// <param name="reviewerId">The identifier code tracking the evaluating reviewer.</param>
     /// <param name="reason">The explanation framing why the verification paperwork was deemed insufficient.</param>
     /// <param name="rejectedAt">The deterministic timestamp when the rejection is signed off.</param>
-    /// <exception cref="ArgumentException">Thrown if reason text parameters or reviewer identifiers fail criteria checks.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if execution is attempted outside the PendingReview state context.</exception>
+    /// <exception cref="InvalidApplicationDetailsException">Thrown if reason text parameters or reviewer identifiers fail criteria checks.</exception>
+    /// <exception cref="InvalidApplicationStatusException">Thrown if execution is attempted outside the PendingReview state context.</exception>
     public void Reject(Guid reviewerId, string reason, DateTime rejectedAt)
     {
         if (Status != ProviderApplicationStatus.PendingReview)
         {
-            throw new InvalidOperationException("Only pending applications can be rejected.");
+            throw new InvalidApplicationStatusException(Status, nameof(Reject));
         }
 
         if (reviewerId == Guid.Empty)
         {
-            throw new ArgumentException("A valid reviewer ID must be provided to reject an application.", nameof(reviewerId));
+            throw new InvalidApplicationDetailsException("A valid reviewer ID must be provided to reject an application.");
         }
 
         if (string.IsNullOrWhiteSpace(reason))
         {
-            throw new ArgumentException("A rejection reason must be provided.", nameof(reason));
+            throw new InvalidApplicationDetailsException("A rejection reason must be provided.");
         }
 
         if (rejectedAt < CreatedAt)
         {
-            throw new ArgumentException("Rejection date cannot be older than the application creation date.", nameof(rejectedAt));
+            throw new InvalidApplicationDetailsException("Rejection date cannot be older than the application creation date.");
         }
 
         Status = ProviderApplicationStatus.Rejected;

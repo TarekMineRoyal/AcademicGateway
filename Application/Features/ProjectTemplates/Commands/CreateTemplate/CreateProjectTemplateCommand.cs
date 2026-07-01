@@ -6,7 +6,7 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateT
 
 public record CreateProjectTemplateCommand : IRequest<Guid>
 {
-    public string ProviderId { get; init; } = string.Empty; // Resolved from the authenticated corporate provider session token
+    public Guid ProviderId { get; init; } // Resolved from the authenticated corporate provider session token
     public string Title { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;
     public int ExpectedDurationWeeks { get; init; }

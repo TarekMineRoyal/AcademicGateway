@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Domain.Common;
 using Domain.ProjectTemplates;
+using Domain.Providers.Exceptions;
 
 namespace Domain.Providers;
 
@@ -57,29 +58,29 @@ public class Provider : BaseEntity
     /// </summary>
     /// <param name="id">The unique Identity key linking back to the account credentials.</param>
     /// <param name="companyName">The legal or operational name of the company.</param>
-    /// <exception cref="ArgumentException">Thrown when fundamental identity or name constraints are missing.</exception>
+    /// <exception cref="InvalidProviderDetailsException">Thrown when fundamental identity or name constraints are missing.</exception>
     public Provider(Guid id, string companyName)
     {
         if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID cannot be empty.", nameof(id));
+            throw new InvalidProviderDetailsException("Identity User ID cannot be empty.");
         }
 
         Id = id;
         UpdateCompanyName(companyName);
-        IsVerified = false; // Must pass a ProviderApplication assessment loop to become verified
+        IsVerified = false;
     }
 
     /// <summary>
     /// Updates the public-facing corporate name of the provider.
     /// </summary>
     /// <param name="newCompanyName">The target company name.</param>
-    /// <exception cref="ArgumentException">Thrown if the provided name value is blank.</exception>
+    /// <exception cref="InvalidProviderDetailsException">Thrown if the provided name value is blank.</exception>
     public void UpdateCompanyName(string newCompanyName)
     {
         if (string.IsNullOrWhiteSpace(newCompanyName))
         {
-            throw new ArgumentException("Company name cannot be empty or whitespace.", nameof(newCompanyName));
+            throw new InvalidProviderDetailsException("Company name cannot be empty or whitespace.");
         }
 
         CompanyName = newCompanyName.Trim();

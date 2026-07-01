@@ -6,7 +6,7 @@ namespace AcademicGateway.Application.Features.TechSupportAccounts.Commands.Crea
 public record CreateTechSupportAccountCommand : IRequest<Guid>
 {
     // The authenticated Provider executing the creation
-    public string ProviderId { get; init; } = string.Empty;
+    public Guid ProviderId { get; init; }
 
     // Login credentials for the newly provisioned auxiliary account
     public string Email { get; init; } = string.Empty;

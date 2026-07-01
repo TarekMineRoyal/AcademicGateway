@@ -6,7 +6,7 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetAppro
 public record ApprovedTemplateDto
 {
     public Guid Id { get; init; }
-    public string ProviderId { get; init; } = string.Empty;
+    public Guid ProviderId { get; init; }
     public string ProviderCompanyName { get; init; } = string.Empty;
     public string Title { get; init; } = string.Empty;
     public string Description { get; init; } = string.Empty;

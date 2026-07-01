@@ -5,7 +5,7 @@ namespace AcademicGateway.Application.Features.Users.Queries.GetStudentProfile;
 
 public record StudentProfileDto
 {
-    public string UserId { get; init; } = string.Empty;
+    public Guid UserId { get; init; }
     public int? GraduationYear { get; init; }
     public List<StudentMajorDto> Majors { get; init; } = new();
     public List<StudentSpecialtyDto> Specialties { get; init; } = new();

@@ -2,7 +2,7 @@
 
 public record ProviderProfileDto
 {
-    public string UserId { get; init; } = string.Empty;
+    public Guid UserId { get; init; }
     public string OrganizationName { get; init; } = string.Empty;
     public string Industry { get; init; } = string.Empty;
     public string? WebsiteUrl { get; init; }

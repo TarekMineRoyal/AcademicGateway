@@ -1,5 +1,6 @@
 ﻿using System;
 using Domain.Curriculum;
+using Domain.Students.Exceptions;
 
 namespace Domain.Students;
 
@@ -40,11 +41,18 @@ public class StudentSpecialty
     /// </summary>
     /// <param name="studentId">The unique Identity string identifier of the target student profile.</param>
     /// <param name="specialtyId">The unique identifier of the target sub-specialty.</param>
-    /// <exception cref="ArgumentException">Thrown when studentId is null/whitespace or specialtyId is an empty Guid.</exception>
+    /// <exception cref="InvalidStudentDetailsException">Thrown when studentId or specialtyId is an empty Guid.</exception>
     public StudentSpecialty(Guid studentId, Guid specialtyId)
     {
-        if (studentId == Guid.Empty) throw new ArgumentException("Student ID cannot be empty.", nameof(studentId));
-        if (specialtyId == Guid.Empty) throw new ArgumentException("Specialty ID cannot be empty.", nameof(specialtyId));
+        if (studentId == Guid.Empty)
+        {
+            throw new InvalidStudentDetailsException("Student tracking identity parameters cannot be empty mapping references.");
+        }
+
+        if (specialtyId == Guid.Empty)
+        {
+            throw new InvalidStudentDetailsException("Sub-track specialty tracking identity parameters cannot be empty mapping references.");
+        }
 
         StudentId = studentId;
         SpecialtyId = specialtyId;

@@ -1,60 +1,63 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Common;
+using Domain.Professors.Exceptions;
 
 namespace Domain.Professors;
 
 /// <summary>
-/// Represents a specialized academic or scientific research area (e.g., Computer Vision, Quantum Computing, Behavioral Economics).
+/// Represents a specific global academic Research Interest topic categorizer lookup index.
+/// Governs structural integrity values assigned onto lookup categories mapped across faculty members.
 /// </summary>
-public class ResearchInterest
+public class ResearchInterest : BaseEntity
 {
-    private readonly List<ProfessorResearchInterest> _professorResearchInterests = new();
+    private readonly List<ProfessorResearchInterest> _professorLinks = new();
 
     /// <summary>
-    /// Gets the unique identifier for the research interest.
+    /// Gets the unique tracking primary surrogate key assigned to this Research Interest metadata definition.
     /// </summary>
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Gets the unique, descriptive title of the research domain.
+    /// Gets the contextual textual area name descriptive title mapping for this category (e.g., "Machine Learning").
     /// </summary>
-    public string Name { get; private set; } = string.Empty;
+    public string Area { get; private set; } = string.Empty;
 
     /// <summary>
-    /// Gets the read-only tracking collection of professors specialized in this domain.
+    /// Gets a read-only tracking relationship collection linking backing professors associated to this topic focus index area.
     /// </summary>
-    public IReadOnlyCollection<ProfessorResearchInterest> ProfessorResearchInterests => _professorResearchInterests.AsReadOnly();
+    public IReadOnlyCollection<ProfessorResearchInterest> ProfessorLinks => _professorLinks.AsReadOnly();
 
     /// <summary>
-    /// EF Core constructor requirement. Prevents bypass of domain constraints during hydration.
+    /// Required parameterless constructor variant for Entity Framework Core relational database hydration mappings.
     /// </summary>
     private ResearchInterest()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="ResearchInterest"/> class with domain validations.
+    /// Initializes a new valid domain instance of the <see cref="ResearchInterest"/> asset.
     /// </summary>
-    /// <param name="name">The name or description of the research specialty.</param>
-    /// <exception cref="ArgumentException">Thrown when name criteria checks fail.</exception>
-    public ResearchInterest(string name)
+    /// <param name="area">The intended descriptive label text assigned onto this lookup track category.</param>
+    /// <exception cref="EmptyResearchInterestAreaException">Thrown when input evaluations discover blank text arguments.</exception>
+    public ResearchInterest(string area)
     {
-        UpdateName(name);
+        UpdateArea(area);
         Id = Guid.NewGuid();
     }
 
     /// <summary>
-    /// Updates the descriptive name of the research focus area.
+    /// Mutates the descriptive structural metadata text marking this focus category reference track tracking parameters.
     /// </summary>
-    /// <param name="newName">The target name value.</param>
-    /// <exception cref="ArgumentException">Thrown if the provided name is invalid.</exception>
-    public void UpdateName(string newName)
+    /// <param name="newArea">The updated text value expression string to save into the database row properties.</param>
+    /// <exception cref="EmptyResearchInterestAreaException">Thrown when string parameters result in null or whitespace parameters.</exception>
+    public void UpdateArea(string newArea)
     {
-        if (string.IsNullOrWhiteSpace(newName))
+        if (string.IsNullOrWhiteSpace(newArea))
         {
-            throw new ArgumentException("Research interest name cannot be empty or whitespace.", nameof(newName));
+            throw new EmptyResearchInterestAreaException();
         }
 
-        Name = newName.Trim();
+        Area = newArea.Trim();
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Domain.Common;
 using Domain.Providers;
+using Domain.SystemStaff.Exceptions;
 
 namespace Domain.SystemStaff;
 
@@ -30,21 +31,22 @@ public class Reviewer : BaseEntity
     public IReadOnlyCollection<ProviderApplication> ReviewedApplications => _reviewedApplications.AsReadOnly();
 
     /// <summary>
-    /// EF Core constructor requirement. Prevents bypass of standard domain constraints during persistence hydration.
+    /// Required parameterless constructor variant for Entity Framework Core relational database hydration mappings.
+    /// Prevents bypass of standard domain constraints during persistence hydration.
     /// </summary>
     private Reviewer() { }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Reviewer"/> profile with structural tracking parameters.
+    /// Initializes a new instance of the <see cref="Reviewer"/> profile with validation boundaries.
     /// </summary>
     /// <param name="id">The unique Identity key linking back to the account credentials.</param>
     /// <param name="fullName">The verified professional full name of the evaluator.</param>
-    /// <exception cref="ArgumentException">Thrown when validation constraints fail.</exception>
+    /// <exception cref="InvalidReviewerDetailsException">Thrown when fundamental identity or formatting attributes fail criteria checks.</exception>
     public Reviewer(Guid id, string fullName)
     {
         if (id == Guid.Empty)
         {
-            throw new ArgumentException("Identity User ID reference cannot be empty.", nameof(id));
+            throw new InvalidReviewerDetailsException("Identity User ID reference context cannot be empty.");
         }
 
         Id = id;
@@ -52,15 +54,15 @@ public class Reviewer : BaseEntity
     }
 
     /// <summary>
-    /// Updates the formal professional display identity name of the reviewer.
+    /// Updates the formal professional display identity name of the reviewer after verifying baseline invariants.
     /// </summary>
     /// <param name="newFullName">The updated name payload string.</param>
-    /// <exception cref="ArgumentException">Thrown if the name argument configuration breaches validation checks.</exception>
+    /// <exception cref="InvalidReviewerDetailsException">Thrown if the name argument configuration is null, empty, or whitespace.</exception>
     public void UpdateFullName(string newFullName)
     {
         if (string.IsNullOrWhiteSpace(newFullName))
         {
-            throw new ArgumentException("Reviewer full name cannot be empty or whitespace.", nameof(newFullName));
+            throw new InvalidReviewerDetailsException("Reviewer full name cannot be empty or whitespace.");
         }
 
         FullName = newFullName.Trim();

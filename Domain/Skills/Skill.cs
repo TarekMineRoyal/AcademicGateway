@@ -1,43 +1,47 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Common;
+using Domain.Skills.Exceptions;
 using Domain.Students;
 
 namespace Domain.Skills;
 
 /// <summary>
-/// Represents a technical or professional skill within the gateway (e.g., C#, Project Management, Data Analysis).
+/// Represents a standardized technical or professional competency lookup index within the gateway 
+/// (e.g., C#, Project Management, Data Analysis).
 /// </summary>
-public class Skill
+public class Skill : BaseEntity
 {
     private readonly List<StudentSkill> _studentSkills = new();
 
     /// <summary>
-    /// Gets the unique identifier for the Skill.
+    /// Gets the unique surrogate tracking identification primary key for this Skill.
     /// </summary>
     public Guid Id { get; private set; }
 
     /// <summary>
-    /// Gets the unique, descriptive name of the skill.
+    /// Gets the unique, descriptive text title identifier of the skill capability.
     /// </summary>
     public string Name { get; private set; } = string.Empty;
 
     /// <summary>
-    /// Gets the read-only tracking collection of student profiles mapped to this skill.
+    /// Gets a read-only encapsulated collection of student profiles mapped to this skill tracking matrix.
     /// </summary>
     public IReadOnlyCollection<StudentSkill> StudentSkills => _studentSkills.AsReadOnly();
 
     /// <summary>
-    /// EF Core constructor requirement. Prevents bypass of business validations during standard initialization.
+    /// Required parameterless constructor variant for Entity Framework Core relational database hydration mappings.
+    /// Prevents bypass of domain constraints during persistence hydration.
     /// </summary>
     private Skill()
     {
     }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="Skill"/> class with required business validations.
+    /// Initializes a new valid domain instance of the <see cref="Skill"/> aggregate lookup entity.
     /// </summary>
-    /// <param name="name">The name of the skill.</param>
-    /// <exception cref="ArgumentException">Thrown when the name is null, empty, or whitespace.</exception>
+    /// <param name="name">The descriptive textual title assigned onto the professional capability.</param>
+    /// <exception cref="EmptySkillNameException">Thrown when the name argument parameter verification fails format criteria bounds.</exception>
     public Skill(string name)
     {
         UpdateName(name);
@@ -45,15 +49,15 @@ public class Skill
     }
 
     /// <summary>
-    /// Updates the descriptive name of the skill, verifying business rule boundaries.
+    /// Mutates the unique descriptive name of the skill lookup entity after verifying baseline string invariants.
     /// </summary>
-    /// <param name="newName">The new name for the skill.</param>
-    /// <exception cref="ArgumentException">Thrown if the provided name is invalid.</exception>
+    /// <param name="newName">The new target title value expression string to save into the database row properties.</param>
+    /// <exception cref="EmptySkillNameException">Thrown when the input evaluation discovers a null or whitespace text string argument.</exception>
     public void UpdateName(string newName)
     {
         if (string.IsNullOrWhiteSpace(newName))
         {
-            throw new ArgumentException("Skill name cannot be empty or whitespace.", nameof(newName));
+            throw new EmptySkillNameException();
         }
 
         Name = newName.Trim();
