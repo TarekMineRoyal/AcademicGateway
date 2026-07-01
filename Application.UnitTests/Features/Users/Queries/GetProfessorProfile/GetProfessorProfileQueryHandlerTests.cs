@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Queries.GetProfessorProfile;
+using Application.Features.Professors.Queries.GetProfessorProfile;
 using Domain.Professors;
 using FluentAssertions;
 using MockQueryable.Moq;

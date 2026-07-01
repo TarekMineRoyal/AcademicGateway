@@ -1,11 +1,11 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using Domain.ProjectTemplates;
+using Domain.ProjectTemplates.Exceptions;
 using Domain.Providers.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -25,6 +25,8 @@ public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
     /// <returns>A unique tracking identifier primary key assigned onto the newly committed project template.</returns>
     /// <exception cref="KeyNotFoundException">Thrown if the specified provider identification reference is missing from database records.</exception>
     /// <exception cref="ProviderNotVerifiedException">Thrown if the requesting provider has not successfully completed onboarding verification gates.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if fundamental template parameters (title, description) fail domain invariant checks.</exception>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if transitioning the newly instantiated template state violates sequence boundaries.</exception>
     public async Task<Guid> Handle(CreateProjectTemplateCommand request, CancellationToken cancellationToken)
     {
         // 1. Retrieve the requesting Provider and enforce profile existence
@@ -36,13 +38,14 @@ public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
             throw new KeyNotFoundException($"Provider profile with ID '{request.ProviderId}' was not found.");
         }
 
-        // 2. Enforce the platform verification rule using our new strongly-typed domain exception
+        // 2. Enforce the platform verification rule using our strongly-typed domain exception
         if (!provider.IsVerified)
         {
             throw new ProviderNotVerifiedException(request.ProviderId);
         }
 
         // 3. Instantiate the ProjectTemplate domain entity using our updated constructor ordering (Title, Description, ProviderId)
+        // This process guarantees all invariant domain validation guards fire cleanly before persistence.
         var template = new ProjectTemplate(
             request.Title,
             request.Description,
@@ -51,19 +54,16 @@ public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
         // 4. Advance the template lifecycle out of initial draft status to match current workflow requirements
         template.SubmitForReview();
 
-        // 5. Verify and attach technical capability requirements using pure aggregate root behavioral methods
-        if (request.SkillIds != null && request.SkillIds.Count != 0)
+        // 5. Attach technical capability requirements using pure aggregate root behavioral methods.
+        // Architectural Optimization: Because the CreateProjectTemplateCommandValidator already runs an 
+        // asynchronous pre-check validating that all SkillIds exist in the system directory, we safely 
+        // eliminate a redundant database roundtrip here and map the IDs directly.
+        if (request.SkillIds != null)
         {
-            // Verify that the requested skills actually exist in our lookup database system
-            var existingSkillIds = await context.Skills
-                .Where(s => request.SkillIds.Contains(s.Id))
-                .Select(s => s.Id)
-                .ToListAsync(cancellationToken);
-
-            foreach (var skillId in existingSkillIds)
+            foreach (var skillId in request.SkillIds)
             {
-                // DDD Winning Practice: Delegate state modifications entirely to the aggregate root method.
-                // This shields your application code from managing direct join-table manipulations.
+                // Delegate state modifications entirely to the aggregate root method.
+                // This shields application logic from managing direct join-table manipulation mechanics.
                 template.AddSkill(skillId);
             }
         }

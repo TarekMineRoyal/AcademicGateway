@@ -6,7 +6,6 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,6 +13,7 @@ namespace AcademicGateway.Application.Features.Providers.Commands.SubmitApplicat
 
 /// <summary>
 /// Orchestrates the business command pipeline for processing, validating, and transitioning provider onboarding application workflows.
+/// Enforces a strict 1-to-1 aggregate root allocation boundary for processing enrollment validation streams.
 /// </summary>
 public class SubmitProviderApplicationCommandHandler(IApplicationDbContext context)
     : IRequestHandler<SubmitProviderApplicationCommand, Guid>
@@ -30,6 +30,7 @@ public class SubmitProviderApplicationCommandHandler(IApplicationDbContext conte
     {
         // 1. Guard: Ensure the requesting Provider profile actually exists in the system using the clean, strongly-typed Guid key
         var providerExists = await context.Providers
+            .AsNoTracking()
             .AnyAsync(p => p.Id == request.ProviderId, cancellationToken);
 
         if (!providerExists)
@@ -43,11 +44,10 @@ public class SubmitProviderApplicationCommandHandler(IApplicationDbContext conte
 
         if (existingApplication != null)
         {
-            // State-Machine Guards: Replace raw InvalidOperationException calls with our strongly-typed domain exception
+            // State-Machine Guards: Prevent double-submitting if an audit cycle is already active or completed
             if (existingApplication.Status == ProviderApplicationStatus.Approved ||
                 existingApplication.Status == ProviderApplicationStatus.PendingReview)
             {
-                // Leveraging the custom domain exception we built in Step 5 to handle invalid workflow state boundaries safely
                 throw new InvalidApplicationStatusException(existingApplication.Status, "SubmitNewApplication");
             }
 
@@ -67,11 +67,12 @@ public class SubmitProviderApplicationCommandHandler(IApplicationDbContext conte
         }
 
         // 3. Process a brand-new application sequence if no prior record exists
+        // Clock timestamp is passed explicitly per domain deterministic guidelines
         var newApplication = new ProviderApplication(
             request.ProviderId,
             request.CompanyDetails,
             request.VerificationDocumentsUrl,
-            DateTime.UtcNow); // Clock timestamp is passed explicitly per domain deterministic guidelines
+            DateTime.UtcNow);
 
         // Advance state machine out of internal draft status straight into the institutional pool
         newApplication.SubmitForReview();

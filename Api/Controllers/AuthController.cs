@@ -1,9 +1,9 @@
-﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
-using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
-using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
-using AcademicGateway.Application.Features.Users.Commands.Login;
-using MediatR;
+﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Application.Features.Providers.Commands.RegisterProvider;
+using Application.Features.Professors.Commands.RegisterProfessor;
+using Application.Features.Auth.Commands.Login;
+using Application.Features.Students.Commands.RegisterStudent;
 
 namespace Api.Controllers;
 

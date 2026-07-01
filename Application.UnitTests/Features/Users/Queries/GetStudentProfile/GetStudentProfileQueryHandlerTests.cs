@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Queries.GetStudentProfile;
+using Application.Features.Students.Queries.GetStudentProfile;
 using Domain.Models.Academic;
 using Domain.Students;
 using FluentAssertions;

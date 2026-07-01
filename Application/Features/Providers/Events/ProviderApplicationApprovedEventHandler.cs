@@ -1,9 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Application.Common.Interfaces;
 using Domain.Providers.Events;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.Providers.Events;
 
@@ -25,10 +25,12 @@ public class ProviderApplicationApprovedEventHandler(IApplicationDbContext conte
     /// </summary>
     /// <param name="domainEvent">The immutable event payload containing the target provider's identifier context.</param>
     /// <param name="cancellationToken">A token to observe and propagate cancellation requests across asynchronous operations.</param>
+    /// <returns>A completed asynchronous execution task.</returns>
     /// <exception cref="KeyNotFoundException">Thrown if the target provider domain profile cannot be found in persistence.</exception>
     public async Task HandleAsync(ProviderApplicationApprovedEvent domainEvent, CancellationToken cancellationToken)
     {
         // 1. Fetch the corresponding provider profile matching the application's unique ID reference
+        // Aligned with the Guid domain key transformation (Id instead of UserId)
         var provider = await context.Providers
             .FirstOrDefaultAsync(p => p.Id == domainEvent.ProviderId, cancellationToken);
 
@@ -37,7 +39,9 @@ public class ProviderApplicationApprovedEventHandler(IApplicationDbContext conte
             throw new KeyNotFoundException($"Provider aggregate profile with tracking ID '{domainEvent.ProviderId}' was not found.");
         }
 
-        // 2. Invoke the explicit domain behavior on the aggregate root to execute standard business constraints
+        // 2. Invoke explicit domain behavior on the aggregate root to execute standard business constraints.
+        // The EF Core change tracker will automatically flag this modification, allowing it to be committed 
+        // within the orchestrating SaveChangesAsync unit-of-work pipeline.
         provider.VerifyProfile();
     }
 }

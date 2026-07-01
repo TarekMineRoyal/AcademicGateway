@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Queries.GetProviderProfile;
+using Application.Features.Providers.Queries.GetProviderProfile;
 using Domain.Providers;
 using FluentAssertions;
 using MockQueryable.Moq;

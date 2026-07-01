@@ -1,9 +1,9 @@
 using AcademicGateway.Application;
 using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
+using Application.Features.Students.Commands.RegisterStudent;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;

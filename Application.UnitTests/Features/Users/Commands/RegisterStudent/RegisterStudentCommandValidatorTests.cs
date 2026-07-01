@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
+using Application.Features.Students.Commands.RegisterStudent;
 using Domain.Curriculum;
 using FluentValidation.TestHelper;
 using MockQueryable.EntityFrameworkCore; // Added this!

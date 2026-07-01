@@ -10,6 +10,7 @@ namespace AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplicat
 
 /// <summary>
 /// Orchestrates the state transition workflow of an external provider onboarding application.
+/// Processes administrative decisions and commits domain events atomically via aggregate root behavior.
 /// </summary>
 public class ReviewProviderApplicationCommandHandler(IApplicationDbContext context)
     : IRequestHandler<ReviewProviderApplicationCommand>
@@ -17,6 +18,10 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
     /// <summary>
     /// Processes the review decision, applies aggregate transitions, and triggers background synchronization hooks.
     /// </summary>
+    /// <param name="request">The structural parameter bundle tracking application evaluation inputs and signatures.</param>
+    /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
+    /// <returns>A completed asynchronous execution task.</returns>
+    /// <exception cref="KeyNotFoundException">Thrown if either the target provider application or the reviewer profile cannot be found.</exception>
     public async Task Handle(ReviewProviderApplicationCommand request, CancellationToken cancellationToken)
     {
         // 1. Fetch the application target from the tracking context
@@ -29,12 +34,13 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
         }
 
         // 2. Fetch the reviewer profile using the 1:1 primary key strategy mapping directly to the Identity User ID
+        // Fixed: Updated lookup target expression to consume 'request.ReviewerId' to align with the refactored command contract.
         var reviewer = await context.Reviewers
-            .FirstOrDefaultAsync(r => r.Id == request.ReviewerIdentityUserId, cancellationToken);
+            .FirstOrDefaultAsync(r => r.Id == request.ReviewerId, cancellationToken);
 
         if (reviewer == null)
         {
-            throw new KeyNotFoundException($"Reviewer domain profile for Identity User ID '{request.ReviewerIdentityUserId}' was not found.");
+            throw new KeyNotFoundException($"Reviewer domain profile with ID '{request.ReviewerId}' was not found within the audit directory.");
         }
 
         // 3. Execute domain state updates using pure behavioral methods

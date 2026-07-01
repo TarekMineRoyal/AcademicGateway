@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
+using Application.Features.Professors.Commands.RegisterProfessor;
 using Domain.Professors;
 using FluentAssertions;
 using MockQueryable.EntityFrameworkCore;

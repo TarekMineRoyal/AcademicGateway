@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
+using Application.Features.Providers.Commands.RegisterProvider;
 using Domain.Providers;
 using FluentAssertions;
 using MockQueryable.EntityFrameworkCore;

@@ -1,6 +1,6 @@
-﻿using System.Threading;
+﻿using Domain.Common;
+using System.Threading;
 using System.Threading.Tasks;
-using Domain.Common;
 
 namespace AcademicGateway.Application.Common.Interfaces;
 

@@ -9,50 +9,56 @@ using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
 
+/// <summary>
+/// Handles the execution of the <see cref="GetApprovedTemplatesQuery"/> request.
+/// Leverages optimized, untracked relational database projections to discover public placement blueprints.
+/// </summary>
 public class GetApprovedTemplatesQueryHandler(IApplicationDbContext context)
-    : IRequestHandler<GetApprovedTemplatesQuery, List<ApprovedTemplateDto>>
+    : IRequestHandler<GetApprovedTemplatesQuery, IReadOnlyCollection<ApprovedTemplateDto>>
 {
-    public async Task<List<ApprovedTemplateDto>> Handle(GetApprovedTemplatesQuery request, CancellationToken cancellationToken)
+    /// <summary>
+    /// Processes the template lookup query, applying dynamic filters and mapping results directly into read-only data contracts.
+    /// </summary>
+    /// <param name="request">The incoming command container tracking optional evaluation criteria (such as specialized SkillId).</param>
+    /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
+    /// <returns>An immutable read-only sequence containing all matched and approved project template views.</returns>
+    public async Task<IReadOnlyCollection<ApprovedTemplateDto>> Handle(GetApprovedTemplatesQuery request, CancellationToken cancellationToken)
     {
-        // 1. Build an IQueryable base that strictly targets Approved listings
+        // 1. Build an IQueryable base that strictly targets Approved listings.
+        // Performance Optimization: Explicit .Include and .ThenInclude statements are completely removed.
+        // In CQRS read paths, a direct LINQ .Select projection automatically commands EF Core to generate 
+        // the optimal inner/outer SQL JOIN queries, avoiding excessive eager loading tracking overhead.
         var query = context.ProjectTemplates
-            .Include(t => t.Provider)
-            .Include(t => t.TemplateSkills)
-                .ThenInclude(ts => ts.Skill)
+            .AsNoTracking()
             .Where(t => t.Status == ProjectTemplateStatus.Approved);
 
-        // 2. Conditionally apply maximum academic duration filter if supplied
-        if (request.MaxDurationWeeks.HasValue)
-        {
-            query = query.Where(t => t.ExpectedDurationWeeks <= request.MaxDurationWeeks.Value);
-        }
-
-        // 3. Conditionally apply join-table skill requirements filter if supplied
+        // 2. Conditionally apply join-table skill requirements filter if supplied
         if (request.SkillId.HasValue)
         {
-            query = query.Where(t => t.TemplateSkills.Any(ts => ts.SkillId == request.SkillId.Value));
+            // Fixed: Updated navigation query to point to 'ProjectTemplateSkills' to match the rich entity property name
+            query = query.Where(t => t.ProjectTemplateSkills.Any(pts => pts.SkillId == request.SkillId.Value));
         }
 
-        // 4. Project the filtered relational database query records directly into DTO payloads
-        var result = await query
+        // 3. Project the filtered relational database query records directly into immutable DTO payloads
+        return await query
             .Select(t => new ApprovedTemplateDto
             {
                 Id = t.Id,
                 ProviderId = t.ProviderId,
-                // FIX: Temporarily using UserId to guarantee a successful compilation.
-                // Swap out '.UserId' below with your actual text property name from Provider.cs if available!
-                ProviderCompanyName = t.Provider != null ? t.Provider.UserId : "Unknown Provider",
+
+                // Fixed: Substituted placeholder reference to wrap your real CompanyName property
+                ProviderCompanyName = t.Provider != null ? t.Provider.CompanyName : "Unknown Provider",
+
                 Title = t.Title,
                 Description = t.Description,
-                ExpectedDurationWeeks = t.ExpectedDurationWeeks,
-                Skills = t.TemplateSkills.Select(ts => new TemplateSkillDto
+
+                // Fixed: Aligned sub-collection selection with 'ProjectTemplateSkills' entity definition
+                Skills = t.ProjectTemplateSkills.Select(pts => new TemplateSkillDto
                 {
-                    Id = ts.SkillId,
-                    Name = ts.Skill != null ? ts.Skill.Name : "Unknown Skill"
+                    Id = pts.SkillId,
+                    Name = pts.Skill != null ? pts.Skill.Name : "Unknown Skill"
                 }).ToList()
             })
             .ToListAsync(cancellationToken);
-
-        return result;
     }
 }

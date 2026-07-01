@@ -1,4 +1,4 @@
-﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
+﻿using Application.Features.Providers.Commands.RegisterProvider;
 using FluentValidation.TestHelper;
 using Xunit;
 

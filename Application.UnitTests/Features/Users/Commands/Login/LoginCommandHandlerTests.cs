@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Users.Commands.Login;
+using Application.Features.Auth.Commands.Login;
 using FluentAssertions;
 using Moq;
 using Xunit;

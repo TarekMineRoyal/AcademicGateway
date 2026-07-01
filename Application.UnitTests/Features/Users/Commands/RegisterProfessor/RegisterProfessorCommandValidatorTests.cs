@@ -1,4 +1,4 @@
-﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
+﻿using Application.Features.Professors.Commands.RegisterProfessor;
 using FluentValidation.TestHelper;
 using Xunit;
 
