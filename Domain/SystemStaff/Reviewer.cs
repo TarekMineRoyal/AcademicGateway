@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Common;
 using Domain.Providers;
 
 namespace Domain.SystemStaff;
@@ -8,7 +9,7 @@ namespace Domain.SystemStaff;
 /// Represents an internal quality assurance evaluator, administrator, or faculty auditor 
 /// responsible for evaluating provider onboarding applications and auditing platform workflows.
 /// </summary>
-public class Reviewer
+public class Reviewer : BaseEntity
 {
     private readonly List<ProviderApplication> _reviewedApplications = new();
 

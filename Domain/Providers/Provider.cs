@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Common;
 using Domain.ProjectTemplates;
 
 namespace Domain.Providers;
@@ -8,7 +9,7 @@ namespace Domain.Providers;
 /// Represents an external organization, industry partner, or corporate provider 
 /// capable of proposing project templates and sponsoring student opportunities.
 /// </summary>
-public class Provider
+public class Provider : BaseEntity
 {
     private readonly List<ProjectTemplate> _projectTemplates = new();
 

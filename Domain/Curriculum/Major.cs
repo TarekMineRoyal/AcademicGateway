@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Domain.Common;
 using Domain.Students;
 
 namespace Domain.Curriculum;
@@ -8,7 +9,7 @@ namespace Domain.Curriculum;
 /// <summary>
 /// Represents an academic major within the gateway (e.g., Computer Science, Mechanical Engineering).
 /// </summary>
-public class Major
+public class Major : BaseEntity
 {
     private readonly List<Specialty> _specialties = new();
     private readonly List<StudentMajor> _studentMajors = new();

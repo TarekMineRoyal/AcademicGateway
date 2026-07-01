@@ -1,4 +1,5 @@
 ﻿using System;
+using Domain.Common;
 
 namespace Domain.Providers;
 
@@ -7,7 +8,7 @@ namespace Domain.Providers;
 /// These accounts are managed by corporate partners to oversee student activities, 
 /// maintain technical environments, and supervise active project instances.
 /// </summary>
-public class TechSupportAccount
+public class TechSupportAccount : BaseEntity
 {
     /// <summary>
     /// Gets the unique identifier for the Tech Support profile. 

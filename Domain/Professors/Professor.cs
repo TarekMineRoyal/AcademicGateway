@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Domain.Common;
 
 namespace Domain.Professors;
 
@@ -8,7 +9,7 @@ namespace Domain.Professors;
 /// Represents an academic faculty profile capable of supervising student projects, 
 /// evaluating submissions, and defining research parameters.
 /// </summary>
-public class Professor
+public class Professor : BaseEntity
 {
     private readonly List<ProfessorResearchInterest> _professorResearchInterests = new();
 

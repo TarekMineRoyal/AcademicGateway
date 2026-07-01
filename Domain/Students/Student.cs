@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Domain.Common;
 
 namespace Domain.Students;
 
@@ -8,7 +9,7 @@ namespace Domain.Students;
 /// Represents a student profile within the gateway tracking academic alignments, 
 /// specialized tracks, technical skill sets, and program metrics.
 /// </summary>
-public class Student
+public class Student : BaseEntity
 {
     private readonly List<StudentMajor> _studentMajors = new();
     private readonly List<StudentSpecialty> _studentSpecialties = new();

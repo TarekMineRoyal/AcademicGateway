@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Domain.Common;
 using Domain.ProjectTemplates.Enums;
 using Domain.Providers;
 
@@ -10,7 +11,7 @@ namespace Domain.ProjectTemplates;
 /// Represents a reusable project blueprint proposed by a verified provider, which undergoes 
 /// a collaborative review pipeline before becoming available to students.
 /// </summary>
-public class ProjectTemplate
+public class ProjectTemplate : BaseEntity
 {
     private readonly List<ProjectTemplateSkill> _projectTemplateSkills = new();
 
