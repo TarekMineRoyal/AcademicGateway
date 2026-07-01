@@ -12,36 +12,70 @@ using System.Threading.Tasks;
 
 namespace AcademicGateway.Infrastructure.Identity;
 
-public class IdentityService(UserManager<ApplicationUser> userManager, IConfiguration configuration) : IIdentityService
+/// <summary>
+/// Infrastructure-tier adapter implementing the <see cref="IIdentityService"/> abstraction contract.
+/// Plugs directly into ASP.NET Core Identity's security state machines and issues securely signed JWT bearer tokens.
+/// </summary>
+public class IdentityService(
+    UserManager<ApplicationUser> userManager,
+    IConfiguration configuration) : IIdentityService
 {
-    public async Task<(bool Succeeded, Guid UserId, IEnumerable<string> Errors)> CreateUserAsync(string userName, string email, string password)
+    /// <summary>
+    /// Asynchronously provisions a new secure identity credential within the backing ASP.NET Core Identity storage provider.
+    /// </summary>
+    /// <param name="userName">The unique login handle requested for user identification.</param>
+    /// <param name="email">The unique contact electronic mail address mapped to the account.</param>
+    /// <param name="password">The raw, plain-text security password phrase undergoing infrastructural complexity filtering and hashing.</param>
+    /// <returns>A structured asynchronous tuple detailing the success state, user identity surrogate key, and an iterable listing of descriptive framework error payloads.</returns>
+    public async Task<(bool Succeeded, Guid UserId, IEnumerable<string> Errors)> CreateUserAsync(
+        string userName,
+        string email,
+        string password)
     {
-        var user = new ApplicationUser { UserName = userName, Email = email };
+        var user = new ApplicationUser
+        {
+            UserName = userName,
+            Email = email
+        };
+
         var result = await userManager.CreateAsync(user, password);
-        return (result.Succeeded, user.Id, result.Errors.Select(e => e.Description));
+
+        return (
+            result.Succeeded,
+            user.Id,
+            result.Errors.Select(e => e.Description)
+        );
     }
 
+    /// <summary>
+    /// Challenges incoming email and password text parameters against recorded credential configurations.
+    /// Issues an authenticated JSON Web Token (JWT) bearer key upon successful matching validation steps.
+    /// </summary>
+    /// <param name="email">The registered security context electronic mail identifier representing the target account handle.</param>
+    /// <param name="password">The secret plain-text verification string passed for profile match confirmation.</param>
+    /// <returns>A cryptographically signed JWT bearer authorization string if validation passes cleanly; otherwise, <c>null</c>.</returns>
     public async Task<string?> AuthenticateAsync(string email, string password)
     {
         var user = await userManager.FindByEmailAsync(email);
         if (user == null || !await userManager.CheckPasswordAsync(user, password))
         {
-            return null; // Invalid credentials
+            return null; // Invalid credentials check fallback trigger
         }
 
-        // Generate JWT
+        // Generate and configure the target symmetric key structure from the service environment settings
         var secret = configuration["JwtSettings:Secret"];
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secret!));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
+        // Formulate standard corporate claim payloads
         var claims = new[]
         {
-            // Fixed: Explicitly convert Guid Id to string for the JWT token payload
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.Email, user.Email!),
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
+        // Construct the lifecycle parameter details for the token asset structure
         var token = new JwtSecurityToken(
             issuer: configuration["JwtSettings:Issuer"],
             audience: configuration["JwtSettings:Audience"],

@@ -1,6 +1,7 @@
 using AcademicGateway.Application;
 using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Infrastructure; // <-- Natively resolves your new Infrastructure extension
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
@@ -15,23 +16,15 @@ using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// 1. Get the connection string from appsettings.json
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+// ==========================================
+// 1. Centralized Layer Registrations
+// ==========================================
+builder.Services.AddApplicationServices();
+builder.Services.AddInfrastructureServices(builder.Configuration); // Loads persistence, identity framework, and decoupled interceptors safely
 
-// 2. Register the DbContext with PostgreSQL and SnakeCase conventions
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseNpgsql(connectionString)
-           .UseSnakeCaseNamingConvention());
-
-// 3. Register ASP.NET Core Identity
-builder.Services.AddIdentityCore<ApplicationUser>(options =>
-{
-    options.User.RequireUniqueEmail = true;
-})
-    .AddRoles<IdentityRole>() // Explicitly adding support for Identity Roles
-    .AddEntityFrameworkStores<ApplicationDbContext>();
-
-// 4. Configure JWT Authentication
+// ==========================================
+// 2. Configure Presentation JWT Authentication Entry Guards
+// ==========================================
 var jwtSecret = builder.Configuration["JwtSettings:Secret"];
 builder.Services.AddAuthentication(options =>
 {
@@ -52,36 +45,27 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-
-// 5. Register our Custom Interfaces and Services
-// This links the IApplicationDbContext to the instantiated ApplicationDbContext above
-builder.Services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-// This registers our Identity wrapper
-builder.Services.AddTransient<IIdentityService, IdentityService>();
-// Centralizes clock initialization workflows into a single manageable provider engine
-builder.Services.AddSingleton<IDateTimeProvider, AcademicGateway.Infrastructure.Services.DateTimeProvider>();
-
-// 6. Register MediatR & FluentValidation
-// Scans the assembly for all AbstractValidators
+// ==========================================
+// 3. Register Presentation Pipeline Elements (MediatR & FluentValidation)
+// ==========================================
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterStudentCommandValidator>();
 
 builder.Services.AddMediatR(cfg => {
     cfg.RegisterServicesFromAssembly(typeof(RegisterStudentCommand).Assembly);
 
-    // Injects our Validation Pipeline so it runs before handlers
+    // Injects our validation cross-cutting pipeline behavior before commands hit concrete handlers
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 });
 
-
+// ==========================================
+// 4. Register Web API & Explorer Utilities
+// ==========================================
 builder.Services.AddControllers();
-builder.Services.AddApplicationServices();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Academic Gateway API", Version = "v1" });
 
-    // Define the OAuth2.0 scheme that's in use (i.e., Bearer Tokens)
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
@@ -110,7 +94,9 @@ builder.Services.AddSwaggerGen(c =>
     });
 });
 
-// Register Exception Handling
+// ==========================================
+// 5. Cross-Cutting UI Utilities (Exceptions, CORS)
+// ==========================================
 builder.Services.AddExceptionHandler<Api.Infrastructure.CustomExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCors(options =>
@@ -125,7 +111,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// ==========================================
+// 6. Configure HTTP Middleware Pipeline
+// ==========================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -134,13 +122,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-app.UseExceptionHandler(); // This activates the CustomExceptionHandler
+app.UseExceptionHandler(); // Activates CustomExceptionHandler natively
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
 // ==========================================
-// Database Migration & Seeding execution
+// 7. Relational Database Migration & Seeding Execution
 // ==========================================
 using (var scope = app.Services.CreateScope())
 {
@@ -149,20 +137,20 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
 
-        // This will automatically apply any pending migrations
+        // Automatically executes outstanding schema definitions down onto the active cluster
         await context.Database.MigrateAsync();
 
-        // Resolve Identity Dependencies for the new Seeder signature
+        // Resolve dependencies explicitly matching the Guid tracking keys assigned onto your identity core structures
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>(); // Realigned type parameter to use your clean Guid contract keys
 
-        // This runs the updated seeder with required role capabilities
+        // Executes seeder parameters cleanly
         await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database.");
+        logger.LogError(ex, "An error occurred while migrating or seeding the database workspace cluster.");
     }
 }
 
