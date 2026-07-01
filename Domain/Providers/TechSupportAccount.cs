@@ -3,8 +3,9 @@
 namespace Domain.Providers;
 
 /// <summary>
-/// Represents an internal technical support or helpdesk staff profile responsible for platform maintenance, 
-/// account troubleshooting, and system configuration.
+/// Represents an external technical support or mentor profile provisioned by a Provider.
+/// These accounts are managed by corporate partners to oversee student activities, 
+/// maintain technical environments, and supervise active project instances.
 /// </summary>
 public class TechSupportAccount
 {

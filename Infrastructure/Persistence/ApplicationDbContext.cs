@@ -193,7 +193,7 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
             entity.HasKey(pa => pa.Id);
 
             entity.HasOne(pa => pa.Provider)
-                  .WithMany(p => p.ProviderApplications)
+                  .WithMany()
                   .HasForeignKey(pa => pa.ProviderId)
                   .OnDelete(DeleteBehavior.Cascade);
 

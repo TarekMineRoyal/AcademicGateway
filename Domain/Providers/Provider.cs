@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Domain.ProjectTemplates;
 
 namespace Domain.Providers;
@@ -12,7 +11,6 @@ namespace Domain.Providers;
 public class Provider
 {
     private readonly List<ProjectTemplate> _projectTemplates = new();
-    private readonly List<ProviderApplication> _providerApplications = new();
 
     /// <summary>
     /// Gets the unique identifier for the Provider profile. 
@@ -45,11 +43,6 @@ public class Provider
     /// Gets the read-only tracking collection of project blueprints proposed by this organization.
     /// </summary>
     public IReadOnlyCollection<ProjectTemplate> ProjectTemplates => _projectTemplates.AsReadOnly();
-
-    /// <summary>
-    /// Gets the read-only history collection of onboarding applications submitted by this provider.
-    /// </summary>
-    public IReadOnlyCollection<ProviderApplication> ProviderApplications => _providerApplications.AsReadOnly();
 
     /// <summary>
     /// EF Core constructor requirement. Prevents bypass of domain constraints during persistence hydration.
@@ -117,21 +110,5 @@ public class Provider
     public void RevokeVerification()
     {
         IsVerified = false;
-    }
-
-    /// <summary>
-    /// Securely tracks a newly initiated or processed verification application.
-    /// </summary>
-    /// <param name="application">The onboarding application tracking instance.</param>
-    public void LinkApplication(ProviderApplication application)
-    {
-        ArgumentNullException.ThrowIfNull(application);
-
-        if (_providerApplications.Any(a => a.Id == application.Id))
-        {
-            return;
-        }
-
-        _providerApplications.Add(application);
     }
 }

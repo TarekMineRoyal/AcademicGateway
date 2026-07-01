@@ -119,6 +119,44 @@ public class ProviderApplication
     }
 
     /// <summary>
+    /// Overwrites a previously rejected application with updated files and text, shifting the 
+    /// existing record back into the pending review pool.
+    /// </summary>
+    /// <param name="newCompanyDetails">The corrected descriptive overview of the company profile.</param>
+    /// <param name="newVerificationDocumentsUrl">The new reference URI locating corporate verification paperwork.</param>
+    /// <exception cref="InvalidOperationException">Thrown if executed outside of a Rejected state context.</exception>
+    /// <exception cref="ArgumentException">Thrown if input validation constraints fail validation boundaries.</exception>
+    public void Resubmit(string newCompanyDetails, string newVerificationDocumentsUrl)
+    {
+        if (Status != ProviderApplicationStatus.Rejected)
+        {
+            throw new InvalidOperationException("Only explicitly rejected applications can be resubmitted.");
+        }
+
+        if (string.IsNullOrWhiteSpace(newCompanyDetails))
+        {
+            throw new ArgumentException("Company details cannot be empty or whitespace.", nameof(newCompanyDetails));
+        }
+
+        if (string.IsNullOrWhiteSpace(newVerificationDocumentsUrl))
+        {
+            throw new ArgumentException("Verification documents URL cannot be empty or whitespace.", nameof(newVerificationDocumentsUrl));
+        }
+
+        // Overwrite the existing record details with the new data values
+        CompanyDetails = newCompanyDetails.Trim();
+        VerificationDocumentsUrl = newVerificationDocumentsUrl.Trim();
+
+        // Reset the state machine back to pending review
+        Status = ProviderApplicationStatus.PendingReview;
+
+        // Clear out the previous review cycle data to present a clean slate for the auditing reviewer
+        ReviewedById = null;
+        ReviewedAt = null;
+        RejectionReason = null;
+    }
+
+    /// <summary>
     /// Commits an approval transition, clearing legacy rejections and storing structural audit references.
     /// </summary>
     /// <param name="reviewerId">The identifier code tracking the certifying reviewer.</param>

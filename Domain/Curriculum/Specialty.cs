@@ -49,7 +49,7 @@ public class Specialty
     /// <param name="name">The name of the sub-specialty.</param>
     /// <param name="majorId">The unique identifier of the parent major this specialty belongs to.</param>
     /// <exception cref="ArgumentException">Thrown when name is empty or majorId is an empty Guid.</exception>
-    public Specialty(string name, Guid majorId)
+    internal Specialty(string name, Guid majorId)
     {
         if (majorId == Guid.Empty)
         {

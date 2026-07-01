@@ -67,20 +67,25 @@ public class Major
     }
 
     /// <summary>
-    /// Safely adds a new sub-specialty under this academic major while avoiding duplicate entries.
+    /// Safely creates and adds a new sub-specialty under this academic major while avoiding duplicate entries.
     /// </summary>
-    /// <param name="specialty">The specialty tracking instance to add.</param>
-    /// <exception cref="ArgumentNullException">Thrown if the specialty object is null.</exception>
-    public void AddSpecialty(Specialty specialty)
+    /// <param name="name">The descriptive name of the sub-specialty to add.</param>
+    /// <exception cref="ArgumentException">Thrown when the provided name is null, empty, or whitespace.</exception>
+    public void AddSpecialty(string name)
     {
-        ArgumentNullException.ThrowIfNull(specialty);
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Specialty name cannot be empty or whitespace.", nameof(name));
+        }
 
-        if (_specialties.Any(s => s.Name.Equals(specialty.Name, StringComparison.OrdinalIgnoreCase)))
+        if (_specialties.Any(s => s.Name.Equals(name, StringComparison.OrdinalIgnoreCase)))
         {
             return; // Specialty already exists under this major, ignore to prevent duplication
         }
 
-        _specialties.Add(specialty);
+        // The aggregate root now explicitly controls the instantiation, 
+        // automatically binding the specialty to this Major's unique Id.
+        _specialties.Add(new Specialty(name, Id));
     }
 
     /// <summary>
