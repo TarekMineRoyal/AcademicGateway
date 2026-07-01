@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
-using AcademicGateway.Domain.Entities;
+using Domain.Models.Academic;
+using Domain.Students;
 using FluentAssertions;
 using FluentValidation; // Needed for asserting ValidationException
 using Xunit;

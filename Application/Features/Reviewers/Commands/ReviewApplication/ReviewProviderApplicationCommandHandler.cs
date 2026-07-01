@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Enums;
+using Domain.Providers;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -44,8 +45,8 @@ public class ReviewProviderApplicationCommandHandler(IApplicationDbContext conte
             if (provider != null)
             {
                 // If your Provider entity uses a method like provider.Verify(), invoke that here instead!
-                typeof(Domain.Entities.Provider)
-                    .GetProperty(nameof(Domain.Entities.Provider.IsVerified))?
+                typeof(Provider)
+                    .GetProperty(nameof(Provider.IsVerified))?
                     .SetValue(provider, true);
             }
         }

@@ -1,8 +1,8 @@
 ﻿using AcademicGateway.Application.Features.Providers.Commands.SubmitApplication;
 using AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplication;
-using AcademicGateway.Domain.Entities;
-using AcademicGateway.Domain.Enums;
 using AcademicGateway.Infrastructure.Identity;
+using Domain.Providers;
+using Domain.Providers.Enums;
 using FluentAssertions;
 using FluentValidation;
 using Xunit;

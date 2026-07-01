@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Entities;
-using AcademicGateway.Domain.Enums;
+using Domain.Providers.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;

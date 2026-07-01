@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
-using AcademicGateway.Domain.Entities;
+using Domain.Students;
 using FluentAssertions; // We use this for clean Assertions!
 using MockQueryable.EntityFrameworkCore;
 using MockQueryable.Moq;

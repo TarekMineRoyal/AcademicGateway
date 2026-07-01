@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
-using AcademicGateway.Domain.Entities;
+using Domain.Providers;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

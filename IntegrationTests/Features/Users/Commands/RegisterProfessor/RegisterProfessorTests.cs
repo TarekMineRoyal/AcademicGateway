@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProfessor;
-using AcademicGateway.Domain.Entities;
+using Domain.Professors;
 using FluentAssertions;
 using FluentValidation;
 using Xunit;

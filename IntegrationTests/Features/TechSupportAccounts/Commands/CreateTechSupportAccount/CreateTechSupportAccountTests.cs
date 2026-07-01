@@ -2,10 +2,10 @@
 using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
 using AcademicGateway.Application.Features.Providers.Commands.SubmitApplication;
 using AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplication;
-using AcademicGateway.Domain.Entities;
 using FluentAssertions;
 using FluentValidation;
 using Xunit;
+using Domain.Providers;
 
 namespace AcademicGateway.IntegrationTests.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
 

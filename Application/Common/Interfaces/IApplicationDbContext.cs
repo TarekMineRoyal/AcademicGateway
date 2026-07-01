@@ -1,4 +1,9 @@
-﻿using AcademicGateway.Domain.Entities;
+﻿using Domain.Lookups;
+using Domain.Professors;
+using Domain.ProjectTemplates;
+using Domain.Providers;
+using Domain.Students;
+using Domain.SystemStaff;
 using Microsoft.EntityFrameworkCore;
 using System.Threading;
 using System.Threading.Tasks;

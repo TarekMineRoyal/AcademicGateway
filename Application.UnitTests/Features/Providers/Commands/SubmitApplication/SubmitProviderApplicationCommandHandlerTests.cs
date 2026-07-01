@@ -1,7 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Providers.Commands.SubmitApplication;
-using AcademicGateway.Domain.Entities;
-using AcademicGateway.Domain.Enums;
+using Domain.Providers;
+using Domain.Providers.Enums;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

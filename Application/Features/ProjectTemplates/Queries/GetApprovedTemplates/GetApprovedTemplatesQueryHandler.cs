@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Domain.Enums;
+using Domain.ProjectTemplates.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;

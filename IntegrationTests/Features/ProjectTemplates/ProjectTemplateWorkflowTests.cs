@@ -1,8 +1,8 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateTemplate;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewTemplate;
-using AcademicGateway.Domain.Entities;
-using AcademicGateway.Domain.Enums;
 using AcademicGateway.Infrastructure.Identity;
+using Domain.ProjectTemplates;
+using Domain.ProjectTemplates.Enums;
 using FluentAssertions;
 using Xunit;
 

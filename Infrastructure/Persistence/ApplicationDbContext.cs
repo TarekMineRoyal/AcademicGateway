@@ -1,6 +1,11 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Domain.Entities;
 using AcademicGateway.Infrastructure.Identity;
+using Domain.Lookups;
+using Domain.Professors;
+using Domain.ProjectTemplates;
+using Domain.Providers;
+using Domain.Students;
+using Domain.SystemStaff;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 

@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.Users.Queries.GetStudentProfile;
-using AcademicGateway.Domain.Entities;
+using Domain.Models.Academic;
+using Domain.Students;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

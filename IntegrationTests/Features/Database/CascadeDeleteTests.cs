@@ -1,8 +1,13 @@
 ﻿using AcademicGateway.Application.Features.Users.Commands.RegisterProvider;
 using AcademicGateway.Application.Features.Users.Commands.RegisterStudent;
-using AcademicGateway.Domain.Entities;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
+using Domain.Lookups;
+using Domain.Models.Academic;
+using Domain.ProjectTemplates;
+using Domain.Providers;
+using Domain.Students;
+using Domain.SystemStaff;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
