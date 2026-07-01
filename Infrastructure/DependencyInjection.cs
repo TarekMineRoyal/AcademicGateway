@@ -35,12 +35,11 @@ public static class DependencyInjection
         // 3. Configure the DbContext with PostgreSQL and SnakeCase conventions
         services.AddDbContext<ApplicationDbContext>((sp, options) =>
         {
-            // Extract the domain event interceptor out of the provider container instance natively
             var interceptor = sp.GetRequiredService<DispatchDomainEventsInterceptor>();
 
             options.UseNpgsql(connectionString)
                    .UseSnakeCaseNamingConvention()
-                   .AddInterceptors(interceptor); // Natively binds our event loop right into EF Core's update lifecycle
+                   .AddInterceptors(interceptor);
         });
 
         // 4. Register the Application Unit of Work Context proxy mapping contract
@@ -51,10 +50,12 @@ public static class DependencyInjection
         {
             options.User.RequireUniqueEmail = true;
         })
-        .AddRoles<IdentityRole<Guid>>() // Explicitly map using your domain's Guid key structure
+        .AddRoles<IdentityRole<Guid>>()
         .AddEntityFrameworkStores<ApplicationDbContext>();
 
-        // 6. Register Identity adapter and core cross-cutting utility tools
+        // 6. Register Identity adapters and core cross-cutting utility tools
+        services.AddHttpContextAccessor(); // Allows resolving the HttpContext from outside of controllers
+        services.AddScoped<ICurrentUserService, CurrentUserService>(); // Resolves the User context per request
         services.AddTransient<IIdentityService, IdentityService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
 

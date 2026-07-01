@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
+using Domain.Curriculum;
 using Domain.Skills;
 using Domain.SystemStaff;
 using Microsoft.AspNetCore.Identity;
@@ -79,6 +80,22 @@ public static class ApplicationDbContextSeed
             };
 
             await context.Skills.AddRangeAsync(defaultSkills);
+            await context.SaveChangesAsync(default);
+        }
+
+        // 5. Seed Majors and Specialties with their respective domain-driven design rules
+        if (!await context.Majors.AnyAsync())
+        {
+            var computerScience = new Major("Computer Science");
+            computerScience.AddSpecialty("Software Engineering");
+            computerScience.AddSpecialty("Artificial Intelligence");
+            computerScience.AddSpecialty("Cybersecurity");
+
+            var engineering = new Major("Electrical Engineering");
+            engineering.AddSpecialty("Embedded Systems");
+            engineering.AddSpecialty("Power Systems");
+
+            await context.Majors.AddRangeAsync(computerScience, engineering);
             await context.SaveChangesAsync(default);
         }
     }

@@ -1,7 +1,7 @@
 using AcademicGateway.Application;
 using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Infrastructure; // <-- Natively resolves your new Infrastructure extension
+using AcademicGateway.Infrastructure;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
@@ -17,48 +17,41 @@ using System.Text;
 var builder = WebApplication.CreateBuilder(args);
 
 // ==========================================
-// 1. Centralized Layer Registrations
+// 1. Layer Registrations (Clean Architecture)
 // ==========================================
 builder.Services.AddApplicationServices();
-builder.Services.AddInfrastructureServices(builder.Configuration); // Loads persistence, identity framework, and decoupled interceptors safely
+builder.Services.AddInfrastructureServices(builder.Configuration);
 
 // ==========================================
-// 2. Configure Presentation JWT Authentication Entry Guards
+// 2. Authentication (JWT)
 // ==========================================
-var jwtSecret = builder.Configuration["JwtSettings:Secret"];
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new TokenValidationParameters
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = builder.Configuration["JwtSettings:Issuer"],
-        ValidAudience = builder.Configuration["JwtSettings:Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSecret!))
-    };
-});
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Secret"]!))
+        };
+    });
 
 // ==========================================
-// 3. Register Presentation Pipeline Elements (MediatR & FluentValidation)
+// 3. MediatR & Pipeline Behaviors
 // ==========================================
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterStudentCommandValidator>();
-
 builder.Services.AddMediatR(cfg => {
     cfg.RegisterServicesFromAssembly(typeof(RegisterStudentCommand).Assembly);
-
-    // Injects our validation cross-cutting pipeline behavior before commands hit concrete handlers
     cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
 });
 
 // ==========================================
-// 4. Register Web API & Explorer Utilities
+// 4. API & Swagger Configuration
 // ==========================================
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -66,54 +59,41 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Academic Gateway API", Version = "v1" });
 
+    // Swagger UI Grouping Logic: 
+    // Automatically tags endpoints based on their controller or folder name to prevent UI mess.
+    c.TagActionsBy(api => new[] { api.ActionDescriptor.RouteValues["controller"] ?? "Default" });
+
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        Description = "JWT Authorization header using the Bearer scheme. \r\n\r\n Enter 'Bearer' [space] and then your token in the text input below.\r\n\r\nExample: \"Bearer 1safsfsdfdfd\"",
+        Description = "JWT Authorization header using the Bearer scheme.",
         Name = "Authorization",
         In = ParameterLocation.Header,
         Type = SecuritySchemeType.ApiKey,
         Scheme = "Bearer"
     });
 
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement()
-    {
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
         {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                },
-                Scheme = "oauth2",
-                Name = "Bearer",
-                In = ParameterLocation.Header,
+            new OpenApiSecurityScheme {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
             },
-            new List<string>()
+            Array.Empty<string>()
         }
     });
 });
 
 // ==========================================
-// 5. Cross-Cutting UI Utilities (Exceptions, CORS)
+// 5. Middleware Pipeline
 // ==========================================
 builder.Services.AddExceptionHandler<Api.Infrastructure.CustomExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
-    {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
-    });
+    options.AddPolicy("AllowAll", policy => policy.AllowAnyOrigin().AllowAnyMethod().AllowAnyHeader());
 });
 
 var app = builder.Build();
 
-// ==========================================
-// 6. Configure HTTP Middleware Pipeline
-// ==========================================
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -122,13 +102,13 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 app.UseCors("AllowAll");
-app.UseExceptionHandler(); // Activates CustomExceptionHandler natively
+app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
 // ==========================================
-// 7. Relational Database Migration & Seeding Execution
+// 6. Database Seeding & Migration
 // ==========================================
 using (var scope = app.Services.CreateScope())
 {
@@ -136,21 +116,17 @@ using (var scope = app.Services.CreateScope())
     try
     {
         var context = services.GetRequiredService<ApplicationDbContext>();
-
-        // Automatically executes outstanding schema definitions down onto the active cluster
         await context.Database.MigrateAsync();
 
-        // Resolve dependencies explicitly matching the Guid tracking keys assigned onto your identity core structures
         var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
-        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>(); // Realigned type parameter to use your clean Guid contract keys
+        var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-        // Executes seeder parameters cleanly
         await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context);
     }
     catch (Exception ex)
     {
         var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "An error occurred while migrating or seeding the database workspace cluster.");
+        logger.LogError(ex, "An error occurred while seeding the database.");
     }
 }
 
