@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Domain.Curriculum;
 using AcademicGateway.Domain.Professors;
 using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.ProjectInstances;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Reviewers;
 using AcademicGateway.Domain.Skills;
@@ -86,6 +87,21 @@ public interface IApplicationDbContext
     /// Gets the database tracking context set for technical support and administrative platform maintenance <see cref="TechSupportAccount"/> profiles.
     /// </summary>
     DbSet<TechSupportAccount> TechSupportAccounts { get; }
+
+    /// <summary>
+    /// Gets the database tracking context set for live, active running project snapshot workspaces.
+    /// </summary>
+    DbSet<ProjectInstance> ProjectInstances { get; }
+
+    /// <summary>
+    /// Gets the database tracking context set for academic match supervision requests.
+    /// </summary>
+    DbSet<SupervisionRequest> SupervisionRequests { get; }
+
+    /// <summary>
+    /// Gets the database tracking context set for industry technical mentor proposals.
+    /// </summary>
+    DbSet<TechSupportProposal> TechSupportProposals { get; }
 
     /// <summary>
     /// Atomically flushes all tracked collection alterations, structural updates, and outstanding aggregate domain state mutations down to the relational persistence layer.
