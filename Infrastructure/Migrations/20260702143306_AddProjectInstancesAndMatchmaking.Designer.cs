@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260702142048_AddProjectInstancesAndMatchmaking")]
+    [Migration("20260702143306_AddProjectInstancesAndMatchmaking")]
     partial class AddProjectInstancesAndMatchmaking
     {
         /// <inheritdoc />
@@ -213,15 +213,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("skill_id");
 
-                    b.Property<Guid?>("ProjectInstanceId1")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_instance_id1");
-
                     b.HasKey("ProjectInstanceId", "SkillId")
                         .HasName("pk_project_instance_skills");
-
-                    b.HasIndex("ProjectInstanceId1")
-                        .HasDatabaseName("ix_project_instance_skills_project_instance_id1");
 
                     b.HasIndex("SkillId")
                         .HasDatabaseName("ix_project_instance_skills_skill_id");
@@ -254,10 +247,6 @@ namespace Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_instance_id");
 
-                    b.Property<Guid>("ProjectInstanceId1")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_instance_id1");
-
                     b.Property<string>("RejectionReason")
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
@@ -282,9 +271,6 @@ namespace Infrastructure.Migrations
                     b.HasIndex("ProjectInstanceId")
                         .HasDatabaseName("ix_supervision_requests_project_instance_id");
 
-                    b.HasIndex("ProjectInstanceId1")
-                        .HasDatabaseName("ix_supervision_requests_project_instance_id1");
-
                     b.ToTable("SupervisionRequests", (string)null);
                 });
 
@@ -303,13 +289,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("project_instance_id");
 
-                    b.Property<Guid>("ProjectInstanceId1")
-                        .HasColumnType("uuid")
-                        .HasColumnName("project_instance_id1");
-
                     b.Property<string>("RejectionReason")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)")
+                        .HasColumnType("text")
                         .HasColumnName("rejection_reason");
 
                     b.Property<string>("Status")
@@ -327,9 +308,6 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("ProjectInstanceId")
                         .HasDatabaseName("ix_tech_support_proposals_project_instance_id");
-
-                    b.HasIndex("ProjectInstanceId1")
-                        .HasDatabaseName("ix_tech_support_proposals_project_instance_id1");
 
                     b.HasIndex("TechSupportAccountId")
                         .HasDatabaseName("ix_tech_support_proposals_tech_support_account_id");
@@ -948,16 +926,11 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("AcademicGateway.Domain.ProjectInstances.ProjectInstanceSkill", b =>
                 {
                     b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", null)
-                        .WithMany()
+                        .WithMany("SnapshotSkills")
                         .HasForeignKey("ProjectInstanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_project_instance_skills_project_instances_project_instance_id");
-
-                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", null)
-                        .WithMany("SnapshotSkills")
-                        .HasForeignKey("ProjectInstanceId1")
-                        .HasConstraintName("fk_project_instance_skills_project_instances_project_instance_id1");
 
                     b.HasOne("AcademicGateway.Domain.Skills.Skill", null)
                         .WithMany()
@@ -976,19 +949,12 @@ namespace Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_supervision_requests_professors_professor_id");
 
-                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", null)
+                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", "ProjectInstance")
                         .WithMany("SupervisionRequests")
                         .HasForeignKey("ProjectInstanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_supervision_requests_project_instances_project_instance_id");
-
-                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", "ProjectInstance")
-                        .WithMany()
-                        .HasForeignKey("ProjectInstanceId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_supervision_requests_project_instances_project_instance_id1");
 
                     b.Navigation("Professor");
 
@@ -997,19 +963,12 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("AcademicGateway.Domain.ProjectInstances.TechSupportProposal", b =>
                 {
-                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", null)
+                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", "ProjectInstance")
                         .WithMany("TechSupportProposals")
                         .HasForeignKey("ProjectInstanceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_tech_support_proposals_project_instances_project_instance_id");
-
-                    b.HasOne("AcademicGateway.Domain.ProjectInstances.ProjectInstance", "ProjectInstance")
-                        .WithMany()
-                        .HasForeignKey("ProjectInstanceId1")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired()
-                        .HasConstraintName("fk_tech_support_proposals_project_instances_project_instance_id1");
 
                     b.HasOne("AcademicGateway.Domain.Providers.TechSupportAccount", "TechSupportAccount")
                         .WithMany()

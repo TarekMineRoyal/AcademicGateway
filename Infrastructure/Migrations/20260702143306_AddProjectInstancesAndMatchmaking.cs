@@ -47,8 +47,7 @@ namespace Infrastructure.Migrations
                 columns: table => new
                 {
                     project_instance_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    skill_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    project_instance_id1 = table.Column<Guid>(type: "uuid", nullable: true)
+                    skill_id = table.Column<Guid>(type: "uuid", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -59,11 +58,6 @@ namespace Infrastructure.Migrations
                         principalTable: "ProjectInstances",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_project_instance_skills_project_instances_project_instance_id1",
-                        column: x => x.project_instance_id1,
-                        principalTable: "ProjectInstances",
-                        principalColumn: "id");
                     table.ForeignKey(
                         name: "fk_project_instance_skills_skills_skill_id",
                         column: x => x.skill_id,
@@ -83,8 +77,7 @@ namespace Infrastructure.Migrations
                     status = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
                     rejection_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    reviewed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
-                    project_instance_id1 = table.Column<Guid>(type: "uuid", nullable: false)
+                    reviewed_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -101,12 +94,6 @@ namespace Infrastructure.Migrations
                         principalTable: "ProjectInstances",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_supervision_requests_project_instances_project_instance_id1",
-                        column: x => x.project_instance_id1,
-                        principalTable: "ProjectInstances",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -117,9 +104,8 @@ namespace Infrastructure.Migrations
                     project_instance_id = table.Column<Guid>(type: "uuid", nullable: false),
                     tech_support_account_id = table.Column<Guid>(type: "uuid", nullable: false),
                     status = table.Column<string>(type: "character varying(30)", maxLength: 30, nullable: false),
-                    rejection_reason = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
-                    project_instance_id1 = table.Column<Guid>(type: "uuid", nullable: false)
+                    rejection_reason = table.Column<string>(type: "text", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -127,12 +113,6 @@ namespace Infrastructure.Migrations
                     table.ForeignKey(
                         name: "fk_tech_support_proposals_project_instances_project_instance_id",
                         column: x => x.project_instance_id,
-                        principalTable: "ProjectInstances",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "fk_tech_support_proposals_project_instances_project_instance_id1",
-                        column: x => x.project_instance_id1,
                         principalTable: "ProjectInstances",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -155,11 +135,6 @@ namespace Infrastructure.Migrations
                 column: "supervisor_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_project_instance_skills_project_instance_id1",
-                table: "ProjectInstanceSkills",
-                column: "project_instance_id1");
-
-            migrationBuilder.CreateIndex(
                 name: "ix_project_instance_skills_skill_id",
                 table: "ProjectInstanceSkills",
                 column: "skill_id");
@@ -175,19 +150,9 @@ namespace Infrastructure.Migrations
                 column: "project_instance_id");
 
             migrationBuilder.CreateIndex(
-                name: "ix_supervision_requests_project_instance_id1",
-                table: "SupervisionRequests",
-                column: "project_instance_id1");
-
-            migrationBuilder.CreateIndex(
                 name: "ix_tech_support_proposals_project_instance_id",
                 table: "TechSupportProposals",
                 column: "project_instance_id");
-
-            migrationBuilder.CreateIndex(
-                name: "ix_tech_support_proposals_project_instance_id1",
-                table: "TechSupportProposals",
-                column: "project_instance_id1");
 
             migrationBuilder.CreateIndex(
                 name: "ix_tech_support_proposals_tech_support_account_id",
