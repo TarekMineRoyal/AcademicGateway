@@ -9,7 +9,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
+namespace IntegrationTests.Subdomains.ProviderApplications.Commands;
 
 /// <summary>
 /// Integration tests verifying pipeline validations, duplicate handling constraints,

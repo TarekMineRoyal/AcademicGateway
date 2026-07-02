@@ -35,7 +35,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Subdomains\AcademicCurriculum\Commands\" />
+    <Folder Include="Subdomains\Curriculum\Commands\" />
   </ItemGroup>
 
 </Project>

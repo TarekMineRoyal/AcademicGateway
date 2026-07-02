@@ -4,7 +4,7 @@ using FluentAssertions;
 using IntegrationTests.Infrastructure;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.Subdomains.AcademicCurriculum.Queries;
+namespace AcademicGateway.IntegrationTests.Subdomains.Curriculum.Queries;
 
 /// <summary>
 /// Integration tests verifying academic major and nested sub-specialty curriculum

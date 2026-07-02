@@ -3,7 +3,7 @@ using IntegrationTests.Infrastructure;
 using System.Net;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.CrossCutting.Authorization;
+namespace IntegrationTests.Subdomains.ProjectTemplates.Queries;
 
 /// <summary>
 /// Infrastructure integration tests verifying perimeter security boundaries and global authentication 

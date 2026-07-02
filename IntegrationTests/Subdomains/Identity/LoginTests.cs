@@ -5,7 +5,7 @@ using FluentAssertions;
 using IntegrationTests.Infrastructure;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.CrossCutting.Identity;
+namespace IntegrationTests.Subdomains.Identity;
 
 /// <summary>
 /// Integration tests verifying user authentication, payload processing correctness, 

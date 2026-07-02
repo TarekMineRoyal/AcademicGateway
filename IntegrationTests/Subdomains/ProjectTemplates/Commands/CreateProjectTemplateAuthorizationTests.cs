@@ -5,7 +5,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.CrossCutting.Authorization;
+namespace IntegrationTests.Subdomains.ProjectTemplates.Commands;
 
 /// <summary>
 /// Infrastructure integration tests verifying perimeter security boundaries and Role-Based 

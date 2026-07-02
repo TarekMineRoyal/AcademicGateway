@@ -10,7 +10,7 @@ using System;
 using System.Threading.Tasks;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
+namespace IntegrationTests.Subdomains.ProviderApplications.Commands;
 
 /// <summary>
 /// Integration tests verifying workflow transitions, domain aggregate boundaries,

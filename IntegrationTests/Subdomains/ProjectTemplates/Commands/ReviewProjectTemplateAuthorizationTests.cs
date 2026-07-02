@@ -4,36 +4,36 @@ using System.Net;
 using System.Net.Http.Json;
 using Xunit;
 
-namespace AcademicGateway.IntegrationTests.CrossCutting.Authorization;
+namespace IntegrationTests.Subdomains.ProjectTemplates.Commands;
 
 /// <summary>
 /// Infrastructure integration tests verifying perimeter security boundaries and Role-Based 
-/// Access Control (RBAC) attributes protecting the provider application evaluation endpoint.
+/// Access Control (RBAC) attributes protecting the project template evaluation endpoint.
 /// </summary>
 [Collection("SharedDatabase")]
-public class ReviewProviderApplicationAuthorizationTests : BaseIntegrationTest
+public class ReviewProjectTemplateAuthorizationTests : BaseIntegrationTest
 {
-    public ReviewProviderApplicationAuthorizationTests(CustomWebApplicationFactory factory) : base(factory)
+    public ReviewProjectTemplateAuthorizationTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
 
     /// <summary>
-    /// Ensures that an anonymous unauthenticated user attempting to review an onboarding application
-    /// is explicitly blocked at the API gateway perimeter with a 401 Unauthorized status.
+    /// Ensures that an anonymous unauthenticated user attempting to review an active project proposal
+    /// is explicitly blocked at the API gateway perimeter with a 401 Unauthorized response status code.
     /// </summary>
     [Fact]
-    public async Task ReviewApplication_ShouldReturnUnauthorized_WhenUserIsAnonymous()
+    public async Task ReviewTemplate_ShouldReturnUnauthorized_WhenUserIsAnonymous()
     {
         // --- 1. ARRANGE ---
         var anonymousClient = GetAnonymousClient();
-        var applicationId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
 
         // Inline anonymous type payload matching the feature slice review contract schema
         var payload = new { IsApproved = true, RejectionReason = (string?)null };
 
         // --- 2. ACT ---
         var response = await anonymousClient.PostAsJsonAsync(
-            $"api/reviewers/applications/{applicationId}/review",
+            $"api/reviewers/templates/{templateId}/review",
             payload,
             TestContext.Current.CancellationToken
         );
@@ -43,20 +43,20 @@ public class ReviewProviderApplicationAuthorizationTests : BaseIntegrationTest
     }
 
     /// <summary>
-    /// Ensures that an authenticated user holding only the Student role is denied access
-    /// with a 403 Forbidden status when attempting to execute administrative application review actions.
+    /// Ensures that an authenticated user holding only the Student role is denied access 
+    /// with a 403 Forbidden response status code when trying to execute template evaluations.
     /// </summary>
     [Fact]
-    public async Task ReviewApplication_ShouldReturnForbidden_WhenUserIsStudent()
+    public async Task ReviewTemplate_ShouldReturnForbidden_WhenUserIsStudent()
     {
         // --- 1. ARRANGE ---
         var studentClient = GetStudentClient();
-        var applicationId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
         var payload = new { IsApproved = true, RejectionReason = (string?)null };
 
         // --- 2. ACT ---
         var response = await studentClient.PostAsJsonAsync(
-            $"api/reviewers/applications/{applicationId}/review",
+            $"api/reviewers/templates/{templateId}/review",
             payload,
             TestContext.Current.CancellationToken
         );
@@ -67,19 +67,19 @@ public class ReviewProviderApplicationAuthorizationTests : BaseIntegrationTest
 
     /// <summary>
     /// Ensures that an authenticated corporate Provider user is denied access with a 403 Forbidden 
-    /// status when trying to hijack or evaluate onboarding application entities.
+    /// response status code when attempting to evaluate or approve template entries.
     /// </summary>
     [Fact]
-    public async Task ReviewApplication_ShouldReturnForbidden_WhenUserIsProvider()
+    public async Task ReviewTemplate_ShouldReturnForbidden_WhenUserIsProvider()
     {
         // --- 1. ARRANGE ---
         var providerClient = GetProviderClient();
-        var applicationId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
         var payload = new { IsApproved = true, RejectionReason = (string?)null };
 
         // --- 2. ACT ---
         var response = await providerClient.PostAsJsonAsync(
-            $"api/reviewers/applications/{applicationId}/review",
+            $"api/reviewers/templates/{templateId}/review",
             payload,
             TestContext.Current.CancellationToken
         );

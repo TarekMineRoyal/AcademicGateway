@@ -13,7 +13,7 @@ using System.Threading.Tasks;
 using Xunit;
 using IntegrationTests.Infrastructure;
 
-namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
+namespace IntegrationTests.Subdomains.TechSupportAccounts.Commands;
 
 /// <summary>
 /// Integration tests verifying validation rules, provider state preconditions, and 
