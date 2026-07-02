@@ -4,8 +4,12 @@ using AcademicGateway.Application.Features.ProviderApplications.Commands.SubmitP
 using AcademicGateway.Application.Features.ProviderApplications.Commands.ReviewProviderApplication;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Providers.Exceptions;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using FluentValidation;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Xunit;
 using IntegrationTests.Infrastructure;
 
@@ -18,6 +22,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
 [Collection("SharedDatabase")]
 public class CreateTechSupportAccountTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="CreateTechSupportAccountTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public CreateTechSupportAccountTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -42,12 +50,20 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(registerProviderCommand);
 
-        // Step B: Seed an active institutional reviewer profile context using clean aggregate constructors
-        // Note: Reusing a separate ID context to ensure clean relational tracking bounds.
-        var reviewer = new AcademicGateway.Domain.Reviewers.Reviewer(Guid.NewGuid(), "System Administrator");
+        // Step B: Seed underlying ApplicationUser security credentials for the platform reviewer
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "admin.reviewer@academicgateway.com",
+            Email = "admin.reviewer@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
+        // Step C: Seed active institutional reviewer profile context using the generated Identity ID context
+        var reviewer = new AcademicGateway.Domain.Reviewers.Reviewer(reviewerUser.Id, "System Administrator");
         await AddAsync(reviewer);
 
-        // Step C: Submit an onboarding application for review to trigger proper verification steps
+        // Step D: Submit an onboarding application for review to trigger proper verification steps
         var submitAppCommand = new SubmitProviderApplicationCommand
         {
             ProviderId = providerId,
@@ -56,7 +72,7 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
         };
         Guid applicationId = await SendAsync(submitAppCommand);
 
-        // Step D: Approve the application through the official command pipeline to naturally verify the provider
+        // Step E: Approve the application through the official command pipeline to naturally verify the provider
         var reviewCommand = new ReviewProviderApplicationCommand
         {
             ApplicationId = applicationId,
@@ -66,12 +82,14 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
         };
         await SendAsync(reviewCommand);
 
-        // Step E: Formulate the final technical support provisioning command
+        // Step F: Formulate the final technical support provisioning command containing valid structural properties
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = providerId,
             Email = "auxiliary.support@academicgateway.com",
-            Password = "SecurePass123!"
+            Password = "SecurePass123!",
+            StaffNumber = "EMP-SUP-001",
+            SupportTier = "Tier 2 Helpdesk"
         };
 
         // --- 2. ACT ---
@@ -106,11 +124,14 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(registerProviderCommand);
 
+        // Include valid staff details to clear fluent validation and hit the inner handler guard clauses
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = providerId,
             Email = "illegal.support@academicgateway.com",
-            Password = "SecurePass123!"
+            Password = "SecurePass123!",
+            StaffNumber = "EMP-SUP-002",
+            SupportTier = "Tier 1 Support"
         };
 
         // --- 2. ACT ---
@@ -129,11 +150,14 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
     public async Task Should_ThrowKeyNotFoundException_WhenProviderDoesNotExist()
     {
         // --- 1. ARRANGE ---
+        // Include valid staff details to clear fluent validation checkpoints
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = Guid.NewGuid(), // Simulates a missing company reference context
             Email = "ghost.support@academicgateway.com",
-            Password = "SecurePass123!"
+            Password = "SecurePass123!",
+            StaffNumber = "EMP-SUP-003",
+            SupportTier = "Tier 3 Engineer"
         };
 
         // --- 2. ACT ---
@@ -151,11 +175,14 @@ public class CreateTechSupportAccountTests : BaseIntegrationTest
     public async Task Should_ThrowValidationException_WhenPasswordDoesNotMeetComplexity()
     {
         // --- 1. ARRANGE ---
+        // Supply valid prerequisites to explicitly isolate the target password complexity rule failure
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = Guid.NewGuid(),
             Email = "badpass.support@academicgateway.com",
             Password = "simple", // Fails uppercase, numeric, and special character criteria rules
+            StaffNumber = "EMP-SUP-004",
+            SupportTier = "Tier 1 Support"
         };
 
         // --- 2. ACT ---

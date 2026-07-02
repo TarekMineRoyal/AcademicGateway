@@ -1,8 +1,12 @@
 ﻿using AcademicGateway.Application.Features.ProviderApplications.Commands.SubmitProviderApplication;
 using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
+using AcademicGateway.Domain.Providers.Exceptions;
 using FluentAssertions;
 using FluentValidation;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
@@ -14,6 +18,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
 [Collection("SharedDatabase")]
 public class SubmitProviderApplicationTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="SubmitProviderApplicationTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public SubmitProviderApplicationTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -46,10 +54,10 @@ public class SubmitProviderApplicationTests : BaseIntegrationTest
 
     /// <summary>
     /// Ensures that a provider aggregate profile that already possesses an active onboarding tracking record 
-    /// is strictly blocked from executing a duplicate submission loop, throwing an <see cref="InvalidOperationException"/>.
+    /// is strictly blocked from executing a duplicate submission loop, throwing an <see cref="InvalidApplicationStatusException"/>.
     /// </summary>
     [Fact]
-    public async Task Should_ThrowInvalidOperationException_WhenProviderAttemptsDuplicateSubmission()
+    public async Task Should_ThrowInvalidApplicationStatusException_WhenProviderAttemptsDuplicateSubmission()
     {
         // --- 1. ARRANGE ---
         // Register a corporate partner profile cleanly using the system command pipeline
@@ -76,11 +84,11 @@ public class SubmitProviderApplicationTests : BaseIntegrationTest
         await SendAsync(command);
 
         // --- 2. ACT & 3. ASSERT ---
-        // Attempt to execute the exact same command payload a second time to trigger a concurrency violation
+        // Attempt to execute the exact same command payload a second time to trigger a state-machine violation
         Func<Task> act = async () => await SendAsync(command);
 
-        // Verify the domain layer intercepts the duplicate submission attempt, safeguarding entity integrity
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage($"*already has an active onboarding application*");
+        // Verify the domain layer's custom exception blocks rewriting or appending data onto an active review workflow
+        await act.Should().ThrowAsync<InvalidApplicationStatusException>()
+            .WithMessage("*while the provider application is in the 'PendingReview' state*");
     }
 }

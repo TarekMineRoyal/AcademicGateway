@@ -3,6 +3,8 @@ using AcademicGateway.Domain.Professors;
 using FluentAssertions;
 using FluentValidation;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Professors.Commands;
@@ -14,6 +16,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Professors.Commands;
 [Collection("SharedDatabase")]
 public class RegisterProfessorTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterProfessorTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public RegisterProfessorTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -26,12 +32,16 @@ public class RegisterProfessorTests : BaseIntegrationTest
     public async Task Should_RegisterProfessorAndCreateProfile_WhenCommandIsValid()
     {
         // --- 1. ARRANGE ---
+        // Configure a complete registration payload meeting all mandatory structural field parameters
         var command = new RegisterProfessorCommand
         {
             Email = "prof.smith@academicgateway.com",
             Username = "profsmith",
             Password = "SecurePassword123!",
-            AcademicDepartment = "Computer Science"
+            FullName = "Professor John Smith",
+            AcademicDepartment = "Computer Science",
+            Rank = "Full Professor",
+            MaxSupervisionCapacity = 5
         };
 
         // --- 2. ACT ---
@@ -44,7 +54,7 @@ public class RegisterProfessorTests : BaseIntegrationTest
         var professorProfile = await FindAsync<Professor>(professorId);
         professorProfile.Should().NotBeNull();
 
-        // FIXES CS1061: Asserts against the refactored 'Department' property on the domain entity
+        // Verifies against the refactored 'Department' property on the domain entity
         professorProfile!.Department.Should().Be(command.AcademicDepartment);
     }
 
@@ -56,12 +66,16 @@ public class RegisterProfessorTests : BaseIntegrationTest
     public async Task Should_ThrowValidationException_WhenDepartmentIsEmpty()
     {
         // --- 1. ARRANGE ---
+        // Supply correct prerequisite metadata fields to isolate validation failure strictly to the blank department field
         var command = new RegisterProfessorCommand
         {
             Email = "prof.bad@academicgateway.com",
             Username = "profbad",
             Password = "SecurePassword123!",
-            AcademicDepartment = "" // Triggers mandatory field criteria check rules
+            FullName = "Professor Alan Turing",
+            AcademicDepartment = "", // Triggers mandatory field criteria check rules
+            Rank = "Associate Professor",
+            MaxSupervisionCapacity = 3
         };
 
         // --- 2. ACT ---

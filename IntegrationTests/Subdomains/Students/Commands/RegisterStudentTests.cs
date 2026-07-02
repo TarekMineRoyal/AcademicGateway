@@ -5,7 +5,14 @@ using AcademicGateway.Domain.Students;
 using FluentAssertions;
 using FluentValidation;
 using IntegrationTests.Infrastructure;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Xunit;
+using AcademicGateway.Infrastructure.Persistence;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Students.Commands;
 
@@ -16,8 +23,15 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Students.Commands;
 [Collection("SharedDatabase")]
 public class RegisterStudentTests : BaseIntegrationTest
 {
+    private readonly IServiceScopeFactory _scopeFactory;
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="RegisterStudentTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public RegisterStudentTests(CustomWebApplicationFactory factory) : base(factory)
     {
+        _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
     }
 
     /// <summary>
@@ -28,24 +42,21 @@ public class RegisterStudentTests : BaseIntegrationTest
     public async Task Should_RegisterStudentAndCreateProfile_WhenCommandIsValid()
     {
         // --- 1. ARRANGE ---
-        // Construct the major aggregate root and append child specialties via encapsulated methods
         var major = new Major("Computer Science");
         major.AddSpecialty("Software Engineering");
         await AddAsync(major);
 
-        // Extract the internally tracked child specialty instance safely to capture its Guid identifier
         var specialty = major.Specialties.Single(s => s.Name == "Software Engineering");
 
-        // Seed an independent technical capability lookup item
         var skill = new Skill("C# / .NET");
         await AddAsync(skill);
 
-        // Build the command referencing our seeded relational lookups
         var command = new RegisterStudentCommand
         {
             Email = "student.test@academicgateway.com",
             Username = "teststudent",
             Password = "SecurePassword123!",
+            FullName = "Test Student",
             GraduationYear = 2026,
             MajorIds = new List<Guid> { major.Id },
             SpecialtyIds = new List<Guid> { specialty.Id },
@@ -53,18 +64,27 @@ public class RegisterStudentTests : BaseIntegrationTest
         };
 
         // --- 2. ACT ---
-        // Dispatch the payload straight through the application MediatR pipeline behaviors
         Guid studentId = await SendAsync(command);
 
         // --- 3. ASSERT ---
         studentId.Should().NotBeEmpty();
 
-        // Direct query validation on the database to check student aggregate boundaries
-        var studentProfile = await FindAsync<Student>(studentId);
+        // Query the database with explicit eager loading to populate relationship matrices
+        Student? studentProfile;
+        using (var scope = _scopeFactory.CreateScope())
+        {
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            studentProfile = await context.Students
+                .Include(s => s.StudentMajors)
+                .Include(s => s.StudentSkills)
+                .Include(s => s.StudentSpecialties)
+                .FirstOrDefaultAsync(s => s.Id == studentId);
+        }
+
         studentProfile.Should().NotBeNull();
         studentProfile!.GraduationYear.Should().Be(command.GraduationYear);
 
-        // Verify relationship consistency using the aggregate's lookup collection bounds
+        // Verify relationship consistency passes cleanly
         studentProfile.StudentMajors.Should().Contain(sm => sm.MajorId == major.Id);
     }
 
@@ -81,7 +101,8 @@ public class RegisterStudentTests : BaseIntegrationTest
             Email = "",
             Username = "",
             Password = "",
-            MajorIds = new List<Guid>() // Triggers mandatory non-empty item verification rules
+            FullName = "",
+            MajorIds = new List<Guid>()
         };
 
         // --- 2. ACT & 3. ASSERT ---
@@ -89,7 +110,7 @@ public class RegisterStudentTests : BaseIntegrationTest
 
         await act.Should().ThrowAsync<ValidationException>()
             .Where(ex => ex.Errors.Any(e => e.PropertyName == "Email" && e.ErrorMessage.Contains("required")))
-            .Where(ex => ex.Errors.Any(e => e.PropertyName == "MajorIds" && e.ErrorMessage.Contains("at least one Major")));
+            .Where(ex => ex.Errors.Any(e => e.PropertyName == "MajorIds" && e.ErrorMessage.Contains("at least one core academic Major program")));
     }
 
     /// <summary>
@@ -100,36 +121,35 @@ public class RegisterStudentTests : BaseIntegrationTest
     public async Task Should_ThrowValidationException_WhenSpecialtyDoesNotBelongToSelectedMajor()
     {
         // --- 1. ARRANGE ---
-        // Seed two independent academic streams to check cross-reference safety boundaries
         var majorA = new Major("Computer Science");
         await AddAsync(majorA);
 
         var majorB = new Major("Mechanical Engineering");
-        majorB.AddSpecialty("Thermodynamics"); // Encapsulated internally inside Major B boundary parameters
+        majorB.AddSpecialty("Thermodynamics");
         await AddAsync(majorB);
 
         var specialtyForB = majorB.Specialties.Single(s => s.Name == "Thermodynamics");
 
-        // Formulate an invalid command mapping Major A alongside an isolated sub-specialty from Major B
         var maliciousCommand = new RegisterStudentCommand
         {
             Email = "crossref.test@academicgateway.com",
             Username = "crossreftest",
             Password = "SecurePassword123!",
-            MajorIds = new List<Guid> { majorA.Id }, // Chosen target program reference
-            SpecialtyIds = new List<Guid> { specialtyForB.Id } // Violates constraint (belongs to Major B)
+            FullName = "Cross Reference Student",
+            MajorIds = new List<Guid> { majorA.Id },
+            SpecialtyIds = new List<Guid> { specialtyForB.Id }
         };
 
         // --- 2. ACT & 3. ASSERT ---
         Func<Task> act = async () => await SendAsync(maliciousCommand);
 
         await act.Should().ThrowAsync<ValidationException>()
-            .Where(ex => ex.Errors.Any(e => e.PropertyName == "SpecialtyIds" && e.ErrorMessage.Contains("do not belong to your chosen majors")));
+            .Where(ex => ex.Errors.Any(e => e.PropertyName == "SpecialtyIds" && e.ErrorMessage.Contains("do not belong to your chosen academic majors")));
     }
 
     /// <summary>
     /// Ensures that trying to claim credentials that are already assigned to an existing profile 
-    /// is caught and rejected at the identity layer, throwing an explicit security exception.
+    /// is caught and rejected at the identity layer, throwing an explicit exception.
     /// </summary>
     [Fact]
     public async Task Should_ThrowException_WhenEmailOrUsernameAlreadyExists()
@@ -143,6 +163,7 @@ public class RegisterStudentTests : BaseIntegrationTest
             Email = "duplicate.test@academicgateway.com",
             Username = "sharedusername",
             Password = "FirstPassword123!",
+            FullName = "First Entry Profile",
             MajorIds = new List<Guid> { major.Id }
         };
 
@@ -151,17 +172,17 @@ public class RegisterStudentTests : BaseIntegrationTest
             Email = "duplicate.test@academicgateway.com",
             Username = "sharedusername",
             Password = "SecondPassword123!",
+            FullName = "Second Entry Profile",
             MajorIds = new List<Guid> { major.Id }
         };
 
-        // Seed the initial unique user entry into the storage cluster
         await SendAsync(command1);
 
         // --- 2. ACT & 3. ASSERT ---
         Func<Task> act = async () => await SendAsync(command2);
 
-        // Catches security collisions and checks your exact exception text matcher signature rules
+        // Realigned pattern matching to match your refactored string pattern exactly
         await act.Should().ThrowAsync<Exception>()
-            .WithMessage("*User creation failed*");
+            .WithMessage("*Student identity configuration failed*");
     }
 }

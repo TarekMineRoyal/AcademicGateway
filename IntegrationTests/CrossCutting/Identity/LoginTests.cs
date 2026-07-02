@@ -36,6 +36,7 @@ public class LoginTests : BaseIntegrationTest
             Email = "login.test@academicgateway.com",
             Username = "logintester",
             Password = password,
+            FullName = "Login Tester",
             GraduationYear = 2026,
             MajorIds = new List<Guid> { major.Id }
         };
@@ -69,6 +70,7 @@ public class LoginTests : BaseIntegrationTest
             Email = "wrongpass.test@academicgateway.com",
             Username = "wrongpasstester",
             Password = "CorrectPassword123!",
+            FullName = "Wrong Pass Tester",
             GraduationYear = 2026,
             MajorIds = new List<Guid> { major.Id }
         };

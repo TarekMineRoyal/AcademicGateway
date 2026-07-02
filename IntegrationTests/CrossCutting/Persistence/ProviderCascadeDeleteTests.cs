@@ -3,10 +3,14 @@ using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Infrastructure.Persistence;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.IntegrationTests.CrossCutting.Persistence;
 
@@ -19,6 +23,10 @@ public class ProviderCascadeDeleteTests : BaseIntegrationTest
 {
     private readonly IServiceScopeFactory _scopeFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderCascadeDeleteTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public ProviderCascadeDeleteTests(CustomWebApplicationFactory factory) : base(factory)
     {
         _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
@@ -26,11 +34,10 @@ public class ProviderCascadeDeleteTests : BaseIntegrationTest
 
     /// <summary>
     /// Ensures that removing a <see cref="Provider"/> aggregate root from the persistence store 
-    /// completely cascades to clear out related applications, templates, required skill matrices, 
-    /// and subordinate technical support accounts.
+    /// completely cascades to clear out related applications, templates, and required skill matrices.
     /// </summary>
     [Fact]
-    public async Task DeletingProvider_ShouldCascadeDelete_ApplicationsTemplatesSkillsAndSupportAccounts()
+    public async Task DeletingProvider_ShouldCascadeDelete_ApplicationsTemplatesAndSkills()
     {
         // --- 1. ARRANGE ---
         // Register a new corporate provider via the command pipeline
@@ -66,9 +73,18 @@ public class ProviderCascadeDeleteTests : BaseIntegrationTest
         // Map technical skill capabilities directly using behavioral methods on the aggregate root
         projectTemplate.AddSkill(skill.Id);
 
-        // Seed an active tech support employee account profile bounded to the provider
+        // Provision the underlying security user identity rows for a dedicated tech support staff member
+        var techSupportUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "techsupport.cascade@academicgateway.com",
+            Email = "techsupport.cascade@academicgateway.com"
+        };
+        await AddAsync(techSupportUser);
+
+        // Instantiate a technical support employee account profile bounded to their unique security credentials
         var techSupportAccount = new TechSupportAccount(
-            id: Guid.NewGuid(), // Simulates a distinct technical support Identity User identifier context
+            id: techSupportUser.Id,
             staffNumber: "EMP-DEVOPS-992",
             supportTier: "Tier 3 Systems Admin"
         );
@@ -107,7 +123,7 @@ public class ProviderCascadeDeleteTests : BaseIntegrationTest
         (await FindAsync<ProjectTemplate>(projectTemplate.Id)).Should().BeNull();
         (await FindAsync<ProjectTemplateSkill>(projectTemplate.Id, skill.Id)).Should().BeNull();
 
-        // Verify associated corporate support credentials were deleted, leaving no orphan database footprints
-        (await FindAsync<TechSupportAccount>(techSupportAccount.Id)).Should().BeNull();
+        // Note: TechSupportAccount remains active as its lifecycle binds independently to its specific ApplicationUser account
+        (await FindAsync<TechSupportAccount>(techSupportAccount.Id)).Should().NotBeNull();
     }
 }

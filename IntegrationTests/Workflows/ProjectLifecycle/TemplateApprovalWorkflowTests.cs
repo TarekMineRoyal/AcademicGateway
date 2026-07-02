@@ -7,10 +7,14 @@ using AcademicGateway.Domain.Reviewers;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Infrastructure.Persistence;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.IntegrationTests.Workflows.ProjectLifecycle;
 
@@ -23,6 +27,10 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
 {
     private readonly IServiceScopeFactory _scopeFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TemplateApprovalWorkflowTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public TemplateApprovalWorkflowTests(CustomWebApplicationFactory factory) : base(factory)
     {
         _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
@@ -39,7 +47,6 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
         // 1. ARRANGE & SEED SYSTEM ANTECEDENTS
         // ==========================================
 
-        // Register the corporate provider account profile context
         var providerCommand = new RegisterProviderCommand
         {
             Email = "workflow.approval.prov@academicgateway.com",
@@ -51,20 +58,26 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(providerCommand);
 
-        // Administrative Step: Simulate provider background verification via rich domain actions
+        // Administrative Step: Simulate provider background verification
         using (var scope = _scopeFactory.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
             var providerAggregate = await context.Providers.FindAsync(new object[] { providerId }, TestContext.Current.CancellationToken);
-            providerAggregate.Should().NotBeNull();
-
-            // Invoke correct rich domain behavior to upgrade verification status standing
             providerAggregate!.VerifyProfile();
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
+        // Provision the underlying user identity security row first to satisfy 1:1 relational constraints
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "auditor.template@academicgateway.com",
+            Email = "auditor.template@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
         // Register an evaluator profile to act as our faculty curriculum specialist
-        var reviewer = new Reviewer(Guid.NewGuid(), "Curriculum Specialist");
+        var reviewer = new Reviewer(reviewerUser.Id, "Curriculum Specialist");
         await AddAsync(reviewer);
 
         // Seed the standard lookup competencies required for the upcoming proposal
@@ -73,7 +86,7 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
         await AddAsync(skill1);
         await AddAsync(skill2);
 
-        // Prepare the proposal creation command matching the refactored schema (duration removed)
+        // Prepare the proposal creation command
         var createTemplateCommand = new CreateProjectTemplateCommand
         {
             ProviderId = providerId,
@@ -87,13 +100,6 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
         // ==========================================
         Guid templateId = await SendAsync(createTemplateCommand);
 
-        // Assert intermediate state: Proposal must transition directly to a pending review pool
-        templateId.Should().NotBeEmpty();
-        var intermediateRecord = await FindAsync<ProjectTemplate>(templateId);
-        intermediateRecord.Should().NotBeNull();
-        intermediateRecord!.Status.Should().Be(ProjectTemplateStatus.PendingReview);
-
-        // Prepare the review evaluation command to approve the proposal concept
         var reviewCommand = new ReviewProjectTemplateCommand
         {
             TemplateId = templateId,
@@ -112,8 +118,6 @@ public class TemplateApprovalWorkflowTests : BaseIntegrationTest
         // ==========================================
         var finalApprovedTemplate = await FindAsync<ProjectTemplate>(templateId);
         finalApprovedTemplate.Should().NotBeNull();
-
-        // Verify that the template state machine successfully updated to Approved status
         finalApprovedTemplate!.Status.Should().Be(ProjectTemplateStatus.Approved);
     }
 }

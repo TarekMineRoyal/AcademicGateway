@@ -2,10 +2,13 @@
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Reviewers;
 using AcademicGateway.Infrastructure.Persistence;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
+using System;
+using System.Threading.Tasks;
 
 namespace AcademicGateway.IntegrationTests.CrossCutting.Persistence;
 
@@ -18,6 +21,10 @@ public class ReviewerNullifyTests : BaseIntegrationTest
 {
     private readonly IServiceScopeFactory _scopeFactory;
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReviewerNullifyTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public ReviewerNullifyTests(CustomWebApplicationFactory factory) : base(factory)
     {
         _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
@@ -43,9 +50,17 @@ public class ReviewerNullifyTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(providerCommand);
 
-        // Instantiate an operational Reviewer aggregate with an explicit unique identity context
-        Guid reviewerId = Guid.NewGuid();
-        var reviewer = new Reviewer(reviewerId, "System Auditor");
+        // Setup underlying ApplicationUser credentials to comply with 1:1 database configurations
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "auditor.reviewer@academicgateway.com",
+            Email = "auditor.reviewer@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
+        // Instantiate an operational Reviewer aggregate mapped directly to our valid identity profile
+        var reviewer = new Reviewer(reviewerUser.Id, "System Auditor");
         await AddAsync(reviewer);
 
         // Provision an onboarding application workflow tracking instance for the provider
@@ -58,20 +73,20 @@ public class ReviewerNullifyTests : BaseIntegrationTest
 
         // Execute state transitions via rich domain methods to simulate an evaluation loop
         providerApp.SubmitForReview();
-        providerApp.Approve(reviewerId, DateTime.UtcNow);
+        providerApp.Approve(reviewerUser.Id, DateTime.UtcNow);
         await AddAsync(providerApp);
 
         // Pre-assertion: Verify the onboarding record is actively mapped to our evaluator
         var savedApp = await FindAsync<ProviderApplication>(providerApp.Id);
         savedApp.Should().NotBeNull();
-        savedApp!.ReviewedById.Should().Be(reviewerId);
+        savedApp!.ReviewedById.Should().Be(reviewerUser.Id);
 
         // --- 2. ACT ---
         // Delete the auditor reviewer aggregate root from the persistence store
         using (var scope = _scopeFactory.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var reviewerEntity = await context.Reviewers.FindAsync(new object[] { reviewerId }, TestContext.Current.CancellationToken);
+            var reviewerEntity = await context.Reviewers.FindAsync(new object[] { reviewerUser.Id }, TestContext.Current.CancellationToken);
             reviewerEntity.Should().NotBeNull();
 
             context.Reviewers.Remove(reviewerEntity!);
@@ -80,7 +95,7 @@ public class ReviewerNullifyTests : BaseIntegrationTest
 
         // --- 3. ASSERT ---
         // Verify the reviewer aggregate root was permanently dropped
-        (await FindAsync<Reviewer>(reviewerId)).Should().BeNull();
+        (await FindAsync<Reviewer>(reviewerUser.Id)).Should().BeNull();
 
         // Verify the application remains intact but its tracking foreign reference was safely set to null
         var updatedApp = await FindAsync<ProviderApplication>(providerApp.Id);

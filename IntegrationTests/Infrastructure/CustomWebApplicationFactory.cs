@@ -105,8 +105,6 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     {
         builder.UseEnvironment("Testing");
 
-        // PRE-BUILD STEP: Load test project's User Secrets right now to satisfy 
-        // strict configuration checks inside Infrastructure Dependency Injection.
         var initialTestConfig = new ConfigurationBuilder()
             .AddUserSecrets<CustomWebApplicationFactory>(optional: true)
             .AddEnvironmentVariables()
@@ -114,36 +112,36 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 
         var testConnectionString = initialTestConfig.GetConnectionString("TestConnection");
 
+        // Prepare settings including dummy JWT configuration parameters for the Testing host context
+        var testSettings = new Dictionary<string, string?>
+        {
+            { "JwtSettings:Secret", "this_is_a_very_long_mock_secret_key_for_testing_purposes_only_32_bytes_long!" },
+            { "JwtSettings:Issuer", "AcademicGatewayApi" },
+            { "JwtSettings:Audience", "AcademicGatewayUsers" },
+            { "JwtSettings:ExpiryMinutes", "60" }
+        };
+
         if (!string.IsNullOrEmpty(testConnectionString))
         {
-            var testSettings = new Dictionary<string, string?>
-            {
-                { "ConnectionStrings:DefaultConnection", testConnectionString },
-                { "ConnectionStrings:TestConnection", testConnectionString }
-            };
-
-            var hostConfig = new ConfigurationBuilder()
-                .AddInMemoryCollection(testSettings)
-                .Build();
-
-            // Push strings into WebHost early initialization stream
-            builder.UseConfiguration(hostConfig);
-
-            // Persist settings into application context configurations
-            builder.ConfigureAppConfiguration((context, configBuilder) =>
-            {
-                configBuilder.AddInMemoryCollection(testSettings);
-                configBuilder.AddUserSecrets<CustomWebApplicationFactory>(optional: true);
-                configBuilder.AddEnvironmentVariables();
-            });
+            testSettings.Add("ConnectionStrings:DefaultConnection", testConnectionString);
+            testSettings.Add("ConnectionStrings:TestConnection", testConnectionString);
         }
+
+        var hostConfig = new ConfigurationBuilder()
+            .AddInMemoryCollection(testSettings)
+            .Build();
+
+        builder.UseConfiguration(hostConfig);
+
+        builder.ConfigureAppConfiguration((context, configBuilder) =>
+        {
+            configBuilder.AddInMemoryCollection(testSettings);
+            configBuilder.AddUserSecrets<CustomWebApplicationFactory>(optional: true);
+            configBuilder.AddEnvironmentVariables();
+        });
 
         builder.ConfigureServices((context, services) =>
         {
-            // NOTE: We no longer unregister/wipe DbContextOptions out!
-            // Preserving the original registration keeps your 'DispatchDomainEventsInterceptor' alive.
-
-            // Intercept perimeter authentication pipelines and swap in mock header evaluation engines
             services.Configure<AuthenticationOptions>(options =>
             {
                 options.DefaultAuthenticateScheme = "TestAuthScheme";

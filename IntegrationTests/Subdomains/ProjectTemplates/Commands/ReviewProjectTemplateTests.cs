@@ -3,8 +3,11 @@ using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
 using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.ProjectTemplates.Exceptions;
 using AcademicGateway.Domain.Reviewers;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.ProjectTemplates.Commands;
@@ -16,6 +19,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.ProjectTemplates.Commands;
 [Collection("SharedDatabase")]
 public class ReviewProjectTemplateTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReviewProjectTemplateTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public ReviewProjectTemplateTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -41,8 +48,17 @@ public class ReviewProjectTemplateTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(registerProviderCommand);
 
-        // Instantiate an evaluator profile using rich domain aggregate patterns
-        var reviewer = new Reviewer(Guid.NewGuid(), "Template Auditor");
+        // Provision the underlying user identity security row first to satisfy 1:1 relational constraints
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "template.auditor@academicgateway.com",
+            Email = "template.auditor@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
+        // Instantiate an evaluator profile using rich domain aggregate patterns mapped to the user context
+        var reviewer = new Reviewer(reviewerUser.Id, "Template Auditor");
         await AddAsync(reviewer);
 
         // Explicitly instantiate a template using the rich domain constructor pattern.

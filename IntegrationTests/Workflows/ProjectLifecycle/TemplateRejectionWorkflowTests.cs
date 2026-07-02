@@ -1,47 +1,47 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateProjectTemplate;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
 using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
+using AcademicGateway.Application.Features.ProviderApplications.Commands.ReviewProviderApplication;
+using AcademicGateway.Application.Features.ProviderApplications.Commands.SubmitProviderApplication;
 using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.ProjectTemplates.Enums;
 using AcademicGateway.Domain.Reviewers;
-using AcademicGateway.Domain.Skills;
-using AcademicGateway.Domain.Providers;
-using AcademicGateway.Infrastructure.Persistence;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Xunit;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Threading.Tasks;
+using Xunit;
+using AcademicGateway.Domain.Skills;
 
 namespace AcademicGateway.IntegrationTests.Workflows.ProjectLifecycle;
 
 /// <summary>
-/// End-to-end workflow integration tests validating the negative branches of the macro project 
-/// template lifecycle saga, specifically focusing on administrative rejections and auditing.
+/// End-to-end workflow integration tests validating project template rejection paths,
+/// administrative evaluations, and preservation of the draft status or transition to rejected.
 /// </summary>
 [Collection("SharedDatabase")]
 public class TemplateRejectionWorkflowTests : BaseIntegrationTest
 {
-    private readonly IServiceScopeFactory _scopeFactory;
-
+    /// <summary>
+    /// Initializes a new instance of the <see cref="TemplateRejectionWorkflowTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public TemplateRejectionWorkflowTests(CustomWebApplicationFactory factory) : base(factory)
     {
-        _scopeFactory = factory.Services.GetRequiredService<IServiceScopeFactory>();
     }
 
     /// <summary>
-    /// Validates that when an active proposal fails to satisfy curriculum criteria, 
-    /// a faculty evaluator can reject the template, successfully updating its lifecycle status 
-    /// and persisting the mandatory justification feedback text.
+    /// Validates the workflow where a reviewer rejects a project template, ensuring the 
+    /// status transitions correctly and the reason is persisted.
     /// </summary>
     [Fact]
     public async Task Should_RejectTemplateAndLogReason_WhenReviewerRejects()
     {
         // ==========================================
-        // 1. ARRANGE & SEED SYSTEM ANTECEDENTS
+        // 1. ARRANGE
         // ==========================================
-
-        // Register the corporate provider account profile context
-        var providerCommand = new RegisterProviderCommand
+        var registerProviderCommand = new RegisterProviderCommand
         {
             Email = "workflow.rejection.prov@academicgateway.com",
             Username = "rejectionprov",
@@ -50,29 +50,26 @@ public class TemplateRejectionWorkflowTests : BaseIntegrationTest
             CompanyDescription = "External Engineering Curriculum Verification Labs",
             WebsiteUrl = "https://syllabus-test.org"
         };
-        Guid providerId = await SendAsync(providerCommand);
+        Guid providerId = await SendAsync(registerProviderCommand);
 
-        // Administrative Step: Simulate provider background verification via rich domain actions
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-            var providerAggregate = await context.Providers.FindAsync(new object[] { providerId }, TestContext.Current.CancellationToken);
-            providerAggregate.Should().NotBeNull();
-
-            // Upgrade verification standing using the exact domain name vector to allow project creation actions
-            providerAggregate!.VerifyProfile();
-            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        }
-
-        // Register a faculty evaluator profile to audit the proposal entry
-        var reviewer = new Reviewer(Guid.NewGuid(), "Strict Inspector");
+        // Provision User Identity for Reviewer
+        var reviewerUser = new ApplicationUser { Id = Guid.NewGuid(), UserName = "auditor@gateway.com", Email = "auditor@gateway.com" };
+        await AddAsync(reviewerUser);
+        var reviewer = new Reviewer(reviewerUser.Id, "Strict Inspector");
         await AddAsync(reviewer);
 
-        // Seed lookups using rich domain constructor patterns
-        var dummySkill = new Skill("Software Architecture Metrics");
+        // --- COMPLETE VERIFICATION WORKFLOW TO ALLOW TEMPLATE CREATION ---
+        var submitAppCommand = new SubmitProviderApplicationCommand { ProviderId = providerId,
+            CompanyDetails = "Dossier requiring professional audit and compliance check", VerificationDocumentsUrl = "https://docs.com/v.pdf" };
+            Guid applicationId = await SendAsync(submitAppCommand);
+
+        await SendAsync(new ReviewProviderApplicationCommand { ApplicationId = applicationId, ReviewerId = reviewer.Id, IsApproved = true });
+
+        // Seed dummy skill
+        var dummySkill = new Skill("Architecture Metrics");
         await AddAsync(dummySkill);
 
-        // Build the creation command matching the refactored schema boundaries
+        // Now template creation will succeed
         var createTemplateCommand = new CreateProjectTemplateCommand
         {
             ProviderId = providerId,
@@ -80,35 +77,27 @@ public class TemplateRejectionWorkflowTests : BaseIntegrationTest
             Description = "A brief summary lacking clear operational milestones and evaluation keys.",
             SkillIds = new List<Guid> { dummySkill.Id }
         };
-
-        // Dispatch the proposal to populate our pending evaluation queue
         Guid templateId = await SendAsync(createTemplateCommand);
 
-        // Set up the review evaluation command to flag a rejection tracking sequence
-        const string rejectionReasonText = "The curriculum scope is entirely too brief and lacks required academic depth.";
-        var rejectCommand = new ReviewProjectTemplateCommand
+        // ==========================================
+        // 2. ACT
+        // ==========================================
+        const string rejectionReasonText = "The curriculum scope is entirely too brief.";
+        var rejectTemplateCommand = new ReviewProjectTemplateCommand
         {
             TemplateId = templateId,
             ReviewerId = reviewer.Id,
             IsApproved = false,
             RejectionReason = rejectionReasonText
         };
+        await SendAsync(rejectTemplateCommand);
 
         // ==========================================
-        // 2. ACT - EXECUTE EVALUATION AUDIT
-        // ==========================================
-        await SendAsync(rejectCommand);
-
-        // ==========================================
-        // 3. ASSERT FINAL SYSTEM STATE
+        // 3. ASSERT
         // ==========================================
         var rejectedTemplate = await FindAsync<ProjectTemplate>(templateId);
         rejectedTemplate.Should().NotBeNull();
-
-        // Verify that the template state machine transitioned to a terminal rejected standing
         rejectedTemplate!.Status.Should().Be(ProjectTemplateStatus.Rejected);
-
-        // Verify that audit feedback documentation was saved successfully using the refactored property name
         rejectedTemplate.ReviewerFeedback.Should().Be(rejectionReasonText);
     }
 }

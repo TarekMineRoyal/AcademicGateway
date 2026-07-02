@@ -2,6 +2,9 @@
 using AcademicGateway.Application.Features.Professors.Queries.GetProfessorProfile;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Professors.Queries;
@@ -13,6 +16,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Professors.Queries;
 [Collection("SharedDatabase")]
 public class GetProfessorProfileTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="GetProfessorProfileTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public GetProfessorProfileTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -25,28 +32,33 @@ public class GetProfessorProfileTests : BaseIntegrationTest
     public async Task Should_ReturnProfessorProfile_WhenUserIdExists()
     {
         // --- 1. ARRANGE ---
+        // Configure a complete registration payload meeting all mandatory structural validation rules
         var registerCommand = new RegisterProfessorCommand
         {
             Email = "profile.professor@academicgateway.com",
             Username = "profileprofessor",
             Password = "SecurePassword123!",
-            AcademicDepartment = "Data Science"
+            FullName = "Professor Jane Doe",
+            AcademicDepartment = "Data Science",
+            Rank = "Associate Professor",
+            MaxSupervisionCapacity = 4
         };
 
-        // Execution returns a strongly-typed Guid key identifier
+        // Execution provisions identity elements and returns a strongly-typed Guid identifier
         Guid professorId = await SendAsync(registerCommand);
         var query = new GetProfessorProfileQuery(professorId);
 
         // --- 2. ACT ---
+        // Dispatch the query message through the pipeline layer
         var result = await SendAsync(query);
 
         // --- 3. ASSERT ---
         result.Should().NotBeNull();
 
-        // Asserts against the DTO's 'Id' property
+        // Asserts against the returned DTO's 'Id' primary reference tracking key
         result.Id.Should().Be(professorId);
 
-        // Asserts against the DTO's 'AcademicDepartment' property
+        // Asserts against the DTO's mapped 'Department' text property mapping
         result.Department.Should().Be("Data Science");
     }
 

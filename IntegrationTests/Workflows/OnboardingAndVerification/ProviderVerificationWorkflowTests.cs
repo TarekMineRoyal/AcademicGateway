@@ -4,8 +4,11 @@ using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Providers.Enums;
 using AcademicGateway.Domain.Reviewers;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Workflows.OnboardingAndVerification;
@@ -17,6 +20,10 @@ namespace AcademicGateway.IntegrationTests.Workflows.OnboardingAndVerification;
 [Collection("SharedDatabase")]
 public class ProviderVerificationWorkflowTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ProviderVerificationWorkflowTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public ProviderVerificationWorkflowTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -49,8 +56,17 @@ public class ProviderVerificationWorkflowTests : BaseIntegrationTest
         initialProviderState.Should().NotBeNull();
         initialProviderState!.IsVerified.Should().BeFalse();
 
+        // Provision the underlying user identity security row first to satisfy 1:1 relational constraints
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "auditor.compliance@academicgateway.com",
+            Email = "auditor.compliance@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
         // Instantiate an official faculty reviewer aggregate profile to act as the compliance auditor
-        var reviewer = new Reviewer(Guid.NewGuid(), "Institutional Auditor");
+        var reviewer = new Reviewer(reviewerUser.Id, "Institutional Auditor");
         await AddAsync(reviewer);
 
         // Prepare the submission command payload targeting the newly generated company profile

@@ -3,8 +3,11 @@ using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Providers.Exceptions;
 using AcademicGateway.Domain.Reviewers;
+using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
+using System;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
@@ -16,6 +19,10 @@ namespace AcademicGateway.IntegrationTests.Subdomains.Providers.Commands;
 [Collection("SharedDatabase")]
 public class ReviewProviderApplicationTests : BaseIntegrationTest
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="ReviewProviderApplicationTests"/> class.
+    /// </summary>
+    /// <param name="factory">The centralized integration web application testing factory infrastructure context.</param>
     public ReviewProviderApplicationTests(CustomWebApplicationFactory factory) : base(factory)
     {
     }
@@ -40,8 +47,17 @@ public class ReviewProviderApplicationTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(registerProviderCommand);
 
-        // Seed an active institutional reviewer profile context using clean aggregate constructors
-        var reviewer = new Reviewer(Guid.NewGuid(), "Guard Reviewer");
+        // Provision the underlying user identity security row first to satisfy 1:1 relational constraints
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "guard.reviewer1@academicgateway.com",
+            Email = "guard.reviewer1@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
+        // Seed an active institutional reviewer profile context using the valid Identity reference key
+        var reviewer = new Reviewer(reviewerUser.Id, "Guard Reviewer");
         await AddAsync(reviewer);
 
         // Instantiate the application via its rich constructor, which naturally defaults status to Draft mode
@@ -92,7 +108,16 @@ public class ReviewProviderApplicationTests : BaseIntegrationTest
         };
         Guid providerId = await SendAsync(registerProviderCommand);
 
-        var reviewer = new Reviewer(Guid.NewGuid(), "Guard Reviewer Two");
+        // Provision the underlying user identity security row first to satisfy 1:1 relational constraints
+        var reviewerUser = new ApplicationUser
+        {
+            Id = Guid.NewGuid(),
+            UserName = "guard.reviewer2@academicgateway.com",
+            Email = "guard.reviewer2@academicgateway.com"
+        };
+        await AddAsync(reviewerUser);
+
+        var reviewer = new Reviewer(reviewerUser.Id, "Guard Reviewer Two");
         await AddAsync(reviewer);
 
         // Instantiate the application aggregate following explicit domain rules
