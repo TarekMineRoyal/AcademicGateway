@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Domain.Common.Exceptions;
+namespace AcademicGateway.Domain.Common.Exceptions;
 
 /// <summary>
 /// Serves as the fundamental base class for all domain-specific business rule exceptions.

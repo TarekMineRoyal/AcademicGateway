@@ -1,4 +1,4 @@
-﻿namespace Domain.Common;
+﻿namespace AcademicGateway.Domain.Common;
 
 /// <summary>
 /// Defines a pure, dependency-free marker interface for all domain events within the gateway.

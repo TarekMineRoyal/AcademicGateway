@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using Domain.Common;
-using Domain.Skills.Exceptions;
-using Domain.Students;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Skills.Exceptions;
+using AcademicGateway.Domain.Students;
 
-namespace Domain.Skills;
+namespace AcademicGateway.Domain.Skills;
 
 /// <summary>
 /// Represents a standardized technical or professional competency lookup index within the gateway 

@@ -1,8 +1,8 @@
 ﻿using System;
-using Domain.Skills;
-using Domain.Students.Exceptions;
+using AcademicGateway.Domain.Skills;
+using AcademicGateway.Domain.Students.Exceptions;
 
-namespace Domain.Students;
+namespace AcademicGateway.Domain.Students;
 
 /// <summary>
 /// Represents the explicit many-to-many join entity linking a Student profile to a specific technical or professional Skill.

@@ -1,7 +1,7 @@
 ﻿using System;
-using Domain.Common.Exceptions;
+using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Professors.Exceptions;
+namespace AcademicGateway.Domain.Professors.Exceptions;
 
 /// <summary>
 /// Exception thrown when a project allocation request is dispatched to a <see cref="Professor"/> 

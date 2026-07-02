@@ -1,4 +1,4 @@
-﻿namespace Domain.ProjectTemplates.Enums;
+﻿namespace AcademicGateway.Domain.ProjectTemplates.Enums;
 
 /// <summary>
 /// Defines the specific state of a project template within its curation and review lifecycle.

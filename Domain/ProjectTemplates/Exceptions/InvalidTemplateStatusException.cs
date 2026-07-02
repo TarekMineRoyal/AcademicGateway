@@ -1,7 +1,7 @@
-﻿using Domain.Common.Exceptions;
-using Domain.ProjectTemplates.Enums;
+﻿using AcademicGateway.Domain.Common.Exceptions;
+using AcademicGateway.Domain.ProjectTemplates.Enums;
 
-namespace Domain.ProjectTemplates.Exceptions;
+namespace AcademicGateway.Domain.ProjectTemplates.Exceptions;
 
 /// <summary>
 /// Exception thrown when a lifecycle operation is attempted on a <see cref="ProjectTemplate"/> 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace Domain.Common;
+namespace AcademicGateway.Domain.Common;
 
 /// <summary>
 /// Serves as the fundamental base class for all entities or aggregate roots capable of 

@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Providers.Commands.SubmitApplication;
+using Application.Features.ProviderApplications.Commands.SubmitProviderApplication;
 using Domain.Providers;
 using Domain.Providers.Enums;
 using FluentAssertions;

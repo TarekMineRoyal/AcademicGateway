@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Domain.Common;
-using Domain.ProjectTemplates.Enums;
-using Domain.ProjectTemplates.Exceptions;
-using Domain.ProjectTemplates.Events;
-using Domain.Providers;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.ProjectTemplates.Enums;
+using AcademicGateway.Domain.ProjectTemplates.Exceptions;
+using AcademicGateway.Domain.ProjectTemplates.Events;
+using AcademicGateway.Domain.Providers;
 
-namespace Domain.ProjectTemplates;
+namespace AcademicGateway.Domain.ProjectTemplates;
 
 /// <summary>
 /// Represents a reusable project blueprint proposed by a verified provider, which undergoes 

@@ -1,8 +1,8 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewTemplate;
+using Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
 using Domain.ProjectTemplates;
 using Domain.ProjectTemplates.Enums;
-using Domain.SystemStaff;
+using Domain.Reviewers;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

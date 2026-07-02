@@ -1,7 +1,7 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.Curriculum;
-using Domain.Skills;
-using Domain.SystemStaff;
+using AcademicGateway.Domain.Curriculum;
+using AcademicGateway.Domain.Skills;
+using AcademicGateway.Domain.Reviewers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;

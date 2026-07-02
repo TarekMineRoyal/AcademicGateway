@@ -1,4 +1,4 @@
-﻿using Domain.Skills;
+﻿using AcademicGateway.Domain.Skills;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateTemplate;
+using Application.Features.ProjectTemplates.Commands.CreateProjectTemplate;
 using Domain.ProjectTemplates;
 using Domain.ProjectTemplates.Enums;
 using Domain.Providers;

@@ -2,7 +2,7 @@
 using AcademicGateway.Application.Features.Reviewers.Commands.ReviewApplication;
 using Domain.Providers;
 using Domain.Providers.Enums;
-using Domain.SystemStaff;
+using Domain.Reviewers;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;

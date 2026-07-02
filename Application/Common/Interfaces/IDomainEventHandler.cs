@@ -1,4 +1,4 @@
-﻿using Domain.Common;
+﻿using AcademicGateway.Domain.Common;
 using System.Threading;
 using System.Threading.Tasks;
 

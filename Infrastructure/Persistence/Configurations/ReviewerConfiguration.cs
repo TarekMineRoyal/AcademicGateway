@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.Providers;
-using Domain.SystemStaff;
+using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Reviewers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

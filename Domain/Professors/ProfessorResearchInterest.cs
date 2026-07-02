@@ -1,7 +1,7 @@
 ﻿using System;
-using Domain.Professors.Exceptions;
+using AcademicGateway.Domain.Professors.Exceptions;
 
-namespace Domain.Professors;
+namespace AcademicGateway.Domain.Professors;
 
 /// <summary>
 /// Represents the explicit many-to-many join entity linking a <see cref="Professor"/> profile 

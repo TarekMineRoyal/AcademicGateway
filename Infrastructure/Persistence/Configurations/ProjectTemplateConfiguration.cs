@@ -1,5 +1,5 @@
-﻿using Domain.ProjectTemplates;
-using Domain.ProjectTemplates.Enums;
+﻿using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.ProjectTemplates.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

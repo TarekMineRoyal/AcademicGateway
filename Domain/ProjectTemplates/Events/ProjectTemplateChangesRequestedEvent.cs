@@ -1,7 +1,7 @@
 ﻿using System;
-using Domain.Common;
+using AcademicGateway.Domain.Common;
 
-namespace Domain.ProjectTemplates.Events;
+namespace AcademicGateway.Domain.ProjectTemplates.Events;
 
 /// <summary>
 /// Represents the immutable domain event raised when a faculty reviewer flags a project 

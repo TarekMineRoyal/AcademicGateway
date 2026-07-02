@@ -1,4 +1,4 @@
-﻿namespace Api.Features.Professors.Register
+﻿namespace AcademicGateway.Api.Features.Professors.Register
 {
     public class RegisterProfessorController
     {

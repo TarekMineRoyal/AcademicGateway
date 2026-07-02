@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Professors.Exceptions;
+namespace AcademicGateway.Domain.Professors.Exceptions;
 
 /// <summary>
 /// Exception thrown when an attempt is made to construct or modify a <see cref="ResearchInterest"/> 

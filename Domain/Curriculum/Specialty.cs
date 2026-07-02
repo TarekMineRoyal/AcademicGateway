@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Domain.Curriculum.Exceptions;
-using Domain.Students;
+using AcademicGateway.Domain.Curriculum.Exceptions;
+using AcademicGateway.Domain.Students;
 
-namespace Domain.Curriculum;
+namespace AcademicGateway.Domain.Curriculum;
 
 /// <summary>
 /// Represents a specific academic sub-track concentration context linked strictly to a primary parent <see cref="Major"/>.

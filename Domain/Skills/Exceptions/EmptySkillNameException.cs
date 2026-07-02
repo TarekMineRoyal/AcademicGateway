@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Skills.Exceptions;
+namespace AcademicGateway.Domain.Skills.Exceptions;
 
 /// <summary>
 /// Exception thrown when an attempt is made to initialize or mutate a <see cref="Skill"/> 

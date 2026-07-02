@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using Domain.Students;
+using AcademicGateway.Domain.Students;
 using MediatR;
 using System;
 using System.Collections.Generic;

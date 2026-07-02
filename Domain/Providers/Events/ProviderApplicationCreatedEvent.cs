@@ -1,7 +1,7 @@
 ﻿using System;
-using Domain.Common;
+using AcademicGateway.Domain.Common;
 
-namespace Domain.Providers.Events;
+namespace AcademicGateway.Domain.Providers.Events;
 
 /// <summary>
 /// Represents the immutable domain event raised when a new stateful provider onboarding application 

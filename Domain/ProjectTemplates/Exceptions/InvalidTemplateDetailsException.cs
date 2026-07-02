@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.ProjectTemplates.Exceptions;
+namespace AcademicGateway.Domain.ProjectTemplates.Exceptions;
 
 /// <summary>
 /// Exception thrown when structural attributes or data arrays of a <see cref="ProjectTemplate"/> 

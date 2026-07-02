@@ -1,7 +1,7 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.Curriculum;
-using Domain.Skills;
-using Domain.Students;
+using AcademicGateway.Domain.Curriculum;
+using AcademicGateway.Domain.Skills;
+using AcademicGateway.Domain.Students;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

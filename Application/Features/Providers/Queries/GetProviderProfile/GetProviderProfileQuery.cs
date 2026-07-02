@@ -1,5 +1,4 @@
-﻿using AcademicGateway.Application.Features.Providers.Queries.GetProviderProfile;
-using MediatR;
+﻿using MediatR;
 using System;
 
 namespace AcademicGateway.Application.Features.Providers.Queries.GetProviderProfile;

@@ -1,8 +1,8 @@
 ﻿using System;
-using Domain.ProjectTemplates.Exceptions;
-using Domain.Skills;
+using AcademicGateway.Domain.ProjectTemplates.Exceptions;
+using AcademicGateway.Domain.Skills;
 
-namespace Domain.ProjectTemplates;
+namespace AcademicGateway.Domain.ProjectTemplates;
 
 /// <summary>
 /// Represents the explicit many-to-many join entity linking a <see cref="ProjectTemplate"/> blueprint 

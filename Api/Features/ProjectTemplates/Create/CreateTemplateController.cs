@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateTemplate;
+using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateProjectTemplate;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

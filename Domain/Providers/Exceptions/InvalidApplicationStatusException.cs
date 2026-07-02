@@ -1,7 +1,7 @@
-﻿using Domain.Common.Exceptions;
-using Domain.Providers.Enums;
+﻿using AcademicGateway.Domain.Common.Exceptions;
+using AcademicGateway.Domain.Providers.Enums;
 
-namespace Domain.Providers.Exceptions;
+namespace AcademicGateway.Domain.Providers.Exceptions;
 
 /// <summary>
 /// Exception thrown when an onboarding workflow transition is executed on a <see cref="ProviderApplication"/> 

@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using Domain.ProjectTemplates.Events;
+using AcademicGateway.Domain.ProjectTemplates.Events;
 using Microsoft.Extensions.Logging;
 using System.Threading;
 using System.Threading.Tasks;

@@ -1,10 +1,10 @@
-﻿using Domain.Curriculum;
-using Domain.Professors;
-using Domain.ProjectTemplates;
-using Domain.Providers;
-using Domain.Skills;
-using Domain.Students;
-using Domain.SystemStaff;
+﻿using AcademicGateway.Domain.Curriculum;
+using AcademicGateway.Domain.Professors;
+using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Reviewers;
+using AcademicGateway.Domain.Skills;
+using AcademicGateway.Domain.Students;
 using Microsoft.EntityFrameworkCore;
 using System.Threading;
 using System.Threading.Tasks;

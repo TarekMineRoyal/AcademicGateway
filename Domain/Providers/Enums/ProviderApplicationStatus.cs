@@ -1,4 +1,4 @@
-﻿namespace Domain.Providers.Enums;
+﻿namespace AcademicGateway.Domain.Providers.Enums;
 
 /// <summary>
 /// Defines the specific state of a provider application within the onboarding evaluation pipeline.

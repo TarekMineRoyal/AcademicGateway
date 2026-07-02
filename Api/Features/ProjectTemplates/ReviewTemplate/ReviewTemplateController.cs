@@ -1,4 +1,4 @@
-﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewTemplate;
+﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

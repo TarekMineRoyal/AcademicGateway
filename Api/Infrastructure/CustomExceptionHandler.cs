@@ -1,4 +1,4 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +8,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Api.Infrastructure;
+namespace AcademicGateway.Api.Infrastructure;
 
 /// <summary>
 /// Implements a global centralized exception handling middleware layer using ASP.NET Core's native <see cref="IExceptionHandler"/>.

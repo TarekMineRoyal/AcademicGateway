@@ -85,7 +85,7 @@ builder.Services.AddSwaggerGen(c =>
 // ==========================================
 // 5. Middleware Pipeline
 // ==========================================
-builder.Services.AddExceptionHandler<Api.Infrastructure.CustomExceptionHandler>();
+builder.Services.AddExceptionHandler<AcademicGateway.Api.Infrastructure.CustomExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddCors(options =>
 {

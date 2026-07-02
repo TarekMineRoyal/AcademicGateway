@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Students.Exceptions;
+namespace AcademicGateway.Domain.Students.Exceptions;
 
 /// <summary>
 /// Exception thrown when structural profile configurations of a <see cref="Student"/> 

@@ -1,7 +1,7 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.ProjectTemplates;
-using Domain.Providers;
-using Domain.Providers.Enums;
+using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Providers.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using System;

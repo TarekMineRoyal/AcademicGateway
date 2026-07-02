@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using Domain.Common;
-using Domain.ProjectTemplates;
-using Domain.Providers.Events; // Added namespace mapping for Phase 1 events
-using Domain.Providers.Exceptions;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.Providers.Events;
+using AcademicGateway.Domain.Providers.Exceptions;
 
-namespace Domain.Providers;
+namespace AcademicGateway.Domain.Providers;
 
 /// <summary>
 /// Represents an external organization, industry partner, or corporate provider 

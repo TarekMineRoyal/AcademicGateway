@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Domain.Common;
-using Domain.Students.Exceptions;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Students.Exceptions;
 
-namespace Domain.Students;
+namespace AcademicGateway.Domain.Students;
 
 /// <summary>
 /// Represents a Student aggregate root profile within the academic gateway.

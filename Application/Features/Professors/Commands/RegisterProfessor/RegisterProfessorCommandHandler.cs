@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using Domain.Professors;
-using Domain.Professors.Exceptions;
+using AcademicGateway.Domain.Professors;
+using AcademicGateway.Domain.Professors.Exceptions;
 using MediatR;
 using System;
 using System.Threading;

@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using Domain.Professors;
+using AcademicGateway.Domain.Professors;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

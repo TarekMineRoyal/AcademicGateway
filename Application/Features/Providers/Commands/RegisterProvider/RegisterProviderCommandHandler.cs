@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using Domain.Providers;
+using AcademicGateway.Domain.Providers;
 using MediatR;
 using System;
 using System.Threading;

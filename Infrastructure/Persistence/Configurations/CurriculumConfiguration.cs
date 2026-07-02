@@ -1,4 +1,4 @@
-﻿using Domain.Curriculum;
+﻿using AcademicGateway.Domain.Curriculum;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 

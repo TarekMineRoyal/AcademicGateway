@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using Domain.Common;
-using Domain.Professors.Exceptions;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Professors.Exceptions;
 
-namespace Domain.Professors;
+namespace AcademicGateway.Domain.Professors;
 
 /// <summary>
 /// Represents a specific global academic Research Interest topic categorizer lookup index.

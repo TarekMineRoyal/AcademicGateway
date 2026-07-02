@@ -1,11 +1,11 @@
 ﻿using System;
-using Domain.Common;
-using Domain.Providers.Enums;
-using Domain.Providers.Events;
-using Domain.Providers.Exceptions;
-using Domain.SystemStaff;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Providers.Enums;
+using AcademicGateway.Domain.Providers.Events;
+using AcademicGateway.Domain.Providers.Exceptions;
+using AcademicGateway.Domain.Reviewers;
 
-namespace Domain.Providers;
+namespace AcademicGateway.Domain.Providers;
 
 /// <summary>
 /// Represents the stateful onboarding application workflow for an external provider seeking verification within the gateway.

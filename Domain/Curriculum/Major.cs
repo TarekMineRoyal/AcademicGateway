@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Domain.Common;
-using Domain.Curriculum.Exceptions;
-using Domain.Students;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Curriculum.Exceptions;
+using AcademicGateway.Domain.Students;
 
-namespace Domain.Curriculum;
+namespace AcademicGateway.Domain.Curriculum;
 
 /// <summary>
 /// Represents a Major aggregate root within the academic gateway curriculum subsystem.

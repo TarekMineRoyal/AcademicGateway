@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Providers.Exceptions;
+namespace AcademicGateway.Domain.Providers.Exceptions;
 
 /// <summary>
 /// Exception thrown when essential tracking specifications of a <see cref="TechSupportAccount"/> 

@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Students.Exceptions;
+namespace AcademicGateway.Domain.Students.Exceptions;
 
 /// <summary>
 /// Exception thrown when a student's declared or expected graduation completion year 

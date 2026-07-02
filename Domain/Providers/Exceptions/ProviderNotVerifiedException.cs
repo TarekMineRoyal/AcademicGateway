@@ -1,7 +1,7 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 using System;
 
-namespace Domain.Providers.Exceptions;
+namespace AcademicGateway.Domain.Providers.Exceptions;
 
 /// <summary>
 /// Exception thrown when an unverified provider attempts to create or publish a project template proposal blueprint.

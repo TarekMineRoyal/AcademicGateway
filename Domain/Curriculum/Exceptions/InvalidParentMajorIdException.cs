@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Curriculum.Exceptions;
+namespace AcademicGateway.Domain.Curriculum.Exceptions;
 
 /// <summary>
 /// Exception thrown when a child <see cref="Specialty"/> is structurally initialized 

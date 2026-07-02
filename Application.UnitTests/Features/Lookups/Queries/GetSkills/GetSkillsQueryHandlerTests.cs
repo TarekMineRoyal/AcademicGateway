@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Application.Features.Lookups.Queries.GetSkills;
+using Application.Features.Skills.Queries.GetSkills;
 using Domain.Skills;
 using FluentAssertions;
 using MockQueryable.Moq;

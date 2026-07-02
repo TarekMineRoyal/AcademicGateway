@@ -1,8 +1,8 @@
 ﻿using System;
-using Domain.Common;
-using Domain.Providers.Exceptions;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Providers.Exceptions;
 
-namespace Domain.Providers;
+namespace AcademicGateway.Domain.Providers;
 
 /// <summary>
 /// Represents an external technical support or mentor profile provisioned by a Provider.

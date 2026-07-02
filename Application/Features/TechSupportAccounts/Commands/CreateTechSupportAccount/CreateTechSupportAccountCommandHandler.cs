@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
-using Domain.Providers;
-using Domain.Providers.Exceptions;
+using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Providers.Exceptions;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;

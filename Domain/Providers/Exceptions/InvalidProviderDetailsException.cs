@@ -1,6 +1,6 @@
-﻿using Domain.Common.Exceptions;
+﻿using AcademicGateway.Domain.Common.Exceptions;
 
-namespace Domain.Providers.Exceptions;
+namespace AcademicGateway.Domain.Providers.Exceptions;
 
 /// <summary>
 /// Exception thrown when structural configuration details of a <see cref="Provider"/> 

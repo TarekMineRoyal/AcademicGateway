@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Domain.Common;
-using Domain.Professors.Exceptions;
+using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Professors.Exceptions;
 
-namespace Domain.Professors;
+namespace AcademicGateway.Domain.Professors;
 
 /// <summary>
 /// Represents a Professor aggregate root within the academic gateway profile subsystem.
