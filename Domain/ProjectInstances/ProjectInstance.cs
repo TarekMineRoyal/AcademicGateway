@@ -181,7 +181,7 @@ public class ProjectInstance : BaseEntity
     /// <summary>
     /// Processes a professor's evaluation review for a outstanding pending supervision request.
     /// </summary>
-    public void ReviewSupervisionRequest(Guid requestId, bool accept, string? rejectionReason, DateTime utcNow)
+    public void ReviewSupervisionRequest(Guid requestId, bool accept, string? rejectionReason, DateTime reviewedAt)
     {
         var request = _supervisionRequests.FirstOrDefault(r => r.Id == requestId);
         if (request == null)
@@ -193,6 +193,11 @@ public class ProjectInstance : BaseEntity
         {
             throw new InvalidSupervisionRequestTransitionException(request.Status);
         }
+
+        var finalStatus = accept ? SupervisionRequestStatus.Accepted : SupervisionRequestStatus.Rejected;
+
+        // Delegate to the child entity to update its state and capture the timestamp safely
+        request.RecordReview(finalStatus, rejectionReason, reviewedAt);
 
         if (accept)
         {

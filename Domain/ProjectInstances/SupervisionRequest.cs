@@ -47,6 +47,11 @@ public class SupervisionRequest : BaseEntity
     public DateTime CreatedAt { get; private set; }
 
     /// <summary>
+    /// Gets the timestamp specifying when the professor accepted or declined this invitation.
+    /// </summary>
+    public DateTime? ReviewedAt { get; private set; }
+
+    /// <summary>
     /// Gets the navigation property back to the containing project workspace workspace.
     /// </summary>
     public ProjectInstance ProjectInstance { get; private set; } = null!;
@@ -74,5 +79,15 @@ public class SupervisionRequest : BaseEntity
         PitchText = pitchText.Trim();
         Status = SupervisionRequestStatus.Pending;
         CreatedAt = createdAt;
+    }
+
+    /// <summary>
+    /// Updates the review status and records the deterministic execution timestamp.
+    /// </summary>
+    public void RecordReview(SupervisionRequestStatus finalStatus, string? rejectionReason, DateTime reviewedAt)
+    {
+        Status = finalStatus;
+        RejectionReason = rejectionReason;
+        ReviewedAt = reviewedAt;
     }
 }

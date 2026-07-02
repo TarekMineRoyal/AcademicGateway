@@ -12,7 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Xunit;
-using AcademicGateway.Infrastructure.Persistence;
+using Infrastructure.Persistence.Context;
 
 namespace AcademicGateway.IntegrationTests.Subdomains.Students.Commands;
 

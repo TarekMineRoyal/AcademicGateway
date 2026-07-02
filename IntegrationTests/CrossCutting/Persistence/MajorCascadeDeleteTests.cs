@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Domain.Curriculum;
-using AcademicGateway.Infrastructure.Persistence;
 using FluentAssertions;
+using Infrastructure.Persistence.Context;
 using IntegrationTests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;

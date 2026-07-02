@@ -1,8 +1,8 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure.Identity;
-using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Infrastructure.Persistence.Interceptors;
 using AcademicGateway.Infrastructure.Services;
+using Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;

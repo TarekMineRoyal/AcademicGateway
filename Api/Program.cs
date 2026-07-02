@@ -3,7 +3,6 @@ using AcademicGateway.Application.Common.Behaviors;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure;
 using AcademicGateway.Infrastructure.Identity;
-using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
 using FluentValidation;
 using MediatR;
@@ -13,6 +12,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
+using Infrastructure.Persistence.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 

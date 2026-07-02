@@ -1,5 +1,5 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
-using AcademicGateway.Infrastructure.Persistence;
+using Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;

@@ -6,7 +6,6 @@ using AcademicGateway.Domain.ProjectTemplates.Enums;
 using AcademicGateway.Domain.Reviewers;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Providers;
-using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
@@ -15,6 +14,7 @@ using IntegrationTests.Infrastructure;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Infrastructure.Persistence.Context;
 
 namespace AcademicGateway.IntegrationTests.Workflows.ProjectLifecycle;
 

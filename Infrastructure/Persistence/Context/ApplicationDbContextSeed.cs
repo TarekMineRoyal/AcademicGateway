@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace AcademicGateway.Infrastructure.Persistence;
+namespace Infrastructure.Persistence.Context;
 
 /// <summary>
 /// Core structural data seeder executing framework role allocations, system-level lookup values, 

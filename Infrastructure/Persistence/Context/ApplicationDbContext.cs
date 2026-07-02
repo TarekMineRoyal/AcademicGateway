@@ -3,6 +3,7 @@ using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Domain.Curriculum;
 using AcademicGateway.Domain.Professors;
 using AcademicGateway.Domain.ProjectTemplates;
+using AcademicGateway.Domain.ProjectInstances; // Added namespace mapping
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Reviewers;
 using AcademicGateway.Domain.Skills;
@@ -13,7 +14,7 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Reflection;
 
-namespace AcademicGateway.Infrastructure.Persistence;
+namespace Infrastructure.Persistence.Context;
 
 /// <summary>
 /// Core database context implementation supporting Identity and multi-aggregate profile extensions.
@@ -52,6 +53,9 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<ProjectTemplate> ProjectTemplates => Set<ProjectTemplate>();
     public DbSet<ProjectTemplateSkill> ProjectTemplateSkills => Set<ProjectTemplateSkill>();
     public DbSet<TechSupportAccount> TechSupportAccounts => Set<TechSupportAccount>();
+    public DbSet<ProjectInstance> ProjectInstances => Set<ProjectInstance>();
+    public DbSet<SupervisionRequest> SupervisionRequests => Set<SupervisionRequest>();
+    public DbSet<TechSupportProposal> TechSupportProposals => Set<TechSupportProposal>();
 
     /// <summary>
     /// Configures structural model mappings via automated reflection-based assembly discovery.

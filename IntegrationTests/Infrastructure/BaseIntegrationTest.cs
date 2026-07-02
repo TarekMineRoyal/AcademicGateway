@@ -1,4 +1,4 @@
-﻿using AcademicGateway.Infrastructure.Persistence;
+﻿using Infrastructure.Persistence.Context;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
 using System.Net.Http;

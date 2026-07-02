@@ -1,7 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Reviewers;
-using AcademicGateway.Infrastructure.Persistence;
 using AcademicGateway.Infrastructure.Identity;
 using FluentAssertions;
 using IntegrationTests.Infrastructure;
@@ -9,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 using System;
 using System.Threading.Tasks;
+using Infrastructure.Persistence.Context;
 
 namespace AcademicGateway.IntegrationTests.CrossCutting.Persistence;
 
