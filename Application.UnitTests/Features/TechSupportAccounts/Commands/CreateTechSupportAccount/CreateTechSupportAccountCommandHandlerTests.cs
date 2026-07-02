@@ -1,24 +1,31 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
-using Domain.Providers;
+using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Providers.Exceptions;
 using FluentAssertions;
 using MockQueryable.Moq;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
 
 namespace AcademicGateway.Application.UnitTests.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
 
+/// <summary>
+/// Contains isolated unit verification routines for the <see cref="CreateTechSupportAccountCommandHandler"/>.
+/// Validates provider onboarding check gates, identity provider routing, and auxiliary support account encapsulation.
+/// </summary>
 public class CreateTechSupportAccountCommandHandlerTests
 {
     private readonly Mock<IApplicationDbContext> _mockContext;
     private readonly Mock<IIdentityService> _mockIdentityService;
     private readonly CreateTechSupportAccountCommandHandler _handler;
 
+    /// <summary>
+    /// Initializes a pristine instance of the test class with isolated dependency mocks.
+    /// </summary>
     public CreateTechSupportAccountCommandHandlerTests()
     {
         _mockContext = new Mock<IApplicationDbContext>();
@@ -26,138 +33,152 @@ public class CreateTechSupportAccountCommandHandlerTests
         _handler = new CreateTechSupportAccountCommandHandler(_mockContext.Object, _mockIdentityService.Object);
     }
 
+    /// <summary>
+    /// Assures that a verified corporate provider can successfully provision a tech support asset,
+    /// generating identity credentials and mapping structural auditing fields for database persistence.
+    /// </summary>
     [Fact]
-    public async Task Handle_ValidVerifiedProvider_ShouldCreateIdentityAndTrackingEntity()
+    public async Task Handle_GivenVerifiedProviderAndValidInputs_ShouldCreateIdentityAndPersistAccount()
     {
         // Arrange
-        var providerId = "auth0|verified_provider_123";
-        var identityUserId = "identity-guid-9999";
+        var providerId = Guid.NewGuid();
+        var expectedIdentityUserId = Guid.NewGuid();
+
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = providerId,
             Email = "support@provider.com",
             Password = "SecurePassword123!",
-            FullName = "Alex Technical Support"
+            StaffNumber = "EMP-998811",       // Required parameter to fulfill domain aggregate invariants
+            SupportTier = "Tier 2 Helpdesk"    // Required parameter to fulfill domain aggregate invariants
         };
 
-        // Instantiate a verified Provider via reflection to match domain rules
-        var provider = CreateEntityWithPrivateConstructor<Provider>();
-        SetPrivateProperty(provider, nameof(Provider.UserId), providerId);
-        SetPrivateProperty(provider, nameof(Provider.IsVerified), true);
+        // Best Practice: Instantiate domain entities cleanly using public constructors to preserve integrity behavior
+        var provider = new Provider(providerId, "Acme Solutions Group");
+        provider.VerifyProfile(); // Elevates partner onboarding standing to satisfy the handler's validation gate
 
-        var mockProvidersSet = new List<Provider> { provider }.BuildMockDbSet();
-        _mockContext.Setup(c => c.Providers).Returns(mockProvidersSet.Object);
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.TechSupportAccounts).Returns(new List<TechSupportAccount>().BuildMockDbSet().Object);
 
-        // Mock empty tech support list initialization
-        var mockTechSupportSet = new List<TechSupportAccount>().BuildMockDbSet();
-        _mockContext.Setup(c => c.TechSupportAccounts).Returns(mockTechSupportSet.Object);
-
-        // Mock a successful Identity user generation
-        _mockIdentityService.Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
-            .ReturnsAsync((true, identityUserId, Array.Empty<string>()));
+        // Instruct our identity layer mock to register user credentials successfully
+        _mockIdentityService
+            .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
+            .ReturnsAsync((true, expectedIdentityUserId, new List<string>()));
 
         // Act
-        var resultId = await _handler.Handle(command, CancellationToken.None);
+        // Best Practice (xUnit1051): Pass TestContext.Current.CancellationToken for responsive test abort controls.
+        var resultId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        resultId.Should().NotBeEmpty();
+        resultId.Should().Be(expectedIdentityUserId);
 
+        // Verify that the auxiliary account was built natively and pushed to tracking with properties intact
         _mockContext.Verify(c => c.TechSupportAccounts.Add(It.Is<TechSupportAccount>(t =>
-            t.ProviderId == providerId &&
-            t.IdentityUserId == identityUserId &&
-            t.FullName == command.FullName
+            t.Id == expectedIdentityUserId &&
+            t.StaffNumber == command.StaffNumber &&
+            t.SupportTier == command.SupportTier &&
+            t.IsActive == true
         )), Times.Once);
 
-        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
     }
 
+    /// <summary>
+    /// Assures that attempting to provision a support agent through a missing or invalid managing provider tracking ID
+    /// stops execution and throws a precise <see cref="KeyNotFoundException"/>.
+    /// </summary>
     [Fact]
-    public async Task Handle_ProviderDoesNotExist_ShouldThrowKeyNotFoundException()
+    public async Task Handle_GivenNonExistentProviderId_ShouldThrowKeyNotFoundExceptionAndAbort()
     {
         // Arrange
+        var wrongProviderId = Guid.NewGuid();
         var command = new CreateTechSupportAccountCommand
         {
-            ProviderId = "auth0|non_existent_provider",
+            ProviderId = wrongProviderId,
             Email = "support@test.com",
             Password = "Password!",
-            FullName = "No Provider"
+            StaffNumber = "EMP-001",
+            SupportTier = "Tier 1 Helpdesk"
         };
 
-        var mockProvidersSet = new List<Provider>().BuildMockDbSet();
-        _mockContext.Setup(c => c.Providers).Returns(mockProvidersSet.Object);
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider>().BuildMockDbSet().Object);
 
         // Act
-        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage($"*Provider profile with ID '{command.ProviderId}' was not found.*");
+            .WithMessage($"*Provider profile with ID '{wrongProviderId}' was not found.*");
 
+        // Guarantee that background processes were bypassed and no database writes occurred
         _mockIdentityService.Verify(i => i.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Assures that if a corporate provider attempts to spawn secondary technical support agents before passing
+    /// their own verification gates, processing is blocked and a <see cref="ProviderNotVerifiedException"/> is raised.
+    /// </summary>
     [Fact]
-    public async Task Handle_ProviderIsNotVerified_ShouldThrowInvalidOperationException()
+    public async Task Handle_GivenUnverifiedProvider_ShouldThrowProviderNotVerifiedExceptionAndAbort()
     {
         // Arrange
-        var providerId = "auth0|unverified_provider";
+        var providerId = Guid.NewGuid();
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = providerId,
             Email = "support@test.com",
             Password = "Password!",
-            FullName = "Unverified Support"
+            StaffNumber = "EMP-002",
+            SupportTier = "Tier 1 Helpdesk"
         };
 
-        var provider = CreateEntityWithPrivateConstructor<Provider>();
-        SetPrivateProperty(provider, nameof(Provider.UserId), providerId);
-        SetPrivateProperty(provider, nameof(Provider.IsVerified), false);
+        // Leave provider profile unverified (IsVerified = false) to simulate a security gate breach condition
+        var provider = new Provider(providerId, "Unverified Corporate Entity");
 
-        var mockProvidersSet = new List<Provider> { provider }.BuildMockDbSet();
-        _mockContext.Setup(c => c.Providers).Returns(mockProvidersSet.Object);
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
 
         // Act
-        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        await act.Should().ThrowAsync<InvalidOperationException>()
-            .WithMessage("Unverified providers are not permitted to provision technical support accounts.");
+        await act.Should().ThrowAsync<ProviderNotVerifiedException>();
 
         _mockIdentityService.Verify(i => i.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 
+    /// <summary>
+    /// Assures that when infrastructure validation boundaries reject a new user allocation,
+    /// an <see cref="InvalidOperationException"/> is thrown and data mutations are aborted.
+    /// </summary>
     [Fact]
-    public async Task Handle_IdentityServiceFails_ShouldThrowInvalidOperationException()
+    public async Task Handle_GivenIdentityServiceRegistrationFailure_ShouldThrowInvalidOperationExceptionAndAbort()
     {
         // Arrange
-        var providerId = "auth0|verified_provider";
+        var providerId = Guid.NewGuid();
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = providerId,
-            Email = "bad-email@",
+            Email = "malformed-address@",
             Password = "123",
-            FullName = "Failed Support"
+            StaffNumber = "EMP-003",
+            SupportTier = "Tier 3 Systems Admin"
         };
 
-        var provider = CreateEntityWithPrivateConstructor<Provider>();
-        SetPrivateProperty(provider, nameof(Provider.UserId), providerId);
-        SetPrivateProperty(provider, nameof(Provider.IsVerified), true);
+        var provider = new Provider(providerId, "Verified High-Security Firm");
+        provider.VerifyProfile();
 
-        var mockProvidersSet = new List<Provider> { provider }.BuildMockDbSet();
-        _mockContext.Setup(c => c.Providers).Returns(mockProvidersSet.Object);
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.TechSupportAccounts).Returns(new List<TechSupportAccount>().BuildMockDbSet().Object);
 
-        var mockTechSupportSet = new List<TechSupportAccount>().BuildMockDbSet();
-        _mockContext.Setup(c => c.TechSupportAccounts).Returns(mockTechSupportSet.Object);
-
-        // Mock identity creation failure payload
-        var executionErrors = new[] { "Password is too weak", "Email format invalid" };
-        _mockIdentityService.Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
-            .ReturnsAsync((false, string.Empty, executionErrors));
+        var executionErrors = new List<string> { "Password is too weak", "Email format invalid" };
+        _mockIdentityService
+            .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
+            .ReturnsAsync((false, Guid.Empty, executionErrors));
 
         // Act
-        Func<Task> act = async () => await _handler.Handle(command, CancellationToken.None);
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         await act.Should().ThrowAsync<InvalidOperationException>()
@@ -166,11 +187,4 @@ public class CreateTechSupportAccountCommandHandlerTests
         _mockContext.Verify(c => c.TechSupportAccounts.Add(It.IsAny<TechSupportAccount>()), Times.Never);
         _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
-
-    private static T CreateEntityWithPrivateConstructor<T>() =>
-        (T)Activator.CreateInstance(typeof(T), true)!;
-
-    private static void SetPrivateProperty(object obj, string propertyName, object value) =>
-        obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?
-           .SetValue(obj, value);
 }
