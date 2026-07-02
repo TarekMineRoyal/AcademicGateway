@@ -6,6 +6,8 @@ using AcademicGateway.Domain.ProjectTemplates.Enums;
 using AcademicGateway.Domain.ProjectTemplates.Exceptions;
 using AcademicGateway.Domain.ProjectTemplates.Events;
 using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.ProjectInstances.Enums;
+using AcademicGateway.Domain.ProjectInstances;
 
 namespace AcademicGateway.Domain.ProjectTemplates;
 
@@ -302,5 +304,49 @@ public class ProjectTemplate : BaseEntity
         {
             _projectTemplateSkills.Remove(skillMapping);
         }
+    }
+
+    /// <summary>
+    /// Factory Method (Prototype Pattern): Instantiates a brand new, isolated live project workspace 
+    /// aggregate root for a student based on this approved template's current point-in-time state snapshot.
+    /// </summary>
+    /// <param name="studentId">The unique tracking identifier of the student initiating the project.</param>
+    /// <param name="createdAt">The deterministic timestamp marking workspace initialization.</param>
+    /// <param name="initialRequestedProfessorId">Optional supervisor ID if requesting mentoring at startup.</param>
+    /// <returns>A initialized, decoupled <see cref="ProjectInstance"/> aggregate root ready for persistence.</returns>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if an attempt is made to instantiate a template that is not Approved.</exception>
+    public ProjectInstance Instantiate(Guid studentId, DateTime createdAt, Guid? initialRequestedProfessorId = null)
+    {
+        // Guard Invariant: Students can only spin up workspaces from fully verified and approved blueprints
+        if (Status != ProjectTemplateStatus.Approved)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(Instantiate));
+        }
+
+        if (studentId == Guid.Empty)
+        {
+            throw new InvalidTemplateDetailsException("Student ID cannot be an empty Guid when instantiating a project.");
+        }
+
+        // Determine the initial lifecycle track based on whether a professor was chosen at startup
+        var initialStatus = initialRequestedProfessorId.HasValue
+            ? ProjectInstanceStatus.AwaitingSupervision
+            : ProjectInstanceStatus.Active;
+
+        // Isolate technical skill IDs from the template join collection to copy into the snapshot
+        var skillIdsSnapshot = _projectTemplateSkills.Select(pts => pts.SkillId);
+
+        // Manufacture the brand new, detached aggregate root instance
+        return new ProjectInstance(
+            studentId,
+            Id,
+            ProviderId,
+            Title,
+            Description,
+            initialStatus,
+            createdAt,
+            initialRequestedProfessorId,
+            skillIdsSnapshot
+        );
     }
 }
