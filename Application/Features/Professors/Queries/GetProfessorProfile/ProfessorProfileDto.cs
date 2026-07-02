@@ -19,9 +19,9 @@ public record ProfessorProfileDto
     public string FullName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the official academic department division designation text (e.g., "Computer Science").
+    /// Gets the official department division designation text (e.g., "Computer Science").
     /// </summary>
-    public string AcademicDepartment { get; init; } = string.Empty;
+    public string Department { get; init; } = string.Empty;
 
     /// <summary>
     /// Gets the professional rank title tier held by this faculty member (e.g., "Associate Professor").

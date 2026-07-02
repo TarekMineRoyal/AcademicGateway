@@ -62,7 +62,7 @@ public class GetProfessorProfileQueryHandlerTests
         result.Should().NotBeNull();
         result.Id.Should().Be(targetProfessorId);
         result.FullName.Should().Be("Dr. Alice Smith");
-        result.AcademicDepartment.Should().Be("Mathematics");
+        result.Department.Should().Be("Mathematics");
         result.Rank.Should().Be("Full Professor");
         result.MaxSupervisionCapacity.Should().Be(6);
         result.CurrentProjectCount.Should().Be(0);

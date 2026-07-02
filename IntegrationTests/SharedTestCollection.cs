@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using IntegrationTests.Infrastructure;
+using Xunit;
 
 namespace AcademicGateway.IntegrationTests;
 

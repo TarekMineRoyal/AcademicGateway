@@ -31,7 +31,7 @@ public class GetProfessorProfileQueryHandler(IApplicationDbContext context)
             {
                 Id = p.Id,
                 FullName = p.FullName,
-                AcademicDepartment = p.Department, // Maps domain entity 'Department' to DTO 'AcademicDepartment'
+                Department = p.Department, // Maps domain entity 'Department' to DTO 'AcademicDepartment'
                 Rank = p.Rank,
                 MaxSupervisionCapacity = p.MaxSupervisionCapacity,
                 CurrentProjectCount = p.CurrentProjectCount,
