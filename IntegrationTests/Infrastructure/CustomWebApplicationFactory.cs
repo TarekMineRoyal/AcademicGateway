@@ -1,6 +1,8 @@
-﻿using AcademicGateway.Infrastructure.Persistence;
+﻿using AcademicGateway.Infrastructure.Identity;
+using AcademicGateway.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -9,8 +11,12 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Npgsql;
 using Respawn;
+using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace IntegrationTests.Infrastructure;
@@ -34,6 +40,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
     /// </summary>
     public async ValueTask InitializeAsync()
     {
+        // Accessing 'Services' boots the web host and executes Program.cs top-to-bottom.
         using var scope = Services.CreateScope();
         var configuration = scope.ServiceProvider.GetRequiredService<IConfiguration>();
 
@@ -81,37 +88,62 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
             await using var connection = new NpgsqlConnection(_connectionString);
             await connection.OpenAsync();
 
+            // 1. Flush tables cleanly without destroying structure
             await _respawner.ResetAsync(connection);
+
+            // 2. Re-apply lookup tables and seed constants needed by individual tests
+            using var scope = Services.CreateScope();
+            var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+
+            await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context);
         }
     }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.ConfigureAppConfiguration((context, config) =>
+        builder.UseEnvironment("Testing");
+
+        // PRE-BUILD STEP: Load test project's User Secrets right now to satisfy 
+        // strict configuration checks inside Infrastructure Dependency Injection.
+        var initialTestConfig = new ConfigurationBuilder()
+            .AddUserSecrets<CustomWebApplicationFactory>(optional: true)
+            .AddEnvironmentVariables()
+            .Build();
+
+        var testConnectionString = initialTestConfig.GetConnectionString("TestConnection");
+
+        if (!string.IsNullOrEmpty(testConnectionString))
         {
-            config.AddUserSecrets<CustomWebApplicationFactory>(optional: true);
-            config.AddEnvironmentVariables();
-        });
+            var testSettings = new Dictionary<string, string?>
+            {
+                { "ConnectionStrings:DefaultConnection", testConnectionString },
+                { "ConnectionStrings:TestConnection", testConnectionString }
+            };
+
+            var hostConfig = new ConfigurationBuilder()
+                .AddInMemoryCollection(testSettings)
+                .Build();
+
+            // Push strings into WebHost early initialization stream
+            builder.UseConfiguration(hostConfig);
+
+            // Persist settings into application context configurations
+            builder.ConfigureAppConfiguration((context, configBuilder) =>
+            {
+                configBuilder.AddInMemoryCollection(testSettings);
+                configBuilder.AddUserSecrets<CustomWebApplicationFactory>(optional: true);
+                configBuilder.AddEnvironmentVariables();
+            });
+        }
 
         builder.ConfigureServices((context, services) =>
         {
-            // 1. Unregister any existing application database options descriptors
-            var dbDescriptor = services.SingleOrDefault(
-                d => d.ServiceType == typeof(DbContextOptions<ApplicationDbContext>));
+            // NOTE: We no longer unregister/wipe DbContextOptions out!
+            // Preserving the original registration keeps your 'DispatchDomainEventsInterceptor' alive.
 
-            if (dbDescriptor != null)
-            {
-                services.Remove(dbDescriptor);
-            }
-
-            var connString = context.Configuration.GetConnectionString("TestConnection");
-
-            // 2. Map DbContext cleanly targeting our tracking target test database connection
-            services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseNpgsql(connString)
-                       .UseSnakeCaseNamingConvention());
-
-            // 3. Intercept perimeter authentication pipelines and swap in mock header evaluation engines
+            // Intercept perimeter authentication pipelines and swap in mock header evaluation engines
             services.Configure<AuthenticationOptions>(options =>
             {
                 options.DefaultAuthenticateScheme = "TestAuthScheme";
@@ -135,6 +167,7 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>, IAsyn
 /// </summary>
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
+    // Corrected .NET 8 signature requirement mapping for options monitor resolution loops
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
         ILoggerFactory logger,
