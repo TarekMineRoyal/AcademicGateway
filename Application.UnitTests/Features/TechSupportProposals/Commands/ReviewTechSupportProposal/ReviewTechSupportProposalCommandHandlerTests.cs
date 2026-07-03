@@ -374,7 +374,7 @@ public class ReviewTechSupportProposalCommandHandlerTests
 
         // Assert
         proposal.Status.Should().Be(TechSupportProposalStatus.Rejected);
-        proposal.RejectionReason.Should().Be("Declined by student workspace owner.");
+        proposal.RejectionReason.Should().Be("Declined");
 
         _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
     }

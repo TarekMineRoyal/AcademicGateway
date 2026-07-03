@@ -290,16 +290,14 @@ public class ReviewSupervisionRequestCommandHandlerTests
     }
 
     /// <summary>
-    /// Assures that attempting to decline a request while providing an empty, whitespace, or null text string parameter value
-    /// natively triggers deep domain aggregate guards and throws an <see cref="InvalidSupervisionRequestTransitionException"/>.
+    /// Assures that when declining a request without providing a rejection reason,
+    /// the system defaults the message to "Declined" and successfully commits the change.
     /// </summary>
-    /// <param name="invalidReason">The invalid text parameter value strings to test.</param>
-    /// <param name="matrixTrackLabel">The nullable descriptor string variable passed explicitly to suppress code diagnostics warning messages.</param>
     [Theory]
     [InlineData("", "Empty Structural Content String Layout")]
     [InlineData("    ", "Whitespace Structural Content String Layout")]
     [InlineData(null, "Explicitly Null Structural Parameter Reference Layout")]
-    public async Task Handle_GivenDeclineChoiceWithMissingRejectionReason_ShouldPropagateInvalidSupervisionRequestTransitionExceptionAndAbort(
+    public async Task Handle_GivenDeclineChoiceWithMissingRejectionReason_ShouldDefaultToDeclinedAndCommit(
         string? invalidReason,
         string? matrixTrackLabel)
     {
@@ -313,7 +311,7 @@ public class ReviewSupervisionRequestCommandHandlerTests
             ProjectInstanceId = targetInstanceId,
             SupervisionRequestId = targetRequestId,
             Accept = false,
-            RejectionReason = invalidReason!
+            RejectionReason = invalidReason
         };
 
         var projectInstance = CreateMockProjectInstance(Guid.NewGuid(), ProjectInstanceStatus.AwaitingSupervision, professorId);
@@ -321,6 +319,7 @@ public class ReviewSupervisionRequestCommandHandlerTests
 
         var requestLog = projectInstance.SupervisionRequests.First();
         SetEntityPrivateProperty(requestLog, nameof(SupervisionRequest.Id), targetRequestId);
+        SetEntityPrivateProperty(requestLog, nameof(SupervisionRequest.Status), SupervisionRequestStatus.Pending);
 
         _mockCurrentUserService.Setup(s => s.IsAuthenticated).Returns(true);
         _mockCurrentUserService.Setup(s => s.UserId).Returns(professorId);
@@ -329,13 +328,15 @@ public class ReviewSupervisionRequestCommandHandlerTests
             .Returns(new List<ProjectInstance> { projectInstance }.BuildMockDbSet().Object);
 
         // Act
-        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+        var result = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         matrixTrackLabel.Should().NotBeNullOrWhiteSpace();
-        await act.Should().ThrowAsync<InvalidSupervisionRequestTransitionException>();
+        result.Should().Be(Unit.Value);
+        requestLog.Status.Should().Be(SupervisionRequestStatus.Rejected);
+        requestLog.RejectionReason.Should().Be("Declined");
 
-        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
     }
 
     #region Operational Aggregate Root Construction Factory Helpers

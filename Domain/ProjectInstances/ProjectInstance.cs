@@ -222,7 +222,7 @@ public class ProjectInstance : BaseEntity
         else
         {
             request.Status = SupervisionRequestStatus.Rejected;
-            request.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? "Declined by faculty." : rejectionReason.Trim();
+            request.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? "Declined" : rejectionReason.Trim();
 
             AddDomainEvent(new SupervisionRequestRejectedEvent(request.Id, Id, request.ProfessorId, request.RejectionReason));
         }
@@ -297,7 +297,7 @@ public class ProjectInstance : BaseEntity
         else
         {
             proposal.Status = TechSupportProposalStatus.Rejected;
-            proposal.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? "Declined by student workspace owner." : rejectionReason.Trim();
+            proposal.RejectionReason = string.IsNullOrWhiteSpace(rejectionReason) ? "Declined" : rejectionReason.Trim();
             AddDomainEvent(new TechSupportProposalRejectedEvent(proposal.Id, Id, proposal.TechSupportAccountId, proposal.RejectionReason));
         }
     }
