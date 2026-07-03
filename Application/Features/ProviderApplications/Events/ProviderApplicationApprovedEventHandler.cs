@@ -29,6 +29,9 @@ public class ProviderApplicationApprovedEventHandler(IApplicationDbContext conte
     /// <exception cref="KeyNotFoundException">Thrown if the target provider domain profile cannot be found in persistence.</exception>
     public async Task HandleAsync(ProviderApplicationApprovedEvent domainEvent, CancellationToken cancellationToken)
     {
+        // Fail immediately if thread or task context is aborted
+        cancellationToken.ThrowIfCancellationRequested();
+
         // 1. Fetch the corresponding provider profile matching the application's unique ID reference
         // Aligned with the Guid domain key transformation (Id instead of UserId)
         var provider = await context.Providers

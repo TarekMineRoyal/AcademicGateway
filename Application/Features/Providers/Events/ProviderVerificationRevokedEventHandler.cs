@@ -24,6 +24,9 @@ public class ProviderVerificationRevokedEventHandler(
     /// <returns>A task tracking the asynchronous synchronization adjustments.</returns>
     public async Task HandleAsync(ProviderVerificationRevokedEvent domainEvent, CancellationToken cancellationToken)
     {
+        // Fail immediately if thread or task context is aborted
+        cancellationToken.ThrowIfCancellationRequested();
+
         logger.LogCritical(
             "SECURITY BREACH BOUNDARY: Provider verification revoked for profile {ProviderId}. Initiating downstream containment cascade.",
             domainEvent.ProviderId);
