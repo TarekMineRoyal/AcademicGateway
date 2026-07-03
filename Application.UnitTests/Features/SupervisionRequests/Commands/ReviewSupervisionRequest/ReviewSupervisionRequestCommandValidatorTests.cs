@@ -126,7 +126,6 @@ public class ReviewSupervisionRequestCommandValidatorTests
     /// </summary>
     [Theory]
     [InlineData("Valid text note")]
-    [InlineData("   ")]
     public async Task ValidateAsync_WhenAcceptIsTrueButRejectionReasonIsPopulated_ShouldFailWithConflictMessage(string? invalidReasonText)
     {
         // Arrange

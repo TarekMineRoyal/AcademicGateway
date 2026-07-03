@@ -102,21 +102,21 @@ public class CreateTechSupportAccountCommandValidatorTests
     }
 
     /// <summary>
-    /// Ensures that malformed structural schemas for corporate electronic email vectors trigger standard diagnostic errors.
+    /// Ensures that malformed structural schemas for corporate electronic email vectors trigger targeted diagnostic errors.
     /// </summary>
     [Theory]
-    [InlineData("plain-text-string")]
-    [InlineData("missingDomain@")]
-    [InlineData("@missingUser.com")]
-    [InlineData("spaces in@email.org")]
-    public async Task ValidateAsync_WhenEmailStructureIsMalformed_ShouldFailWithFormatErrorMessage(string? malformedEmail)
+    [InlineData("plain-text-string", "A legitimate, standard email address structure format is required.")]
+    [InlineData("missingDomain@", "A legitimate, standard email address structure format is required.")]
+    [InlineData("@missingUser.com", "A legitimate, standard email address structure format is required.")]
+    [InlineData("spaces in@email.org", "Email address cannot contain spaces.")]
+    public async Task ValidateAsync_WhenEmailStructureIsMalformed_ShouldFailWithCorrectMessage(string malformedEmail, string expectedErrorMessage)
     {
         // Arrange
         var cancellationToken = TestContext.Current.CancellationToken;
         var command = new CreateTechSupportAccountCommand
         {
             ProviderId = Guid.NewGuid(),
-            Email = malformedEmail!,
+            Email = malformedEmail,
             Password = "SecurePassword123!",
             StaffNumber = "EMP-998822",
             SupportTier = "Tier 2 Helpdesk"
@@ -127,7 +127,7 @@ public class CreateTechSupportAccountCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.Email)
-              .WithErrorMessage("A legitimate, standard email address structure format is required.");
+              .WithErrorMessage(expectedErrorMessage);
     }
 
     /// <summary>

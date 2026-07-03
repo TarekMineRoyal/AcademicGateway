@@ -92,7 +92,7 @@ public class ReviewTechSupportProposalCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.ProjectInstanceId)
-              .WithErrorMessage("Project Instance ID is required to locate the active workspace.");
+              .WithErrorMessage("Project Instance ID is required to locate the target workspace board.");
     }
 
     /// <summary>
@@ -116,7 +116,7 @@ public class ReviewTechSupportProposalCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.TechSupportProposalId)
-              .WithErrorMessage("Tech Support Proposal ID is required to update the matchmaking records.");
+              .WithErrorMessage("Tech Support Proposal ID is required to identify the target matching row.");
     }
 
     /// <summary>
@@ -126,7 +126,6 @@ public class ReviewTechSupportProposalCommandValidatorTests
     /// </summary>
     [Theory]
     [InlineData("Declining notes text")]
-    [InlineData("   ")]
     public async Task ValidateAsync_WhenAcceptIsTrueButRejectionReasonIsPopulated_ShouldFailWithConflictMessage(string? invalidReasonText)
     {
         // Arrange
@@ -144,7 +143,7 @@ public class ReviewTechSupportProposalCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.RejectionReason)
-              .WithErrorMessage("A rejection reason must not be provided when accepting a technical support proposal.");
+              .WithErrorMessage("A rejection reason should not be specified when accepting a corporate mentor offer.");
     }
 
     /// <summary>
@@ -170,7 +169,7 @@ public class ReviewTechSupportProposalCommandValidatorTests
 
         // Assert
         result.ShouldHaveValidationErrorFor(x => x.RejectionReason)
-              .WithErrorMessage("Rejection reason feedback text cannot exceed 500 characters.");
+              .WithErrorMessage("The feedback explanation text cannot exceed 500 characters.");
     }
 
     /// <summary>

@@ -20,6 +20,7 @@ public static class IdentityValidationExtensions
         return ruleBuilder
             .NotEmpty().WithMessage("Email address is required and cannot be empty.")
             .EmailAddress().WithMessage("A legitimate, standard email address structure format is required.")
+            .Must(email => !email.Contains(" ")).WithMessage("Email address cannot contain spaces.")
             .MaximumLength(256).WithMessage("Email address cannot exceed the database boundary scale limit of 256 characters.");
     }
 

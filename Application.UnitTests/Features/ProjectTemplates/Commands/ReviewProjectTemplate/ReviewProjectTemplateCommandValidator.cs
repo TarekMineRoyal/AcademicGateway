@@ -161,7 +161,7 @@ public class ReviewProjectTemplateCommandValidatorTests
             TemplateId = Guid.NewGuid(),
             ReviewerId = Guid.NewGuid(),
             IsApproved = false,
-            RejectionReason = "Short text" // 10 characters required, 9 provided - triggers failure
+            RejectionReason = "ShortText" // 10 characters required, 9 provided - triggers failure
         };
 
         // Act
