@@ -35,7 +35,7 @@ public class GetProfessorProfileQueryHandler(IApplicationDbContext context)
                 Rank = p.Rank,
                 MaxSupervisionCapacity = p.MaxSupervisionCapacity,
                 CurrentProjectCount = p.CurrentProjectCount,
-                IsAcceptingProjects = p.IsAcceptingProjects
+                IsAcceptingProjects = p.CurrentProjectCount < p.MaxSupervisionCapacity
             })
             .FirstOrDefaultAsync(cancellationToken);
 

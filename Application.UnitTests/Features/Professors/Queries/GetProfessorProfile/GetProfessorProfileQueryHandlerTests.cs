@@ -84,7 +84,6 @@ public class GetProfessorProfileQueryHandlerTests
 
         // Simulate a closed capacity boundary state natively by adjusting tracking variables via reflection
         SetPrivateProperty(professor, nameof(Professor.CurrentProjectCount), 3);
-        SetPrivateProperty(professor, nameof(Professor.IsAcceptingProjects), false);
 
         var mockDbSet = new List<Professor> { professor }.BuildMockDbSet();
         _dbContextMock.Setup(db => db.Professors).Returns(mockDbSet.Object);

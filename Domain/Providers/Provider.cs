@@ -94,7 +94,12 @@ public class Provider : BaseEntity
     /// <param name="websiteUrl">The verified corporate URL reference string.</param>
     public void UpdateProfileDetails(string description, string websiteUrl)
     {
-        CompanyDescription = description?.Trim() ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(description))
+        {
+            throw new InvalidProviderDetailsException("Company description cannot be empty or whitespace.");
+        }
+
+        CompanyDescription = description.Trim();
         WebsiteUrl = websiteUrl?.Trim() ?? string.Empty;
     }
 
