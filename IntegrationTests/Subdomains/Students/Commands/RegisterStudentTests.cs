@@ -78,7 +78,7 @@ public class RegisterStudentTests : BaseIntegrationTest
                 .Include(s => s.StudentMajors)
                 .Include(s => s.StudentSkills)
                 .Include(s => s.StudentSpecialties)
-                .FirstOrDefaultAsync(s => s.Id == studentId);
+                .FirstOrDefaultAsync(s => s.Id == studentId, TestContext.Current.CancellationToken);
         }
 
         studentProfile.Should().NotBeNull();
