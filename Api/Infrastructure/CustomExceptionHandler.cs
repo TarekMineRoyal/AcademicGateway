@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Domain.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -34,6 +35,7 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             ValidationException => (StatusCodes.Status400BadRequest, "Validation Failed"),
             KeyNotFoundException => (StatusCodes.Status404NotFound, "Resource Not Found"),
+            UnauthorizedAccessException => (StatusCodes.Status403Forbidden, "Access Denied"), // Map security context and ownership boundary violations cleanly
             DomainException => (StatusCodes.Status409Conflict, "Domain Rule Violation"), // Safely route state invariant failures to HTTP 409 Conflict
             InvalidOperationException => (StatusCodes.Status400BadRequest, "Invalid Operation"),
             _ => (StatusCodes.Status500InternalServerError, "An Error Occurred")
@@ -61,9 +63,14 @@ public class CustomExceptionHandler : IExceptionHandler
             // Inject the machine-readable programmatic string token error key for frontend client state machines
             problemDetails.Extensions["code"] = domainException.ErrorCode;
         }
+        else if (exception is UnauthorizedAccessException)
+        {
+            // Inject programmatic security category metadata without leaking infrastructural architecture stack traces
+            problemDetails.Extensions["code"] = "ACCESS_DENIED";
+        }
         else
         {
-            // Capture general infrastructure diagnostics and debugging telemetry stack data for non-validation errors
+            // Capture general infrastructure diagnostics and debugging telemetry stack data for non-validation/non-security errors
             problemDetails.Extensions["exceptionType"] = exception.GetType().Name;
             problemDetails.Extensions["stackTrace"] = exception.StackTrace;
             if (exception.InnerException != null)
