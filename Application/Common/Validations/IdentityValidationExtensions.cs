@@ -15,9 +15,10 @@ public static class IdentityValidationExtensions
     /// <typeparam name="T">The type of the target command or request executing validation filters.</typeparam>
     /// <param name="ruleBuilder">The incoming validation rule constructor instance tracking the target string entry.</param>
     /// <returns>The extended <see cref="IRuleBuilderOptions{T, String}"/> context mapping to chained rule constraints.</returns>
-    public static IRuleBuilderOptions<T, string> ValidIdentityEmail<T>(this IRuleBuilder<T, string> ruleBuilder)
+    public static IRuleBuilderOptions<T, string> ValidIdentityEmail<T>(this IRuleBuilderInitial<T, string> ruleBuilder)
     {
         return ruleBuilder
+            .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("Email address is required and cannot be empty.")
             .EmailAddress().WithMessage("A legitimate, standard email address structure format is required.")
             .Must(email => !email.Contains(" ")).WithMessage("Email address cannot contain spaces.")
