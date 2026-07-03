@@ -1,6 +1,5 @@
 ﻿using FluentValidation;
 using MediatR;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -32,14 +31,14 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
         RequestHandlerDelegate<TResponse> next,
         CancellationToken cancellationToken)
     {
-        // 1. Optimize execution path: Skip building context arrays if no validators exist for this type
+        // 1. Optimize execution path: Skip execution if no validators exist for this type
         if (validators.Any())
         {
-            var context = new ValidationContext<TRequest>(request);
-
-            // 2. Execute all matching validators concurrently to maximize throughput
+            // 2. Execute all matching validators concurrently to maximize throughput.
+            // Create a new ValidationContext for EACH validator to guarantee thread-safety 
+            // and prevent shared-state duplicate error amalgamation.
             var validationResults = await Task.WhenAll(
-                validators.Select(v => v.ValidateAsync(context, cancellationToken)));
+                validators.Select(v => v.ValidateAsync(new ValidationContext<TRequest>(request), cancellationToken)));
 
             // 3. Flatten the errors sequence into a single collection array
             var failures = validationResults
@@ -47,7 +46,7 @@ public class ValidationBehavior<TRequest, TResponse>(IEnumerable<IValidator<TReq
                 .SelectMany(r => r.Errors)
                 .ToList();
 
-            // 4. Fail-Fast Boundary: Intercept and crash the request loop BEFORE hitting down-tier handlers or database pools
+            // 4. Fail-Fast Boundary: Intercept and crash the request loop BEFORE hitting down-tier handlers
             if (failures.Any())
             {
                 throw new ValidationException(failures);
