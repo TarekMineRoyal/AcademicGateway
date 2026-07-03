@@ -17,7 +17,8 @@ namespace AcademicGateway.Application.UnitTests.Features.Students.Queries.GetStu
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="GetStudentProfileQueryHandler"/>.
-/// Validates deep relational un-+tracked database select projections, DTO value mapping, and missing context exceptions.
+/// Validates deep relational untracked database select projections, DTO value mapping, 
+/// missing context exceptions, and projection ternary null fallback descriptors.
 /// </summary>
 public class GetStudentProfileQueryHandlerTests
 {
@@ -46,14 +47,12 @@ public class GetStudentProfileQueryHandlerTests
         var specialtyId = Guid.NewGuid();
         var skillId = Guid.NewGuid();
 
-        // Best Practice: Populate via native constructor rules to honor domain validation constraints
         var student = new Student(
             id: targetStudentId,
             fullName: "Jane Doe",
             graduationYear: 2026
         );
 
-        // Advance sub-collection status natively via encapsulated domain aggregate behaviors
         student.AddMajor(majorId);
         student.AddSpecialty(specialtyId);
         student.AddSkill(skillId);
@@ -78,7 +77,6 @@ public class GetStudentProfileQueryHandlerTests
         var query = new GetStudentProfileQuery(targetStudentId);
 
         // Act
-        // Best Practice (xUnit1051): Pass TestContext.Current.CancellationToken for prompt cancellation responsiveness.
         var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
@@ -87,7 +85,6 @@ public class GetStudentProfileQueryHandlerTests
         result.FullName.Should().Be("Jane Doe");
         result.GraduationYear.Should().Be(2026);
 
-        // Verify relational collection projection elements are correctly mapped
         result.Majors.Should().ContainSingle(m => m.Id == majorId && m.Name == "Computer Science");
         result.Specialties.Should().ContainSingle(s => s.Id == specialtyId && s.Name == "Artificial Intelligence");
         result.Skills.Should().ContainSingle(s => s.Id == skillId && s.Name == "C#");
@@ -108,7 +105,6 @@ public class GetStudentProfileQueryHandlerTests
         var query = new GetStudentProfileQuery(wrongId);
 
         // Act
-        // Best Practice (xUnit1051): Supply TestContext.Current.CancellationToken inside the execution delegate stream.
         Func<Task> act = async () => await _handler.Handle(query, TestContext.Current.CancellationToken);
 
         // Assert
@@ -116,10 +112,100 @@ public class GetStudentProfileQueryHandlerTests
             .WithMessage($"*Student profile for ID '{wrongId}' was not found within the institutional directory.*");
     }
 
+    /// <summary>
+    /// Assures that if a student's major relational join context row does not hold a hydrated parent Major entity model,
+    /// the dynamic projection safely applies the custom string ternary fallback option "Unknown Major".
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenStudentWithNullMajorNavigationProperty_ShouldMapNameAsUnknownMajor()
+    {
+        // Arrange
+        var targetStudentId = Guid.NewGuid();
+        var majorId = Guid.NewGuid();
+
+        var student = new Student(targetStudentId, "Jane Doe", 2026);
+        student.AddMajor(majorId);
+
+        // Explicit Boundary Condition: Force the parent 'Major' navigation entity to remain null
+        SetPrivateProperty(student.StudentMajors.First(), nameof(StudentMajor.Major), null!);
+
+        var mockDbSet = new List<Student> { student }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Students).Returns(mockDbSet.Object);
+
+        var query = new GetStudentProfileQuery(targetStudentId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Majors.Should().ContainSingle(m => m.Id == majorId && m.Name == "Unknown Major");
+    }
+
+    /// <summary>
+    /// Assures that if a student's specialty relational join context row does not hold a hydrated Specialty entity model,
+    /// the dynamic projection safely applies the custom string ternary fallback option "Unknown Specialty".
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenStudentWithNullSpecialtyNavigationProperty_ShouldMapNameAsUnknownSpecialty()
+    {
+        // Arrange
+        var targetStudentId = Guid.NewGuid();
+        var specialtyId = Guid.NewGuid();
+
+        var student = new Student(targetStudentId, "Jane Doe", 2026);
+        student.AddSpecialty(specialtyId);
+
+        // Explicit Boundary Condition: Force the child 'Specialty' navigation entity to remain null
+        SetPrivateProperty(student.StudentSpecialties.First(), nameof(StudentSpecialty.Specialty), null!);
+
+        var mockDbSet = new List<Student> { student }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Students).Returns(mockDbSet.Object);
+
+        var query = new GetStudentProfileQuery(targetStudentId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Specialties.Should().ContainSingle(s => s.Id == specialtyId && s.Name == "Unknown Specialty");
+    }
+
+    /// <summary>
+    /// Assures that if a student's skill relational join context row does not hold a hydrated Skill entity model,
+    /// the dynamic projection safely applies the custom string ternary fallback option "Unknown Skill".
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenStudentWithNullSkillNavigationProperty_ShouldMapNameAsUnknownSkill()
+    {
+        // Arrange
+        var targetStudentId = Guid.NewGuid();
+        var skillId = Guid.NewGuid();
+
+        var student = new Student(targetStudentId, "Jane Doe", 2026);
+        student.AddSkill(skillId);
+
+        // Explicit Boundary Condition: Force the lookup 'Skill' navigation entity to remain null
+        SetPrivateProperty(student.StudentSkills.First(), nameof(StudentSkill.Skill), null!);
+
+        var mockDbSet = new List<Student> { student }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Students).Returns(mockDbSet.Object);
+
+        var query = new GetStudentProfileQuery(targetStudentId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Skills.Should().ContainSingle(s => s.Id == skillId && s.Name == "Unknown Skill");
+    }
+
     private static T CreateEntityWithPrivateConstructor<T>() =>
         (T)Activator.CreateInstance(typeof(T), true)!;
 
-    private static void SetPrivateProperty(object obj, string propertyName, object value) =>
+    private static void SetPrivateProperty(object obj, string propertyName, object? value) =>
         obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?
            .SetValue(obj, value);
 }

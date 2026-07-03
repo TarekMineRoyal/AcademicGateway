@@ -15,7 +15,8 @@ namespace AcademicGateway.Application.UnitTests.Features.TechSupportAccounts.Com
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="CreateTechSupportAccountCommandHandler"/>.
-/// Validates provider onboarding check gates, identity provider routing, and auxiliary support account encapsulation.
+/// Validates provider onboarding check gates, identity provider routing, identity identity boundary exceptions,
+/// and deep pass-through domain aggregate invariant detail details constraints.
 /// </summary>
 public class CreateTechSupportAccountCommandHandlerTests
 {
@@ -49,30 +50,26 @@ public class CreateTechSupportAccountCommandHandlerTests
             ProviderId = providerId,
             Email = "support@provider.com",
             Password = "SecurePassword123!",
-            StaffNumber = "EMP-998811",       // Required parameter to fulfill domain aggregate invariants
-            SupportTier = "Tier 2 Helpdesk"    // Required parameter to fulfill domain aggregate invariants
+            StaffNumber = "EMP-998811",
+            SupportTier = "Tier 2 Helpdesk"
         };
 
-        // Best Practice: Instantiate domain entities cleanly using public constructors to preserve integrity behavior
         var provider = new Provider(providerId, "Acme Solutions Group");
-        provider.VerifyProfile(); // Elevates partner onboarding standing to satisfy the handler's validation gate
+        provider.VerifyProfile();
 
         _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
         _mockContext.Setup(c => c.TechSupportAccounts).Returns(new List<TechSupportAccount>().BuildMockDbSet().Object);
 
-        // Instruct our identity layer mock to register user credentials successfully
         _mockIdentityService
             .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
             .ReturnsAsync((true, expectedIdentityUserId, new List<string>()));
 
         // Act
-        // Best Practice (xUnit1051): Pass TestContext.Current.CancellationToken for responsive test abort controls.
         var resultId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         resultId.Should().Be(expectedIdentityUserId);
 
-        // Verify that the auxiliary account was built natively and pushed to tracking with properties intact
         _mockContext.Verify(c => c.TechSupportAccounts.Add(It.Is<TechSupportAccount>(t =>
             t.Id == expectedIdentityUserId &&
             t.StaffNumber == command.StaffNumber &&
@@ -110,7 +107,6 @@ public class CreateTechSupportAccountCommandHandlerTests
         await act.Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage($"*Provider profile with ID '{wrongProviderId}' was not found.*");
 
-        // Guarantee that background processes were bypassed and no database writes occurred
         _mockIdentityService.Verify(i => i.CreateUserAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
         _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -133,7 +129,6 @@ public class CreateTechSupportAccountCommandHandlerTests
             SupportTier = "Tier 1 Helpdesk"
         };
 
-        // Leave provider profile unverified (IsVerified = false) to simulate a security gate breach condition
         var provider = new Provider(providerId, "Unverified Corporate Entity");
 
         _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
@@ -185,6 +180,127 @@ public class CreateTechSupportAccountCommandHandlerTests
             .WithMessage($"Failed to provision identity credentials: Password is too weak, Email format invalid");
 
         _mockContext.Verify(c => c.TechSupportAccounts.Add(It.IsAny<TechSupportAccount>()), Times.Never);
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if identity service configuration generates success indicators but returns a blank Guid tracker,
+    /// the domain constructor intercepts processing and bubbles up an <see cref="InvalidTechSupportDetailsException"/>.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenIdentitySucceedsWithEmptyGuid_ShouldPropagateInvalidTechSupportDetailsExceptionAndAbort()
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var command = new CreateTechSupportAccountCommand
+        {
+            ProviderId = providerId,
+            Email = "support@firm.com",
+            Password = "Password123!",
+            StaffNumber = "EMP-777",
+            SupportTier = "Tier 1 Helpdesk"
+        };
+
+        var provider = new Provider(providerId, "Verified Security Provider");
+        provider.VerifyProfile();
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.TechSupportAccounts).Returns(new List<TechSupportAccount>().BuildMockDbSet().Object);
+
+        // Violation: Success indicator is true but returned tracker code resolves to Guid.Empty
+        _mockIdentityService
+            .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
+            .ReturnsAsync((true, Guid.Empty, new List<string>()));
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidTechSupportDetailsException>()
+            .WithMessage("*Identity User ID cannot be empty.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if empty or whitespace text is provided for staff identifier tracking arguments,
+    /// the domain layer blocks construction, throwing an <see cref="InvalidTechSupportDetailsException"/>.
+    /// Note: Parameter defined as string? to cleanly eliminate reference variable compiler check warnings.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("    ")]
+    [InlineData(null)]
+    public async Task Handle_GivenInvalidStaffNumber_ShouldPropagateInvalidTechSupportDetailsExceptionAndAbort(string? invalidStaffNumber)
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var command = new CreateTechSupportAccountCommand
+        {
+            ProviderId = providerId,
+            Email = "support@firm.com",
+            Password = "Password123!",
+            StaffNumber = invalidStaffNumber!,
+            SupportTier = "Tier 1 Helpdesk"
+        };
+
+        var provider = new Provider(providerId, "Verified Security Provider");
+        provider.VerifyProfile();
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+
+        _mockIdentityService
+            .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
+            .ReturnsAsync((true, Guid.NewGuid(), new List<string>()));
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidTechSupportDetailsException>()
+            .WithMessage("*Staff number cannot be empty or whitespace.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if empty or whitespace text is provided for security tier category tracking arguments,
+    /// the domain layer blocks construction, throwing an <see cref="InvalidTechSupportDetailsException"/>.
+    /// Note: Parameter defined as string? to cleanly eliminate reference variable compiler check warnings.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t \n ")]
+    [InlineData(null)]
+    public async Task Handle_GivenInvalidSupportTier_ShouldPropagateInvalidTechSupportDetailsExceptionAndAbort(string? invalidSupportTier)
+    {
+        // Arrange
+        var providerId = Guid.NewGuid();
+        var command = new CreateTechSupportAccountCommand
+        {
+            ProviderId = providerId,
+            Email = "support@firm.com",
+            Password = "Password123!",
+            StaffNumber = "EMP-882200",
+            SupportTier = invalidSupportTier!
+        };
+
+        var provider = new Provider(providerId, "Verified Security Provider");
+        provider.VerifyProfile();
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+
+        _mockIdentityService
+            .Setup(i => i.CreateUserAsync(command.Email, command.Email, command.Password))
+            .ReturnsAsync((true, Guid.NewGuid(), new List<string>()));
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidTechSupportDetailsException>()
+            .WithMessage("*Support tier assignment level cannot be empty or whitespace.*");
+
         _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

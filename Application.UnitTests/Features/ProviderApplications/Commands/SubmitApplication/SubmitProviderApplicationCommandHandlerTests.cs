@@ -8,7 +8,6 @@ using MockQueryable.Moq;
 using Moq;
 using System;
 using System.Collections.Generic;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
@@ -17,7 +16,8 @@ namespace AcademicGateway.Application.UnitTests.Features.ProviderApplications.Co
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="SubmitProviderApplicationCommandHandler"/>.
-/// Validates 1-to-1 aggregate root allocation constraints, multi-path lifecycle transitions, and resubmission state loops.
+/// Validates 1-to-1 aggregate root allocation constraints, multi-path lifecycle transitions, resubmission state loops,
+/// defensive fallback catch blocks, and pass-through domain aggregate detail invariants.
 /// </summary>
 public class SubmitProviderApplicationCommandHandlerTests
 {
@@ -57,20 +57,17 @@ public class SubmitProviderApplicationCommandHandlerTests
             VerificationDocumentsUrl = "https://storage.academicgateway.net/docs/compliance_v1.pdf"
         };
 
-        // Instantiate core prerequisite dependencies via domain public constructors
         var provider = new Provider(targetProviderId, "Corporate Tech Innovations");
 
         _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
         _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication>().BuildMockDbSet().Object);
 
         // Act
-        // Best Practice (xUnit1051): Pass TestContext.Current.CancellationToken for responsive test abort controls.
         var resultId = await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
         resultId.Should().NotBeEmpty();
 
-        // Verify that the new aggregate root was fully populated and appended to the tracking table dataset
         _mockContext.Verify(c => c.ProviderApplications.Add(It.Is<ProviderApplication>(a =>
             a.Id == resultId &&
             a.ProviderId == targetProviderId &&
@@ -79,6 +76,51 @@ public class SubmitProviderApplicationCommandHandlerTests
             a.Status == ProviderApplicationStatus.PendingReview &&
             a.CreatedAt == _fixedUtcTime
         )), Times.Once);
+
+        _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
+    }
+
+    /// <summary>
+    /// Assures that if a corporate partner's previous submission was formally Rejected, issuing a new command 
+    /// triggers the stateful loop that updates the tracking fields and safely pushes it back into PendingReview.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenPriorApplicationIsRejected_ShouldTriggerResubmitDomainMethodAndReturnId()
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var reviewerId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = "Corrected corporate bio overview.",
+            VerificationDocumentsUrl = "https://storage.net/fixed_credentials.pdf"
+        };
+
+        var provider = new Provider(targetProviderId, "Resubmitting Partner Co.");
+
+        // Simulate a Rejected baseline status natively using domain methods
+        var existingApplication = new ProviderApplication(targetProviderId, "Bad Details", "https://docs.com/blurry.pdf", _fixedUtcTime.AddDays(-5));
+        existingApplication.SubmitForReview();
+        existingApplication.Reject(reviewerId, "Filing details were blurry.", _fixedUtcTime.AddDays(-2));
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
+
+        // Act
+        var resultId = await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        resultId.Should().Be(existingApplication.Id);
+
+        existingApplication.Status.Should().Be(ProviderApplicationStatus.PendingReview);
+        existingApplication.CompanyDetails.Should().Be(command.CompanyDetails);
+        existingApplication.VerificationDocumentsUrl.Should().Be(command.VerificationDocumentsUrl);
+
+        // Assert historical audit fields are completely cleared out per workflow requirements
+        existingApplication.ReviewedById.Should().BeNull();
+        existingApplication.ReviewedAt.Should().BeNull();
+        existingApplication.RejectionReason.Should().BeNull();
 
         _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
     }
@@ -130,9 +172,8 @@ public class SubmitProviderApplicationCommandHandlerTests
 
         var provider = new Provider(targetProviderId, "Spammer Solutions Corp");
 
-        // Establish an existing application and push it to an active review state natively
         var existingApplication = new ProviderApplication(targetProviderId, "Original Details", "https://docs.com/original.pdf", _fixedUtcTime.AddDays(-2));
-        existingApplication.SubmitForReview();
+        existingApplication.SubmitForReview(); // Status = PendingReview
 
         _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
         _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
@@ -146,43 +187,215 @@ public class SubmitProviderApplicationCommandHandlerTests
     }
 
     /// <summary>
-    /// Assures that if a corporate partner's previous submission was formally Rejected, issuing a new command 
-    /// triggers the stateful loop that updates the tracking fields and safely pushes it back into PendingReview.
+    /// Assures that attempting to issue a submission command when a previous application has achieved an Approved state 
+    /// securely locks subsequent changes and throws an <see cref="InvalidApplicationStatusException"/>.
     /// </summary>
     [Fact]
-    public async Task Handle_GivenPriorApplicationIsRejected_ShouldTriggerResubmitDomainMethodAndReturnId()
+    public async Task Handle_GivenApplicationIsAlreadyApproved_ShouldThrowInvalidApplicationStatusException()
     {
         // Arrange
         var targetProviderId = Guid.NewGuid();
         var command = new SubmitProviderApplicationCommand
         {
             ProviderId = targetProviderId,
-            CompanyDetails = "Corrected corporate bio overview.",
-            VerificationDocumentsUrl = "https://storage.net/fixed_credentials.pdf"
+            CompanyDetails = "Submitting an alteration to a fully verified and approved record track.",
+            VerificationDocumentsUrl = "https://storage.net/override.pdf"
         };
 
-        var provider = new Provider(targetProviderId, "Resubmitting Partner Co.");
+        var provider = new Provider(targetProviderId, "Verified Corporate Vendor");
 
-        // Simulate a Rejected baseline status natively via domain operations
-        var existingApplication = new ProviderApplication(targetProviderId, "Bad Details", "https://docs.com/blurry.pdf", _fixedUtcTime.AddDays(-5));
+        var existingApplication = new ProviderApplication(targetProviderId, "Original Details", "https://docs.com/original.pdf", _fixedUtcTime.AddDays(-5));
         existingApplication.SubmitForReview();
-        existingApplication.Reject(Guid.NewGuid(), "Filing details were blurry.", _fixedUtcTime.AddDays(-2));
+        existingApplication.Approve(Guid.NewGuid(), _fixedUtcTime.AddDays(-2)); // Status = Approved
 
         _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
         _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
 
         // Act
-        var resultId = await _handler.Handle(command, TestContext.Current.CancellationToken);
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
 
         // Assert
-        resultId.Should().Be(existingApplication.Id);
+        await act.Should().ThrowAsync<InvalidApplicationStatusException>();
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
 
-        // Verify state mutation fields were accurately reset and pushed back to the evaluation grid
-        existingApplication.Status.Should().Be(ProviderApplicationStatus.PendingReview);
-        existingApplication.CompanyDetails.Should().Be(command.CompanyDetails);
-        existingApplication.VerificationDocumentsUrl.Should().Be(command.VerificationDocumentsUrl);
-        existingApplication.RejectionReason.Should().BeNull();
+    /// <summary>
+    /// Assures that if an application exists but resides in an unhandled pipeline state context (such as Draft),
+    /// the handler's default defensive fallback path intercepts processing and throws an <see cref="InvalidApplicationStatusException"/>.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenExistingApplicationInDraftStatus_ShouldHitHandlerFallbackAndThrowInvalidApplicationStatusException()
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = "Attempting to push when a draft record already tracks inside database bounds.",
+            VerificationDocumentsUrl = "https://storage.net/draft_overwrite.pdf"
+        };
 
-        _mockContext.Verify(c => c.SaveChangesAsync(TestContext.Current.CancellationToken), Times.Once);
+        var provider = new Provider(targetProviderId, "Draft Owner Corp");
+
+        // Instantiate the entity but DO NOT invoke SubmitForReview(). Status remains 'Draft'.
+        var existingApplication = new ProviderApplication(targetProviderId, "Draft Details Blocked", "https://docs.com/draft.pdf", _fixedUtcTime.AddDays(-1));
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidApplicationStatusException>();
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if invalid, empty, or whitespace text is provided for company descriptions during a new application,
+    /// the core domain boundaries reject structural hydration, throwing an <see cref="InvalidApplicationDetailsException"/>.
+    /// </summary>
+    /// <remarks>
+    /// Fixed xUnit1012 warning by altering the input variable type signature to a nullable string component.
+    /// </remarks>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task Handle_NewApplication_GivenInvalidCompanyDetails_ShouldPropagateInvalidApplicationDetailsException(string? invalidDetails)
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = invalidDetails!,
+            VerificationDocumentsUrl = "https://storage.net/legal_docs.pdf"
+        };
+
+        var provider = new Provider(targetProviderId, "Corporate Entity Profile");
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication>().BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidApplicationDetailsException>()
+            .WithMessage("*Company details cannot be empty or whitespace.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if an empty or whitespace URI reference is supplied for documentation locations during a new application,
+    /// the aggregate invariants block generation by throwing an <see cref="InvalidApplicationDetailsException"/>.
+    /// </summary>
+    /// <remarks>
+    /// Fixed xUnit1012 warning by altering the input variable type signature to a nullable string component.
+    /// </remarks>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \n \t ")]
+    [InlineData(null)]
+    public async Task Handle_NewApplication_GivenInvalidDocumentsUrl_ShouldPropagateInvalidApplicationDetailsException(string? invalidUrl)
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = "Valid textual description context detailing corporate operations baseline.",
+            VerificationDocumentsUrl = invalidUrl!
+        };
+
+        var provider = new Provider(targetProviderId, "Corporate Entity Profile");
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication>().BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidApplicationDetailsException>()
+            .WithMessage("*Verification documents URL cannot be empty or whitespace.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if an empty or whitespace string is passed for corporate backgrounds during a resubmission tracking loop,
+    /// the domain aggregate root prevents updating, throwing an <see cref="InvalidApplicationDetailsException"/>.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Handle_Resubmission_GivenInvalidCompanyDetails_ShouldPropagateInvalidApplicationDetailsException(string invalidDetails)
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = invalidDetails,
+            VerificationDocumentsUrl = "https://storage.net/updated_files.pdf"
+        };
+
+        var provider = new Provider(targetProviderId, "Resubmitting Vendor");
+
+        var existingApplication = new ProviderApplication(targetProviderId, "Original Details", "https://docs.com/old.pdf", _fixedUtcTime.AddDays(-5));
+        existingApplication.SubmitForReview();
+        existingApplication.Reject(Guid.NewGuid(), "Requires more thorough updates.", _fixedUtcTime.AddDays(-2));
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidApplicationDetailsException>()
+            .WithMessage("*Company details cannot be empty or whitespace.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    /// <summary>
+    /// Assures that if an empty or whitespace string is passed for documentation files during a resubmission tracking loop,
+    /// the domain aggregate root prevents updating, throwing an <see cref="InvalidApplicationDetailsException"/>.
+    /// </summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData(" \t \n ")]
+    public async Task Handle_Resubmission_GivenInvalidDocumentsUrl_ShouldPropagateInvalidApplicationDetailsException(string invalidUrl)
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+        var command = new SubmitProviderApplicationCommand
+        {
+            ProviderId = targetProviderId,
+            CompanyDetails = "Thorough and expanded corporate background portfolio details.",
+            VerificationDocumentsUrl = invalidUrl
+        };
+
+        var provider = new Provider(targetProviderId, "Resubmitting Vendor");
+
+        var existingApplication = new ProviderApplication(targetProviderId, "Original Details", "https://docs.com/old.pdf", _fixedUtcTime.AddDays(-5));
+        existingApplication.SubmitForReview();
+        existingApplication.Reject(Guid.NewGuid(), "Files were missing or corrupted.", _fixedUtcTime.AddDays(-2));
+
+        _mockContext.Setup(c => c.Providers).Returns(new List<Provider> { provider }.BuildMockDbSet().Object);
+        _mockContext.Setup(c => c.ProviderApplications).Returns(new List<ProviderApplication> { existingApplication }.BuildMockDbSet().Object);
+
+        // Act
+        Func<Task> act = async () => await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidApplicationDetailsException>()
+            .WithMessage("*Verification documents URL cannot be empty or whitespace.*");
+
+        _mockContext.Verify(c => c.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
     }
 }

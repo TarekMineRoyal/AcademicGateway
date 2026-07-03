@@ -13,7 +13,8 @@ namespace AcademicGateway.Application.UnitTests.Features.Providers.Queries.GetPr
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="GetProviderProfileQueryHandler"/>.
-/// Validates relational read-only projections, domain entity to DTO model mapping, and query exception handling bounds.
+/// Validates relational read-only select projections, domain entity to DTO model mapping, 
+/// multiple dataset row isolation, and query exception handling bounds.
 /// </summary>
 public class GetProviderProfileQueryHandlerTests
 {
@@ -63,6 +64,91 @@ public class GetProviderProfileQueryHandlerTests
         result.CompanyDescription.Should().Be("A specialized biotechnology firm designing automated cellular sorting matrix architectures.");
         result.WebsiteUrl.Should().Be("https://innovate.io");
         result.IsVerified.Should().BeTrue();
+    }
+
+    /// <summary>
+    /// Assures that when a corporate partner exists but has not yet passed verification gates,
+    /// the query handler returns their projected profile with the compliance status flag accurately set to false.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenExistingUnverifiedProvider_ShouldReturnProjectedProfileDtoWithIsVerifiedFalse()
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+
+        // Context: Instantiated but DO NOT call provider.VerifyProfile(). IsVerified remains false.
+        var provider = new Provider(targetProviderId, "Unverified Tech Startup");
+        provider.UpdateProfileDetails("Early stage venture overview.", "https://startup.net");
+
+        var mockDbSet = new List<Provider> { provider }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Providers).Returns(mockDbSet.Object);
+
+        var query = new GetProviderProfileQuery(targetProviderId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(targetProviderId);
+        result.IsVerified.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Assures that if a provider has a fresh profile shell without custom descriptions or site configurations,
+    /// the data view projects cleanly, setting default text blocks without throwing null reference exceptions.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenFreshProviderWithoutProfileDetails_ShouldProjectCleanlyWithEmptyStrings()
+    {
+        // Arrange
+        var targetProviderId = Guid.NewGuid();
+
+        // Context: Description and Website are left as default empty strings inside the domain entity layer
+        var freshProvider = new Provider(targetProviderId, "Fresh Consulting Group");
+
+        var mockDbSet = new List<Provider> { freshProvider }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Providers).Returns(mockDbSet.Object);
+
+        var query = new GetProviderProfileQuery(targetProviderId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.CompanyName.Should().Be("Fresh Consulting Group");
+        result.CompanyDescription.Should().Be(string.Empty);
+        result.WebsiteUrl.Should().Be(string.Empty);
+    }
+
+    /// <summary>
+    /// Assures that when multiple provider records reside within the database context, the query engine
+    /// cleanly applies key filters to isolate and project only the requested profile instance.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenMultipleProvidersInDataset_ShouldIsolateCorrectTargetProfileInstance()
+    {
+        // Arrange
+        var searchTargetId = Guid.NewGuid();
+        var alternativeId = Guid.NewGuid();
+
+        var targetProvider = new Provider(searchTargetId, "Target Corporate Entity");
+        var secondaryProvider = new Provider(alternativeId, "Alternative Competitor Corp");
+
+        var multiProviderPool = new List<Provider> { targetProvider, secondaryProvider };
+        var mockDbSet = multiProviderPool.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Providers).Returns(mockDbSet.Object);
+
+        var query = new GetProviderProfileQuery(searchTargetId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(searchTargetId);
+        result.CompanyName.Should().Be("Target Corporate Entity");
     }
 
     /// <summary>

@@ -18,7 +18,8 @@ namespace AcademicGateway.Application.UnitTests.Features.ProjectTemplates.Querie
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="GetApprovedTemplatesQueryHandler"/>.
-/// Validates relational read-only read projections, conditional criteria matching, and workflow status filters.
+/// Validates relational read-only projections, conditional database filtering criteria, 
+/// workflow status isolation barriers, and projection ternary null-coalescing string fallbacks.
 /// </summary>
 public class GetApprovedTemplatesQueryHandlerTests
 {
@@ -36,7 +37,7 @@ public class GetApprovedTemplatesQueryHandlerTests
 
     /// <summary>
     /// Assures that executing an unfiltered query retrieves all project templates that have successfully 
-    /// advanced into an Approved pipeline state while entirely ignoring Draft layouts.
+    /// advanced into an Approved pipeline state while entirely ignoring other operational lifecycles.
     /// </summary>
     [Fact]
     public async Task Handle_GivenNoFiltersApplied_ShouldReturnAllApprovedTemplatesDirectly()
@@ -45,30 +46,31 @@ public class GetApprovedTemplatesQueryHandlerTests
         var providerId = Guid.NewGuid();
         var queryPayload = new GetApprovedTemplatesQuery { SkillId = null };
 
-        // Best Practice: Populate corporate context to avoid falling back to "Unknown Provider" during projection mapping
         var provider = new Provider(providerId, "Cloud Solutions Corp");
 
-        // Setup Approved Listing via standard aggregate state machine transitions
+        // Precondition 1: Setup Approved Listing via standard aggregate state machine transitions
         var templateApproved = new ProjectTemplate(
             title: "Cloud Ops Masterclass",
             description: "Description lengthy enough to bypass validation parameters within the system layout.",
             providerId: providerId);
-
         templateApproved.SubmitForReview();
         templateApproved.Approve();
         SetPrivateProperty(templateApproved, nameof(ProjectTemplate.Provider), provider);
 
-        // Setup Draft Listing (Should be filtered out naturally by the query engine)
-        var templateDraft = new ProjectTemplate(
-            title: "Secret Pending Core Draft",
-            description: "Description lengthy enough to bypass validation parameters within the system layout.",
-            providerId: providerId);
+        // Precondition 2: Setup non-approved listings that should be automatically skipped by the query block
+        var templateDraft = new ProjectTemplate("Draft Track Outline", "Valid description placeholder metrics.", providerId);
 
-        var templatePool = new List<ProjectTemplate> { templateApproved, templateDraft };
+        var templatePending = new ProjectTemplate("Pending Review Track", "Valid description placeholder metrics.", providerId);
+        templatePending.SubmitForReview();
+
+        var templateRejected = new ProjectTemplate("Rejected Track Outline", "Valid description placeholder metrics.", providerId);
+        templateRejected.SubmitForReview();
+        templateRejected.RejectPermanently("Fails core curriculum criteria framework bounds.");
+
+        var templatePool = new List<ProjectTemplate> { templateApproved, templateDraft, templatePending, templateRejected };
         _mockContext.Setup(c => c.ProjectTemplates).Returns(templatePool.BuildMockDbSet().Object);
 
         // Act
-        // Best Practice (xUnit1051): Pass TestContext.Current.CancellationToken for responsive test execution controls.
         var resultList = await _handler.Handle(queryPayload, TestContext.Current.CancellationToken);
 
         // Assert
@@ -99,7 +101,6 @@ public class GetApprovedTemplatesQueryHandlerTests
             title: "Target Tech Track",
             description: "Description lengthy enough to bypass validation parameters within the system layout.",
             providerId: providerId);
-
         templateMatching.SubmitForReview();
         templateMatching.Approve();
         templateMatching.AddSkill(targetSearchSkillId);
@@ -115,10 +116,10 @@ public class GetApprovedTemplatesQueryHandlerTests
             title: "Alternative Tech Track",
             description: "Description lengthy enough to bypass validation parameters within the system layout.",
             providerId: providerId);
-
         templateMismatched.SubmitForReview();
         templateMismatched.Approve();
         templateMismatched.AddSkill(alternativeSkillId);
+        SetPrivateProperty(templateMismatched, nameof(ProjectTemplate.Provider), provider);
 
         var templatePool = new List<ProjectTemplate> { templateMatching, templateMismatched };
         _mockContext.Setup(c => c.ProjectTemplates).Returns(templatePool.BuildMockDbSet().Object);
@@ -136,10 +137,78 @@ public class GetApprovedTemplatesQueryHandlerTests
         matchResult.Skills.First().Name.Should().Be("React.js Framework");
     }
 
+    /// <summary>
+    /// Assures that if a project template record does not possess a loaded or referenced Provider entity model,
+    /// the dynamic projection safely applies the custom string ternary fallback option "Unknown Provider".
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenTemplateWithNullProviderRelation_ShouldMapProviderCompanyNameAsUnknownProvider()
+    {
+        // Arrange
+        var queryPayload = new GetApprovedTemplatesQuery { SkillId = null };
+
+        var templateWithoutProvider = new ProjectTemplate(
+            title: "Orphaned Platform Template",
+            description: "Description lengthy enough to bypass validation parameters within the system layout.",
+            providerId: Guid.NewGuid());
+        templateWithoutProvider.SubmitForReview();
+        templateWithoutProvider.Approve();
+
+        // Explicit Boundary Condition: Leave the 'Provider' navigation property as null
+        SetPrivateProperty(templateWithoutProvider, nameof(ProjectTemplate.Provider), null!);
+
+        var templatePool = new List<ProjectTemplate> { templateWithoutProvider };
+        _mockContext.Setup(c => c.ProjectTemplates).Returns(templatePool.BuildMockDbSet().Object);
+
+        // Act
+        var resultList = await _handler.Handle(queryPayload, TestContext.Current.CancellationToken);
+
+        // Assert
+        resultList.Should().HaveCount(1);
+        resultList.First().ProviderCompanyName.Should().Be("Unknown Provider");
+    }
+
+    /// <summary>
+    /// Assures that if a template's skill join reference does not carry a hydrated core Skill domain entity snapshot,
+    /// the projection statement gracefully defaults its string descriptor assignment rule to "Unknown Skill".
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenTemplateWithNullSkillNavigationProperty_ShouldMapSkillNameAsUnknownSkill()
+    {
+        // Arrange
+        var targetSkillId = Guid.NewGuid();
+        var queryPayload = new GetApprovedTemplatesQuery { SkillId = null };
+
+        var templateWithMissingSkillNav = new ProjectTemplate(
+            title: "Unmapped Competency Architecture",
+            description: "Description lengthy enough to bypass validation parameters within the system layout.",
+            providerId: Guid.NewGuid());
+        templateWithMissingSkillNav.SubmitForReview();
+        templateWithMissingSkillNav.Approve();
+        templateWithMissingSkillNav.AddSkill(targetSkillId);
+
+        // Explicit Boundary Condition: Force the sub-collection's nested 'Skill' lookups to remain null
+        var joinRelation = templateWithMissingSkillNav.ProjectTemplateSkills.First();
+        SetPrivateProperty(joinRelation, nameof(ProjectTemplateSkill.Skill), null!);
+
+        var templatePool = new List<ProjectTemplate> { templateWithMissingSkillNav };
+        _mockContext.Setup(c => c.ProjectTemplates).Returns(templatePool.BuildMockDbSet().Object);
+
+        // Act
+        var resultList = await _handler.Handle(queryPayload, TestContext.Current.CancellationToken);
+
+        // Assert
+        resultList.Should().HaveCount(1);
+        var mappedSkills = resultList.First().Skills;
+        mappedSkills.Should().HaveCount(1);
+        mappedSkills.First().Id.Should().Be(targetSkillId);
+        mappedSkills.First().Name.Should().Be("Unknown Skill");
+    }
+
     private static T CreateEntityWithPrivateConstructor<T>() =>
         (T)Activator.CreateInstance(typeof(T), true)!;
 
-    private static void SetPrivateProperty(object obj, string propertyName, object value) =>
+    private static void SetPrivateProperty(object obj, string propertyName, object? value) =>
         obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?
            .SetValue(obj, value);
 }

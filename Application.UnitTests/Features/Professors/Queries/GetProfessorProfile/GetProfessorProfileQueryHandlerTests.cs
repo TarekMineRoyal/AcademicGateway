@@ -6,6 +6,7 @@ using MockQueryable.Moq;
 using Moq;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -13,7 +14,8 @@ namespace AcademicGateway.Application.UnitTests.Features.Professors.Queries.GetP
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="GetProfessorProfileQueryHandler"/>.
-/// Validates relational read-only projections, domain model to DTO mappings, and lookup exception handling.
+/// Validates relational read-only projections, domain model to DTO mappings, multi-row dataset 
+/// isolation controls, shifted domain capacity boundaries, and lookup exception handling.
 /// </summary>
 public class GetProfessorProfileQueryHandlerTests
 {
@@ -70,6 +72,66 @@ public class GetProfessorProfileQueryHandlerTests
     }
 
     /// <summary>
+    /// Assures that if a professor's internal tracking properties shift to indicate they are no longer
+    /// accepting student assignments, the read projection projects those active boolean toggles accurately.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenProfessorNotAcceptingProjects_ShouldReturnProjectedProfileWithAccurateStateFlags()
+    {
+        // Arrange
+        var targetProfessorId = Guid.NewGuid();
+        var professor = new Professor(targetProfessorId, "Dr. Robert Vance", "Physics", "Associate Professor", 3);
+
+        // Simulate a closed capacity boundary state natively by adjusting tracking variables via reflection
+        SetPrivateProperty(professor, nameof(Professor.CurrentProjectCount), 3);
+        SetPrivateProperty(professor, nameof(Professor.IsAcceptingProjects), false);
+
+        var mockDbSet = new List<Professor> { professor }.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Professors).Returns(mockDbSet.Object);
+
+        var query = new GetProfessorProfileQuery(targetProfessorId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(targetProfessorId);
+        result.CurrentProjectCount.Should().Be(3);
+        result.IsAcceptingProjects.Should().BeFalse();
+    }
+
+    /// <summary>
+    /// Assures that when multiple professor records reside within the database context, the query engine
+    /// cleanly applies key filters to isolate and project only the requested profile instance.
+    /// </summary>
+    [Fact]
+    public async Task Handle_GivenMultipleProfessorsInRegistry_ShouldAccuratelyIsolateCorrectProfileInstance()
+    {
+        // Arrange
+        var searchTargetId = Guid.NewGuid();
+        var alternativeId = Guid.NewGuid();
+
+        var targetProfessor = new Professor(searchTargetId, "Dr. Alice Smith", "Mathematics", "Full Professor", 5);
+        var secondaryProfessor = new Professor(alternativeId, "Dr. John Doe", "Chemistry", "Assistant Professor", 4);
+
+        var multiProfessorPool = new List<Professor> { targetProfessor, secondaryProfessor };
+        var mockDbSet = multiProfessorPool.BuildMockDbSet();
+        _dbContextMock.Setup(db => db.Professors).Returns(mockDbSet.Object);
+
+        var query = new GetProfessorProfileQuery(searchTargetId);
+
+        // Act
+        var result = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(searchTargetId);
+        result.FullName.Should().Be("Dr. Alice Smith");
+        result.Department.Should().Be("Mathematics");
+    }
+
+    /// <summary>
     /// Assures that looking up a missing or invalid professor identification code 
     /// securely breaks execution and throws a comprehensive <see cref="KeyNotFoundException"/>.
     /// </summary>
@@ -91,4 +153,8 @@ public class GetProfessorProfileQueryHandlerTests
         await act.Should().ThrowAsync<KeyNotFoundException>()
             .WithMessage($"*Professor profile for ID '{wrongId}' was not found.*");
     }
+
+    private static void SetPrivateProperty(object obj, string propertyName, object value) =>
+        obj.GetType().GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)?
+           .SetValue(obj, value);
 }

@@ -13,7 +13,8 @@ namespace AcademicGateway.Application.UnitTests.Features.Skills.Queries.GetSkill
 
 /// <summary>
 /// Contains isolated unit verification routines for the <see cref="GetSkillsQueryHandler"/>.
-/// Validates relational read-only lookups, entity-to-DTO data mapping, and projection performance.
+/// Validates relational read-only global lookups, entity-to-DTO data mapping projections, 
+/// and empty data boundary collection pathways.
 /// </summary>
 public class GetSkillsQueryHandlerTests
 {
@@ -37,7 +38,6 @@ public class GetSkillsQueryHandlerTests
     public async Task Handle_WhenSkillsExistInRegistry_ShouldReturnAllProjectedSkillDtos()
     {
         // Arrange
-        // Best Practice: Instantiate entities natively via standard domain constructors to satisfy core invariants
         var skill1 = new Skill("C#");
         var skill2 = new Skill("Python");
 
@@ -60,5 +60,29 @@ public class GetSkillsQueryHandlerTests
         // Confirm that the LINQ projection successfully bound both the domain entity text values and tracking Guids
         resultList.Should().ContainSingle(s => s.Id == skill1.Id && s.Name == "C#");
         resultList.Should().ContainSingle(s => s.Id == skill2.Id && s.Name == "Python");
+    }
+
+    /// <summary>
+    /// Assures that when no skills have been populated or configured within the institutional directory registry,
+    /// the query executes cleanly without errors and returns an empty read-only collection contract wrapper.
+    /// </summary>
+    [Fact]
+    public async Task Handle_WhenNoSkillsExistInRegistry_ShouldReturnEmptyCollectionFlawlessly()
+    {
+        // Arrange
+        var emptySkillsList = new List<Skill>();
+        var mockDbSet = emptySkillsList.BuildMockDbSet();
+
+        // Mock the db table to return an empty queryable data baseline
+        _dbContextMock.Setup(db => db.Skills).Returns(mockDbSet.Object);
+
+        var query = new GetSkillsQuery();
+
+        // Act
+        var resultList = await _handler.Handle(query, TestContext.Current.CancellationToken);
+
+        // Assert
+        resultList.Should().NotBeNull();
+        resultList.Should().BeEmpty();
     }
 }
