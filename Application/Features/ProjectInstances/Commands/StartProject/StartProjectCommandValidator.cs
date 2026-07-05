@@ -3,12 +3,12 @@
 namespace AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 
 /// <summary>
-/// Enforces business validation rules for incoming <see cref="StartProjectCommand"/> requests.
+/// Enforces formal data sanitation and structural input checks for incoming <see cref="StartProjectCommand"/> requests.
 /// </summary>
 public class StartProjectCommandValidator : AbstractValidator<StartProjectCommand>
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="StartProjectCommandValidator"/> class.
+    /// Initializes validation boundaries for project instance workspace triggers.
     /// </summary>
     public StartProjectCommandValidator()
     {

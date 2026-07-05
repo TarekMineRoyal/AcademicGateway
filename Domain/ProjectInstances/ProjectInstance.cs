@@ -19,6 +19,7 @@ public class ProjectInstance : BaseEntity
     private readonly List<ProjectInstanceSkill> _snapshotSkills = new();
     private readonly List<SupervisionRequest> _supervisionRequests = new();
     private readonly List<TechSupportProposal> _techSupportProposals = new();
+    private readonly List<LocalMilestone> _localMilestones = new();
 
     /// <summary>
     /// Gets the unique tracking identifier for the live project workspace.
@@ -97,6 +98,11 @@ public class ProjectInstance : BaseEntity
     public IReadOnlyCollection<TechSupportProposal> TechSupportProposals => _techSupportProposals.AsReadOnly();
 
     /// <summary>
+    /// Exposes the execution graph milestone items linked to this live workspace channel.
+    /// </summary>
+    public IReadOnlyCollection<LocalMilestone> LocalMilestones => _localMilestones.AsReadOnly();
+
+    /// <summary>
     /// EF Core constructor requirement. Prevents bypass of standard domain constraints during persistence hydration.
     /// </summary>
     private ProjectInstance()
@@ -132,7 +138,6 @@ public class ProjectInstance : BaseEntity
             _snapshotSkills.Add(new ProjectInstanceSkill(Id, skillId));
         }
 
-        // Invariant: If a professor was selected at startup, seed the initial pending request record immediately
         if (initialRequestedProfessorId.HasValue && initialRequestedProfessorId.Value != Guid.Empty)
         {
             var initialRequest = new SupervisionRequest(
@@ -146,13 +151,26 @@ public class ProjectInstance : BaseEntity
         AddDomainEvent(new ProjectInstanceStartedEvent(Id, TemplateId, StudentId, initialRequestedProfessorId));
     }
 
+    /// <summary>
+    /// Internal endpoint used exclusively by the <see cref="LocalMilestoneFactory"/> domain service 
+    /// to seed the isolated cloned snapshot milestone records into the aggregate boundary collection.
+    /// </summary>
+    internal void SeedClonedMilestones(IEnumerable<LocalMilestone> milestones)
+    {
+        if (_localMilestones.Any())
+        {
+            throw new InvalidOperationException("The execution graph milestones for this project instance have already been populated.");
+        }
+
+        _localMilestones.AddRange(milestones);
+    }
+
     // =========================================================================
     // STATE MACHINE TRANSITION METHODS & BUSINESS INVARIANTS
     // =========================================================================
 
     /// <summary>
     /// Issues a new matchmaking request to an academic supervisor. 
-    /// Can be initiated mid-project if the student started solo.
     /// </summary>
     public void SubmitSupervisionRequest(Guid professorId, string pitchText, DateTime utcNow)
     {
@@ -166,7 +184,6 @@ public class ProjectInstance : BaseEntity
             throw new InvalidProjectInstanceTransitionException("This project instance is already bound to an active academic supervisor.");
         }
 
-        // Invariant: Prevent duplicate active pending requests to protect faculty review backlogs
         if (_supervisionRequests.Any(r => r.Status == SupervisionRequestStatus.Pending))
         {
             throw new InvalidProjectInstanceTransitionException("An active supervision request is already pending review for this project workspace.");
@@ -196,7 +213,6 @@ public class ProjectInstance : BaseEntity
 
         var finalStatus = accept ? SupervisionRequestStatus.Accepted : SupervisionRequestStatus.Rejected;
 
-        // Delegate to the child entity to update its state and capture the timestamp safely
         request.RecordReview(finalStatus, rejectionReason, reviewedAt);
 
         if (accept)
@@ -204,13 +220,11 @@ public class ProjectInstance : BaseEntity
             request.Status = SupervisionRequestStatus.Accepted;
             SupervisorId = request.ProfessorId;
 
-            // If the project was paused waiting for onboarding validation, wake it up
             if (Status == ProjectInstanceStatus.AwaitingSupervision)
             {
                 Status = ProjectInstanceStatus.Active;
             }
 
-            // Decline any other historically lingering proposals to maintain single-supervisor isolation
             foreach (var pendingRequest in _supervisionRequests.Where(r => r.Id != requestId && r.Status == SupervisionRequestStatus.Pending))
             {
                 pendingRequest.Status = SupervisionRequestStatus.Rejected;
@@ -229,8 +243,7 @@ public class ProjectInstance : BaseEntity
     }
 
     /// <summary>
-    /// Explicitly transitions an onboarding paused project into an active solo configuration 
-    /// if a requested matching failed or the student changes their mind.
+    /// Explicitly transitions an onboarding paused project into an active solo configuration.
     /// </summary>
     public void TransitionToSolo()
     {
@@ -242,7 +255,6 @@ public class ProjectInstance : BaseEntity
         Status = ProjectInstanceStatus.Active;
         SupervisorId = null;
 
-        // Cleanly clear out any outstanding pending match requests
         foreach (var pendingRequest in _supervisionRequests.Where(r => r.Status == SupervisionRequestStatus.Pending))
         {
             pendingRequest.Status = SupervisionRequestStatus.Rejected;
@@ -261,7 +273,6 @@ public class ProjectInstance : BaseEntity
             throw new InvalidProjectInstanceTransitionException($"Corporate mentors can only be attached to active running instances. Current status: '{Status}'.");
         }
 
-        // Invariant: Prevent redundant active pending proposal offerings for the same support engineer account
         if (_techSupportProposals.Any(p => p.TechSupportAccountId == techSupportAccountId && p.Status == TechSupportProposalStatus.Pending))
         {
             throw new InvalidProjectInstanceTransitionException("A pending corporate assistance offer for this specific tech support account is already awaiting student feedback.");

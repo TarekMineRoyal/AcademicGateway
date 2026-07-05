@@ -5,7 +5,7 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Commands.StartPr
 
 /// <summary>
 /// CQRS Command for a student to initialize a live project workspace from an approved template blueprint.
-/// Spawns a new ProjectInstance aggregate root copy capturing a historical snapshot of the blueprint.
+/// Spawns a new ProjectInstance aggregate root copy capturing a deep-cloned historical snapshot of the blueprint graph.
 /// </summary>
 public record StartProjectCommand : IRequest<Guid>
 {
