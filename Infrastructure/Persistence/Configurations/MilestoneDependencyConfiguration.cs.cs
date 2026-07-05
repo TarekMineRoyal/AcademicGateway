@@ -17,10 +17,8 @@ public class MilestoneDependencyConfiguration : IEntityTypeConfiguration<Milesto
         // Map to its independent template blueprint table destination
         builder.ToTable("TemplateMilestoneDependencies");
 
-        // Establish the composite tracking key for the template graph.
-        // Note: If your domain model property uses "TemplateMilestoneId" instead of 
-        // "ProjectTemplateMilestoneId", update the string literal below to match your domain property.
-        builder.HasKey("ProjectTemplateMilestoneId", "PredecessorId");
+        // Establish the composite tracking key using actual CLR domain properties
+        builder.HasKey(d => new { d.PredecessorId, d.SuccessorId });
 
         builder.Property(d => d.Type)
             .IsRequired()
