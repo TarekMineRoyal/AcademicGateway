@@ -1,4 +1,4 @@
-﻿using Domain.Common.Enums;
+﻿using AcademicGateway.Domain.Common.Enums;
 
 namespace AcademicGateway.Domain.ProjectTemplates;
 

@@ -1,4 +1,4 @@
-﻿namespace Domain.Common.Enums;
+﻿namespace AcademicGateway.Domain.Common.Enums;
 
 /// <summary>
 /// Defines the expected format for a milestone deliverable.
