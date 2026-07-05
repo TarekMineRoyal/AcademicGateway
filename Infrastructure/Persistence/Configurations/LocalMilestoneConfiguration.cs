@@ -1,90 +1,101 @@
-﻿using AcademicGateway.Domain.Common.Enums;
-using AcademicGateway.Domain.ProjectInstances;
-using AcademicGateway.Domain.ProjectInstances.Enums;
+﻿using AcademicGateway.Domain.ProjectInstances;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AcademicGateway.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Database configuration mappings for the <see cref="LocalMilestone"/> execution entity.
-/// Establishes table constraints, precision controls for scheduling metrics, and enum text conversions.
+/// Mappings and table constraints governing the persistence storage layout of the <see cref="LocalMilestone"/> entity.
+/// Enhanced for Sprint 4 to manage granular evaluation metrics, grading scopes, and direct backing-field encapsulation for discussion threads.
 /// </summary>
 public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilestone>
 {
     /// <summary>
-    /// Configures the relational boundaries, data field lengths, and index constraints for runtime milestones.
+    /// Configures the relational database table architecture, keys, field typings, and navigational modes for runtime milestones.
     /// </summary>
-    /// <param name="builder">The API builder instance used to define internal database schemas.</param>
     public void Configure(EntityTypeBuilder<LocalMilestone> builder)
     {
-        // Define explicit physical database table name mapping
+        // Define explicit storage table mapping destination
         builder.ToTable("LocalMilestones");
 
-        // Primary Key registration
-        builder.HasKey(x => x.Id);
+        // Set primary key identifier parameters
+        builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id)
+            .ValueGeneratedNever();
 
-        // Core tracking reference to parent project aggregate root context
-        builder.Property(x => x.ProjectInstanceId)
+        // Structural metadata constraints
+        builder.Property(m => m.ProjectInstanceId)
             .IsRequired();
 
-        // Historical snapshot text variables inherited from blueprint
-        builder.Property(x => x.TitleSnapshot)
-            .HasMaxLength(200)
-            .IsRequired();
+        builder.Property(m => m.TitleSnapshot)
+            .IsRequired()
+            .HasMaxLength(200);
 
-        builder.Property(x => x.DescriptionSnapshot)
-            .HasMaxLength(4000)
-            .IsRequired();
+        builder.Property(m => m.DescriptionSnapshot)
+            .IsRequired()
+            .HasMaxLength(4000);
 
-        // Effort and evaluation numeric measurements require explicit scale definition in SQL
-        builder.Property(x => x.ExpectedEffortInHours)
-            .HasColumnType("decimal(18,2)")
-            .IsRequired();
+        builder.Property(m => m.ExpectedEffortInHours)
+            .IsRequired()
+            .HasColumnType("decimal(6,2)");
 
-        builder.Property(x => x.Grade)
-            .HasColumnType("decimal(5,2)")
-            .IsRequired(false);
-
-        // Polymorphic submissions and feedback commentary envelopes
-        builder.Property(x => x.SubmissionPayload)
-            .HasMaxLength(4000)
-            .IsRequired(false);
-
-        builder.Property(x => x.EvaluationFeedback)
-            .HasMaxLength(2000)
-            .IsRequired(false);
-
-        // Student-assigned architectural dates and timeline limits
-        builder.Property(x => x.ScheduledStartDate)
-            .IsRequired(false);
-
-        builder.Property(x => x.ScheduledEndDate)
-            .IsRequired(false);
-
-        // Administrative operational timestamps
-        builder.Property(x => x.SubmittedAt)
-            .IsRequired(false);
-
-        builder.Property(x => x.GradedAt)
-            .IsRequired(false);
-
-        // Maps structural enums safely to text formats for cleaner database auditing logs
-        builder.Property(x => x.RequiredDeliverableType)
+        // Enum data mapping transformations
+        builder.Property(m => m.RequiredDeliverableType)
+            .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(30)
-            .IsRequired();
+            .HasMaxLength(50);
 
-        builder.Property(x => x.Status)
+        builder.Property(m => m.Status)
+            .IsRequired()
             .HasConversion<string>()
-            .HasMaxLength(30)
-            .IsRequired();
+            .HasMaxLength(50);
 
-        // RELATIONSHIP BOUNDARIES
-        // Configures the structural graph edge collection pointing into milestone nodes
-        builder.HasMany(x => x.InboundDependencies)
+        // Timeline date properties
+        builder.Property(m => m.ScheduledStartDate)
+            .IsRequired(false);
+
+        builder.Property(m => m.ScheduledEndDate)
+            .IsRequired(false);
+
+        builder.Property(m => m.SubmissionPayload)
+            .IsRequired(false)
+            .HasMaxLength(4000);
+
+        builder.Property(m => m.SubmittedAt)
+            .IsRequired(false);
+
+        // =========================================================================
+        // SPRINT 4: INDIVIDUAL MILESTONE EVALUATION PERISTENCE MAPPINGS
+        // =========================================================================
+
+        // Configure milestone score to preserve rounding precision inside SQL scales
+        builder.Property(m => m.Grade)
+            .IsRequired(false)
+            .HasColumnType("decimal(5,2)");
+
+        builder.Property(m => m.EvaluationFeedback)
+            .IsRequired(false)
+            .HasMaxLength(4000);
+
+        builder.Property(m => m.GradedAt)
+            .IsRequired(false);
+
+        // =========================================================================
+        // SPRINT 4.5: CONVERSATION ENCAPSULATION SETTINGS
+        // =========================================================================
+
+        // Direct EF Core to route materialization maps for the Comments collection 
+        // straight through its underlying private list backing field to honor strict domain invariants.
+        builder.HasMany(m => m.Comments)
             .WithOne()
-            .HasForeignKey(x => x.SuccessorId)
+            .HasForeignKey(c => c.LocalMilestoneId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata.FindNavigation(nameof(LocalMilestone.Comments))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
+
+        // Performance Optimization Index: Speeds up parent container workspace graph hydration passes
+        builder.HasIndex(m => m.ProjectInstanceId)
+            .HasDatabaseName("IX_LocalMilestones_ProjectInstanceId");
     }
 }

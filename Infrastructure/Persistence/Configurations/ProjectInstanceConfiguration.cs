@@ -5,51 +5,105 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace AcademicGateway.Infrastructure.Persistence.Configurations;
 
 /// <summary>
-/// Database configuration mappings for the <see cref="ProjectInstance"/> aggregate root boundary.
-/// Configures high-level relational matching properties and cascades deletion targets down to the milestone graph.
+/// Mappings, structural invariants, and constraints governing the persistence storage layout of the <see cref="ProjectInstance"/> aggregate root.
+/// Enhanced for Sprint 4 to securely persist macro-level aggregate final grading metrics and optional supervisor relationships.
 /// </summary>
 public class ProjectInstanceConfiguration : IEntityTypeConfiguration<ProjectInstance>
 {
     /// <summary>
-    /// Configures the core field parameters and relational hierarchies linked to active student workspaces.
+    /// Configures the relational database table schema layout, column typings, and navigational boundaries for project workspace aggregates.
     /// </summary>
     public void Configure(EntityTypeBuilder<ProjectInstance> builder)
     {
-        // Define explicit physical database table name
+        // Define explicit storage table mapping destination
         builder.ToTable("ProjectInstances");
 
-        // Primary Key definition
-        builder.HasKey(x => x.Id);
+        // Primary key configuration parameters
+        builder.HasKey(p => p.Id);
+        builder.Property(p => p.Id)
+            .ValueGeneratedNever();
 
-        // Core relational tracking identifiers
-        builder.Property(x => x.StudentId)
+        // Standard identity mapping tracking links
+        builder.Property(p => p.StudentId)
             .IsRequired();
 
-        builder.Property(x => x.ProviderId)
+        builder.Property(p => p.TemplateId)
             .IsRequired();
 
-        builder.Property(x => x.TemplateId)
+        builder.Property(p => p.ProviderId)
             .IsRequired();
 
-        // Calendar deadlines and limits
-        builder.Property(x => x.CreatedAt)
+        // Enforce baseline string sanitation boundaries for snapshots
+        builder.Property(p => p.TitleSnapshot)
+            .IsRequired()
+            .HasMaxLength(200);
+
+        builder.Property(p => p.DescriptionSnapshot)
+            .IsRequired()
+            .HasMaxLength(4000);
+
+        // Enum conversion mapping configurations
+        builder.Property(p => p.Status)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.Property(p => p.CreatedAt)
             .IsRequired();
 
-        // Execution deadline is nullable on initialization until supervisor assignment
-        builder.Property(x => x.EndDate)
+        builder.Property(p => p.EndDate)
             .IsRequired(false);
 
-        // Map the Status enum code strictly to a clean readable string description in SQL rows
-        builder.Property(x => x.Status)
-            .HasConversion<string>()
-            .HasMaxLength(50)
-            .IsRequired();
+        // =========================================================================
+        // MACRO-LEVEL AGGREGATE FINAL GRADING PROP CONSTRAINTS
+        // =========================================================================
 
-        // RELATIONSHIP HIERARCHIES (AGGREGATE BOUNDARY PROTECTION)
-        // Binds the active milestone execution graph to the lifetime of the project instance root
-        builder.HasMany(x => x.LocalMilestones)
+        // Configure overall score column to map cleanly onto SQL decimal structures without loss of rounding scale precision
+        builder.Property(p => p.OverallGrade)
+            .IsRequired(false)
+            .HasColumnType("decimal(5,2)");
+
+        builder.Property(p => p.ProjectGradedAt)
+            .IsRequired(false);
+
+        // =========================================================================
+        // DOMAIN ENCAPSULATION & NAVIGATIONAL RELATIONSHIPS
+        // =========================================================================
+
+        // Explicit foreign key configuration mapping to optional Academic Supervisor profile.
+        // Set to Restrict so that deleting a professor profile is blocked if they are actively tracking a project.
+        builder.HasOne(p => p.Supervisor)
+            .WithMany()
+            .HasForeignKey(p => p.SupervisorId)
+            .OnDelete(DeleteBehavior.Restrict)
+            .IsRequired(false);
+
+        // Map internal skill snapshot bridging array value table rows
+        builder.HasMany(p => p.SnapshotSkills)
             .WithOne()
-            .HasForeignKey(x => x.ProjectInstanceId)
+            .HasForeignKey(ps => ps.ProjectInstanceId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        // Map historical supervision invitations tracking loop
+        builder.HasMany(p => p.SupervisionRequests)
+            .WithOne()
+            .HasForeignKey(sr => sr.ProjectInstanceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Map corporate technical mentoring proposals tracking loop
+        builder.HasMany(p => p.TechSupportProposals)
+            .WithOne()
+            .HasForeignKey(tp => tp.ProjectInstanceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Map child milestone snapshotted graph nodes.
+        // Configures backing field direct storage channel parameters to preserve aggregate encapsulation boundaries.
+        builder.HasMany(p => p.LocalMilestones)
+            .WithOne()
+            .HasForeignKey(m => m.ProjectInstanceId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata.FindNavigation(nameof(ProjectInstance.LocalMilestones))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
     }
 }

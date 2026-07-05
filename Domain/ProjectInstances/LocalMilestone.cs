@@ -4,15 +4,19 @@ using System.Linq;
 using AcademicGateway.Domain.Common;
 using AcademicGateway.Domain.Common.Enums;
 using AcademicGateway.Domain.ProjectInstances.Enums;
+using AcademicGateway.Domain.ProjectInstances.Grading;
 
 namespace AcademicGateway.Domain.ProjectInstances;
 
 /// <summary>
 /// Represents an isolated, active runtime milestone managed inside a student's project workspace instance.
-/// Holds scheduling timelines, state changes, polymorphic submission strings, and evaluation metrics.
+/// Holds scheduling timelines, state changes, polymorphic submission strings, comments, and evaluation metrics.
 /// </summary>
 public class LocalMilestone : BaseEntity
 {
+    private readonly List<LocalMilestoneDependency> _inboundDependencies = new();
+    private readonly List<MilestoneComment> _comments = new();
+
     /// <summary>
     /// Gets the unique tracking identifier for this runtime milestone instance.
     /// </summary>
@@ -66,32 +70,32 @@ public class LocalMilestone : BaseEntity
     /// <summary>
     /// Gets the exact tracking timestamp when the student completed the deliverable push.
     /// </summary>
-    public DateTime? SubmittedAt { get; internal set; }
+    public DateTime? SubmittedAt { get; private set; }
 
     /// <summary>
     /// Gets the final numerical score value awarded during professor evaluation.
     /// </summary>
-    public decimal? Grade { get; internal set; }
+    public decimal? Grade { get; private set; }
 
     /// <summary>
     /// Gets the formal evaluation audit feedback commentary logged by the grading mentor.
     /// </summary>
-    public string? EvaluationFeedback { get; internal set; }
+    public string? EvaluationFeedback { get; private set; }
 
     /// <summary>
     /// Gets the timestamp tracking when evaluation calculations were certified.
     /// </summary>
-    public DateTime? GradedAt { get; internal set; }
-
-    /// <summary>
-    /// Backing tracking structure managing the prerequisite links attached to this node.
-    /// </summary>
-    private readonly List<LocalMilestoneDependency> _inboundDependencies = new();
+    public DateTime? GradedAt { get; private set; }
 
     /// <summary>
     /// Exposes incoming dependency boundaries as an encapsulated read-only sequence structure.
     /// </summary>
     public IReadOnlyCollection<LocalMilestoneDependency> InboundDependencies => _inboundDependencies.AsReadOnly();
+
+    /// <summary>
+    /// Exposes timestamped cross-role conversation commentary logged within this milestone workspace channel.
+    /// </summary>
+    public IReadOnlyCollection<MilestoneComment> Comments => _comments.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor required by EF Core for persistence materialization loops.
@@ -134,19 +138,11 @@ public class LocalMilestone : BaseEntity
         }
     }
 
-    // =========================================================================
-    // SPRINT 3.2: POLYMORPHIC SUBMISSION ENGINE
-    // =========================================================================
-
     /// <summary>
     /// Processes a student deliverable submission, validating formatting rules against polymorphic constraints.
     /// </summary>
-    /// <param name="payload">The text string or token containing the student's work submission payload.</param>
-    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
-    /// <exception cref="InvalidOperationException">Thrown if execution state constraints or format checks fail.</exception>
     internal void SubmitDeliverable(string payload, DateTime utcNow)
     {
-        // Guard Invariant: Once an academic supervisor evaluates a milestone, its content becomes completely immutable.
         if (Status == LocalMilestoneStatus.Graded)
         {
             throw new InvalidOperationException($"Submission Denied: Milestone '{TitleSnapshot}' has already been graded and closed out.");
@@ -159,7 +155,6 @@ public class LocalMilestone : BaseEntity
 
         var cleanedPayload = payload.Trim();
 
-        // Polymorphic format evaluation router matrix
         switch (RequiredDeliverableType)
         {
             case DeliverableType.Url:
@@ -173,7 +168,6 @@ public class LocalMilestone : BaseEntity
                 break;
 
             case DeliverableType.File:
-                // Verifies presence of a storage asset tracking hash (light format constraint check)
                 if (cleanedPayload.Length < 5)
                 {
                     throw new InvalidOperationException("Submission Format Error: The file storage identifier payload appears invalid or corrupted.");
@@ -189,13 +183,60 @@ public class LocalMilestone : BaseEntity
 
             case DeliverableType.None:
             default:
-                // No validation required for reading acknowledgments or informational assignments
                 break;
         }
 
-        // Apply state data changes securely inside the aggregate entity context
         SubmissionPayload = cleanedPayload;
         SubmittedAt = utcNow;
         Status = LocalMilestoneStatus.Submitted;
+    }
+
+    /// <summary>
+    /// Registers an academic evaluation score and commentary from an authorized supervisor,
+    /// dynamically executing validation logic against the injected domain grading strategy.
+    /// </summary>
+    internal void EvaluateSubmission(decimal grade, string? feedback, IGradingStrategy gradingStrategy, DateTime utcNow)
+    {
+        if (gradingStrategy == null)
+        {
+            throw new ArgumentNullException(nameof(gradingStrategy), "An evaluation execution requires a valid grading strategy instance.");
+        }
+
+        if (Status != LocalMilestoneStatus.Submitted)
+        {
+            throw new InvalidOperationException(
+                $"Evaluation Denied: Milestone '{TitleSnapshot}' is currently '{Status}'. " +
+                "An item must be explicitly marked as 'Submitted' before grading operations can be processed.");
+        }
+
+        if (!gradingStrategy.IsValidMilestoneGrade(grade))
+        {
+            throw new InvalidOperationException(
+                $"Grading Strategy Invariant Violation: The proposed score value '{grade}' is mathematically " +
+                $"invalid for the target evaluation layout: '{gradingStrategy.StrategyName}'.");
+        }
+
+        Grade = grade;
+        EvaluationFeedback = string.IsNullOrWhiteSpace(feedback) ? null : feedback.Trim();
+        GradedAt = utcNow;
+        Status = LocalMilestoneStatus.Graded;
+    }
+
+    // =========================================================================
+    // CROSS-ROLE MILESTONE DISCUSSION ENGINE MUTATOR
+    // =========================================================================
+
+    /// <summary>
+    /// Appends a new immutable collaboration commentary entry log directly onto this milestone tracking lane.
+    /// </summary>
+    /// <param name="authorId">The unique account identifier code linking back to the posting platform user.</param>
+    /// <param name="authorIdentitySnapshot">The string description defining the functional role authority of the poster.</param>
+    /// <param name="content">The raw message textual copy containing details, questions, or clarification instructions.</param>
+    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
+    internal void AddComment(Guid authorId, string authorIdentitySnapshot, string content, DateTime utcNow)
+    {
+        // Instantiation encapsulates and executes character length and empty-space checking guards automatically
+        var comment = new MilestoneComment(this.Id, authorId, authorIdentitySnapshot, content, utcNow);
+        _comments.Add(comment);
     }
 }

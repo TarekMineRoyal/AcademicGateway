@@ -6,6 +6,7 @@ using AcademicGateway.Domain.Common.Enums;
 using AcademicGateway.Domain.ProjectInstances.Enums;
 using AcademicGateway.Domain.ProjectInstances.Events;
 using AcademicGateway.Domain.ProjectInstances.Exceptions;
+using AcademicGateway.Domain.ProjectInstances.Grading;
 using AcademicGateway.Domain.Students;
 using AcademicGateway.Domain.Professors;
 
@@ -13,7 +14,7 @@ namespace AcademicGateway.Domain.ProjectInstances;
 
 /// <summary>
 /// Represents an active, running runtime instance of a project workspace initialized by a student.
-/// Acts as the Aggregate Root for the execution subdomain, managing matching, mentorship, and milestone timelines.
+/// Acts as the Aggregate Root for the execution subdomain, managing matching, mentorship, milestone timelines, comments, and grading evaluation tracking loops.
 /// </summary>
 public class ProjectInstance : BaseEntity
 {
@@ -72,6 +73,16 @@ public class ProjectInstance : BaseEntity
     /// Gets the strict administrative deadline capping active work execution, set by the supervisor.
     /// </summary>
     public DateTime? EndDate { get; private set; }
+
+    /// <summary>
+    /// Gets the final numerical score value awarded to the project aggregate as a whole upon completion.
+    /// </summary>
+    public decimal? OverallGrade { get; private set; }
+
+    /// <summary>
+    /// Gets the timestamp tracking when the project aggregate's final evaluation was certified.
+    /// </summary>
+    public DateTime? ProjectGradedAt { get; private set; }
 
     /// <summary>
     /// Gets the navigation property for the owner student profile.
@@ -166,7 +177,7 @@ public class ProjectInstance : BaseEntity
     }
 
     // =========================================================================
-    // SPRINT 3: STUDENT TIMELINE PLANNING & WORK EXECUTION MECHANICS
+    // STUDENT TIMELINE PLANNING & WORK EXECUTION MECHANICS
     // =========================================================================
 
     /// <summary>
@@ -218,15 +229,8 @@ public class ProjectInstance : BaseEntity
     /// Orchestrates a student deliverable submission for an internal milestone, routing the payload 
     /// down to the specific entity node while keeping child collections encapsulated.
     /// </summary>
-    /// <param name="milestoneId">The unique tracking identifier of the target local milestone.</param>
-    /// <param name="submissionPayload">The raw data, link, or asset locator hash representing the student's work submission.</param>
-    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
-    /// <exception cref="InvalidProjectInstanceTransitionException">Thrown if the project workspace status blocks task submissions.</exception>
-    /// <exception cref="KeyNotFoundException">Thrown if the target milestone cannot be resolved in this context.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if formatting constraints or lifecycle rules fail inside the entity boundary.</exception>
     public void SubmitMilestoneDeliverable(Guid milestoneId, string submissionPayload, DateTime utcNow)
     {
-        // Guard Invariant: Deliverables cannot be recorded on workspaces that are closed out or terminated
         if (Status == ProjectInstanceStatus.Concluded || Status == ProjectInstanceStatus.Canceled)
         {
             throw new InvalidProjectInstanceTransitionException($"Cannot submit deliverable. The project workspace is currently closed out as '{Status}'.");
@@ -238,8 +242,114 @@ public class ProjectInstance : BaseEntity
             throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context.");
         }
 
-        // Delegate polymorphic format evaluation and timestamp logging directly to the target child milestone entity
         targetMilestone.SubmitDeliverable(submissionPayload, utcNow);
+    }
+
+    // =========================================================================
+    // AGGREGATE ROUTER FOR DISCUSSION COMMENTS
+    // =========================================================================
+
+    /// <summary>
+    /// Appends a collaboration comment to an internal milestone execution path. 
+    /// Restricts inputs based on current workspace tracking lifecycle locks.
+    /// </summary>
+    public void AddMilestoneComment(Guid milestoneId, Guid authorId, string authorIdentitySnapshot, string content, DateTime utcNow)
+    {
+        if (Status == ProjectInstanceStatus.Concluded || Status == ProjectInstanceStatus.Canceled)
+        {
+            throw new InvalidProjectInstanceTransitionException($"Cannot post message commentary. The project workspace is currently '{Status}'.");
+        }
+
+        var targetMilestone = _localMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (targetMilestone == null)
+        {
+            throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context boundary.");
+        }
+
+        targetMilestone.AddComment(authorId, authorIdentitySnapshot, content, utcNow);
+    }
+
+    // =========================================================================
+    // GRADING & EVALUATION ENGINE (PROFESSOR OPTIONAL ADJUSTMENTS)
+    // =========================================================================
+
+    /// <summary>
+    /// Orchestrates the evaluation transaction loop for a target milestone submission.
+    /// Accommodates optional professor tracks by allowing students to self-certify/evaluate if no supervisor is bound.
+    /// </summary>
+    /// <param name="milestoneId">The unique tracking identifier of the target child milestone node.</param>
+    /// <param name="grade">The numerical score value awarded to the deliverable push.</param>
+    /// <param name="feedback">Optional critique commentaries logged by the evaluator.</param>
+    /// <param name="gradingStrategy">The concrete domain strategy algorithm governing evaluation rules.</param>
+    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
+    /// <param name="executingUserId">The tracking identifier of the user processing the evaluation check.</param>
+    /// <exception cref="InvalidProjectInstanceTransitionException">Thrown if identity checks or execution states fail constraints.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown if the target milestone cannot be resolved.</exception>
+    public void EvaluateMilestoneSubmission(
+        Guid milestoneId,
+        decimal grade,
+        string? feedback,
+        IGradingStrategy gradingStrategy,
+        DateTime utcNow,
+        Guid executingUserId)
+    {
+        if (Status != ProjectInstanceStatus.Active)
+        {
+            throw new InvalidProjectInstanceTransitionException($"Evaluation Denied: Milestone scores can only be assigned to active running instances. Current status: '{Status}'.");
+        }
+
+        // Updated Decentralized Guard: If an academic supervisor is attached, they retain absolute grading authority.
+        // If no supervisor is assigned, the owner student is granted self-evaluation rights over their track parameters.
+        if (SupervisorId.HasValue && SupervisorId.Value != executingUserId)
+        {
+            throw new InvalidProjectInstanceTransitionException("Access Denied: Only the assigned academic supervisor possesses authority to grade submissions on this project workspace.");
+        }
+        if (!SupervisorId.HasValue && StudentId != executingUserId)
+        {
+            throw new InvalidProjectInstanceTransitionException("Access Denied: In a solo un-supervised track, only the owner student can process milestone evaluations.");
+        }
+
+        var targetMilestone = _localMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (targetMilestone == null)
+        {
+            throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context boundary.");
+        }
+
+        targetMilestone.EvaluateSubmission(grade, feedback, gradingStrategy, utcNow);
+    }
+
+    /// <summary>
+    /// Evaluates and locks in the final macro-level aggregate grade score for the entire project workspace.
+    /// Allows the owner student or the assigned supervisor to execute final closure loops.
+    /// </summary>
+    /// <param name="gradingStrategy">The concrete domain strategy algorithm governing the project workspace.</param>
+    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
+    /// <param name="executingUserId">The tracking identifier of the user triggering final aggregate calculations.</param>
+    /// <exception cref="InvalidProjectInstanceTransitionException">Thrown if workspace track states or authority checks fail constraints.</exception>
+    public void FinalizeProjectGrade(IGradingStrategy gradingStrategy, DateTime utcNow, Guid executingUserId)
+    {
+        if (Status != ProjectInstanceStatus.Concluded)
+        {
+            throw new InvalidProjectInstanceTransitionException(
+                $"Finalization Denied: Project grade scoring can only occur on workspaces marked as 'Concluded'. Current status: '{Status}'.");
+        }
+
+        // Corrected Authority Guard: Access is granted if the executor matches the owner student OR the assigned supervisor.
+        bool isAuthorized = executingUserId == StudentId || (SupervisorId.HasValue && SupervisorId.Value == executingUserId);
+        if (!isAuthorized)
+        {
+            throw new InvalidProjectInstanceTransitionException("Access Denied: You do not possess structural authority to finalize calculations on this project workspace.");
+        }
+
+        if (gradingStrategy == null)
+        {
+            throw new ArgumentNullException(nameof(gradingStrategy), "Final calculation processing requires a valid grading strategy reference.");
+        }
+
+        var computedFinalGrade = gradingStrategy.CalculateFinalProjectGrade(this._localMilestones);
+
+        OverallGrade = computedFinalGrade;
+        ProjectGradedAt = utcNow;
     }
 
     /// <summary>
