@@ -2,6 +2,7 @@
 using AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 using AcademicGateway.Domain.ProjectInstances;
 using AcademicGateway.Domain.ProjectInstances.Enums;
+using AcademicGateway.Domain.ProjectInstances.Services;
 using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.ProjectTemplates.Enums;
 using AcademicGateway.Domain.ProjectTemplates.Exceptions;
@@ -36,7 +37,13 @@ public class StartProjectCommandHandlerTests
     {
         _mockContext = new Mock<IApplicationDbContext>();
         _mockDateTimeProvider = new Mock<IDateTimeProvider>();
-        _handler = new StartProjectCommandHandler(_mockContext.Object, _mockDateTimeProvider.Object);
+
+        // 1. Create a concrete instance of the factory class
+        var localMilestoneFactory = new LocalMilestoneFactory();
+
+        // 2. Supply the factory instance as the third constructor parameter
+        _handler = new StartProjectCommandHandler(_mockContext.Object, _mockDateTimeProvider.Object, localMilestoneFactory);
+
         _deterministicUtcNow = new DateTime(2026, 7, 3, 12, 0, 0, DateTimeKind.Utc);
 
         _mockDateTimeProvider.Setup(d => d.UtcNow).Returns(_deterministicUtcNow);
