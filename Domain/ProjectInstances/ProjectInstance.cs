@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using AcademicGateway.Domain.Common;
+using AcademicGateway.Domain.Common.Enums;
 using AcademicGateway.Domain.ProjectInstances.Enums;
 using AcademicGateway.Domain.ProjectInstances.Events;
 using AcademicGateway.Domain.ProjectInstances.Exceptions;
@@ -12,7 +13,7 @@ namespace AcademicGateway.Domain.ProjectInstances;
 
 /// <summary>
 /// Represents an active, running runtime instance of a project workspace initialized by a student.
-/// Acts as the Aggregate Root for the execution subdomain, managing matching, mentorship, and milestones.
+/// Acts as the Aggregate Root for the execution subdomain, managing matching, mentorship, and milestone timelines.
 /// </summary>
 public class ProjectInstance : BaseEntity
 {
@@ -111,7 +112,6 @@ public class ProjectInstance : BaseEntity
 
     /// <summary>
     /// Initializes a new instance of a running project workspace aggregate root.
-    /// Intended for use primarily by the Domain Factory Method pattern implementation.
     /// </summary>
     internal ProjectInstance(
         Guid studentId,
@@ -166,7 +166,125 @@ public class ProjectInstance : BaseEntity
     }
 
     // =========================================================================
-    // STATE MACHINE TRANSITION METHODS & BUSINESS INVARIANTS
+    // SPRINT 3: STUDENT TIMELINE PLANNING & WORK EXECUTION MECHANICS
+    // =========================================================================
+
+    /// <summary>
+    /// Updates the scheduling tracking timeline variables for an internal milestone execution leg,
+    /// enforcing DAG scheduling dependency restrictions across the aggregate graph network.
+    /// </summary>
+    public void UpdateMilestoneTimeline(Guid milestoneId, DateTime startDate, DateTime endDate)
+    {
+        if (Status == ProjectInstanceStatus.Concluded || Status == ProjectInstanceStatus.Canceled)
+        {
+            throw new InvalidProjectInstanceTransitionException($"Cannot alter milestone deadlines. The workspace channel is '{Status}'.");
+        }
+
+        var targetMilestone = _localMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (targetMilestone == null)
+        {
+            throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context.");
+        }
+
+        if (endDate <= startDate)
+        {
+            throw new InvalidOperationException("Invariant Violation: Scheduled End Date must be strictly later than Scheduled Start Date.");
+        }
+
+        var originalStartDate = targetMilestone.ScheduledStartDate;
+        var originalEndDate = targetMilestone.ScheduledEndDate;
+
+        targetMilestone.ScheduledStartDate = startDate;
+        targetMilestone.ScheduledEndDate = endDate;
+
+        try
+        {
+            EnsureTimelineDependenciesAreValid();
+        }
+        catch (InvalidOperationException)
+        {
+            targetMilestone.ScheduledStartDate = originalStartDate;
+            targetMilestone.ScheduledEndDate = originalEndDate;
+            throw;
+        }
+
+        if (targetMilestone.Status == LocalMilestoneStatus.NotStarted)
+        {
+            targetMilestone.Status = LocalMilestoneStatus.InProgress;
+        }
+    }
+
+    /// <summary>
+    /// Orchestrates a student deliverable submission for an internal milestone, routing the payload 
+    /// down to the specific entity node while keeping child collections encapsulated.
+    /// </summary>
+    /// <param name="milestoneId">The unique tracking identifier of the target local milestone.</param>
+    /// <param name="submissionPayload">The raw data, link, or asset locator hash representing the student's work submission.</param>
+    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
+    /// <exception cref="InvalidProjectInstanceTransitionException">Thrown if the project workspace status blocks task submissions.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown if the target milestone cannot be resolved in this context.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if formatting constraints or lifecycle rules fail inside the entity boundary.</exception>
+    public void SubmitMilestoneDeliverable(Guid milestoneId, string submissionPayload, DateTime utcNow)
+    {
+        // Guard Invariant: Deliverables cannot be recorded on workspaces that are closed out or terminated
+        if (Status == ProjectInstanceStatus.Concluded || Status == ProjectInstanceStatus.Canceled)
+        {
+            throw new InvalidProjectInstanceTransitionException($"Cannot submit deliverable. The project workspace is currently closed out as '{Status}'.");
+        }
+
+        var targetMilestone = _localMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (targetMilestone == null)
+        {
+            throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context.");
+        }
+
+        // Delegate polymorphic format evaluation and timestamp logging directly to the target child milestone entity
+        targetMilestone.SubmitDeliverable(submissionPayload, utcNow);
+    }
+
+    /// <summary>
+    /// Iterates across the entire live milestone graph network collection, verifying that no 
+    /// child node dates violate chronological dependency sequencing restrictions.
+    /// </summary>
+    private void EnsureTimelineDependenciesAreValid()
+    {
+        foreach (var milestone in _localMilestones)
+        {
+            if (!milestone.ScheduledStartDate.HasValue)
+            {
+                continue;
+            }
+
+            foreach (var dependency in milestone.InboundDependencies)
+            {
+                var predecessor = _localMilestones.First(m => m.Id == dependency.PredecessorId);
+
+                if (dependency.Type == DependencyType.FinishToStart)
+                {
+                    if (predecessor.ScheduledEndDate.HasValue && milestone.ScheduledStartDate.Value < predecessor.ScheduledEndDate.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Timeline Constraint Conflict: Milestone '{milestone.TitleSnapshot}' is scheduled to start on " +
+                            $"{milestone.ScheduledStartDate.Value:yyyy-MM-dd}, which violates a Finish-To-Start dependency on " +
+                            $"Prerequisite '{predecessor.TitleSnapshot}' ending on {predecessor.ScheduledEndDate.Value:yyyy-MM-dd}.");
+                    }
+                }
+                else if (dependency.Type == DependencyType.StartToStart)
+                {
+                    if (predecessor.ScheduledStartDate.HasValue && milestone.ScheduledStartDate.Value < predecessor.ScheduledStartDate.Value)
+                    {
+                        throw new InvalidOperationException(
+                            $"Timeline Constraint Conflict: Milestone '{milestone.TitleSnapshot}' is scheduled to start on " +
+                            $"{milestone.ScheduledStartDate.Value:yyyy-MM-dd}, which violates a Concurrent Start-To-Start dependency on " +
+                            $"Prerequisite '{predecessor.TitleSnapshot}' starting on {predecessor.ScheduledStartDate.Value:yyyy-MM-dd}.");
+                    }
+                }
+            }
+        }
+    }
+
+    // =========================================================================
+    // STATE MACHINE TRANSITION METHODS & MATCHMAKING OPERATIONS
     // =========================================================================
 
     /// <summary>

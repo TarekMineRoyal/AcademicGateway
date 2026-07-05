@@ -46,7 +46,7 @@ public class LocalMilestone : BaseEntity
     /// <summary>
     /// Gets the current state within the individual task execution state machine.
     /// </summary>
-    public LocalMilestoneStatus Status { get; internal set; } // Settable within the aggregate root boundaries
+    public LocalMilestoneStatus Status { get; internal set; }
 
     /// <summary>
     /// Gets the student-assigned start date for this execution leg. Nullable until scheduled per Rule 3.
@@ -132,5 +132,70 @@ public class LocalMilestone : BaseEntity
         {
             _inboundDependencies.Add(dependency);
         }
+    }
+
+    // =========================================================================
+    // SPRINT 3.2: POLYMORPHIC SUBMISSION ENGINE
+    // =========================================================================
+
+    /// <summary>
+    /// Processes a student deliverable submission, validating formatting rules against polymorphic constraints.
+    /// </summary>
+    /// <param name="payload">The text string or token containing the student's work submission payload.</param>
+    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
+    /// <exception cref="InvalidOperationException">Thrown if execution state constraints or format checks fail.</exception>
+    internal void SubmitDeliverable(string payload, DateTime utcNow)
+    {
+        // Guard Invariant: Once an academic supervisor evaluates a milestone, its content becomes completely immutable.
+        if (Status == LocalMilestoneStatus.Graded)
+        {
+            throw new InvalidOperationException($"Submission Denied: Milestone '{TitleSnapshot}' has already been graded and closed out.");
+        }
+
+        if (string.IsNullOrWhiteSpace(payload))
+        {
+            throw new InvalidOperationException("Submission Denied: The deliverable payload data cannot be empty or whitespace.");
+        }
+
+        var cleanedPayload = payload.Trim();
+
+        // Polymorphic format evaluation router matrix
+        switch (RequiredDeliverableType)
+        {
+            case DeliverableType.Url:
+                if (!cleanedPayload.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                    !cleanedPayload.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        $"Submission Format Error: Milestone '{TitleSnapshot}' requires a valid web repository link destination " +
+                        $"(must begin with 'http://' or 'https://'). Provided: '{cleanedPayload}'");
+                }
+                break;
+
+            case DeliverableType.File:
+                // Verifies presence of a storage asset tracking hash (light format constraint check)
+                if (cleanedPayload.Length < 5)
+                {
+                    throw new InvalidOperationException("Submission Format Error: The file storage identifier payload appears invalid or corrupted.");
+                }
+                break;
+
+            case DeliverableType.Text:
+                if (cleanedPayload.Length > 4000)
+                {
+                    throw new InvalidOperationException("Submission Format Error: Text entry summary exceeds maximum length limit of 4000 characters.");
+                }
+                break;
+
+            case DeliverableType.None:
+            default:
+                // No validation required for reading acknowledgments or informational assignments
+                break;
+        }
+
+        // Apply state data changes securely inside the aggregate entity context
+        SubmissionPayload = cleanedPayload;
+        SubmittedAt = utcNow;
+        Status = LocalMilestoneStatus.Submitted;
     }
 }
