@@ -1,8 +1,11 @@
 ﻿using AcademicGateway.Domain.Common.Exceptions;
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +19,9 @@ namespace AcademicGateway.Api.Infrastructure;
 /// Automatically intercepts unhandled application failures, translates exceptions into standardized RFC-compliant <see cref="ProblemDetails"/> payloads,
 /// and ensures machine-readable error context codes are streamed back cleanly to consumer clients.
 /// </summary>
-public class CustomExceptionHandler : IExceptionHandler
+public class CustomExceptionHandler(
+    ILogger<CustomExceptionHandler> logger,
+    IWebHostEnvironment environment) : IExceptionHandler
 {
     /// <summary>
     /// Intercepts throwing system errors dynamically to map appropriate status codes, error details, and custom metadata extensions.
@@ -30,6 +35,16 @@ public class CustomExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
+        // Log the unhandled exception context securely on the server telemetry channel
+        if (exception is DomainException || exception is ValidationException || exception is KeyNotFoundException)
+        {
+            logger.LogWarning(exception, "A managed business validation or domain rule rule constraint was violated: {Message}", exception.Message);
+        }
+        else
+        {
+            logger.LogError(exception, "An unhandled system exception occurred during request execution: {Message}", exception.Message);
+        }
+
         // Dynamically determine the status code and title based on the incoming exception inheritance type matrix
         var (statusCode, title) = exception switch
         {
@@ -51,32 +66,37 @@ public class CustomExceptionHandler : IExceptionHandler
             Detail = exception.Message
         };
 
-        // Process payload structural conditions depending on data context requirements
-        if (exception is ValidationException validationException)
+        // Append explicit payload structural metadata details depending on exception type contexts
+        switch (exception)
         {
-            problemDetails.Extensions["errors"] = validationException.Errors
-                .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
-                .ToDictionary(g => g.Key, g => g.ToArray());
-        }
-        else if (exception is DomainException domainException)
-        {
-            // Inject the machine-readable programmatic string token error key for frontend client state machines
-            problemDetails.Extensions["code"] = domainException.ErrorCode;
-        }
-        else if (exception is UnauthorizedAccessException)
-        {
-            // Inject programmatic security category metadata without leaking infrastructural architecture stack traces
-            problemDetails.Extensions["code"] = "ACCESS_DENIED";
-        }
-        else
-        {
-            // Capture general infrastructure diagnostics and debugging telemetry stack data for non-validation/non-security errors
-            problemDetails.Extensions["exceptionType"] = exception.GetType().Name;
-            problemDetails.Extensions["stackTrace"] = exception.StackTrace;
-            if (exception.InnerException != null)
-            {
-                problemDetails.Extensions["innerException"] = exception.InnerException.Message;
-            }
+            case ValidationException validationException:
+                problemDetails.Extensions["errors"] = validationException.Errors
+                    .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
+                    .ToDictionary(g => g.Key, g => g.ToArray());
+                break;
+
+            case DomainException domainException:
+                // Inject the machine-readable programmatic string token error key for frontend client state machines
+                problemDetails.Extensions["code"] = domainException.ErrorCode;
+                break;
+
+            case UnauthorizedAccessException:
+                // Inject programmatic security category metadata without leaking structural details
+                problemDetails.Extensions["code"] = "ACCESS_DENIED";
+                break;
+
+            default:
+                // Protect Production: Only capture infrastructure diagnostics stack details while working in Development environments
+                if (environment.IsDevelopment())
+                {
+                    problemDetails.Extensions["exceptionType"] = exception.GetType().Name;
+                    problemDetails.Extensions["stackTrace"] = exception.StackTrace;
+                    if (exception.InnerException != null)
+                    {
+                        problemDetails.Extensions["innerException"] = exception.InnerException.Message;
+                    }
+                }
+                break;
         }
 
         // Stream the resulting ProblemDetails entity straight onto the response thread pipeline JSON stream
