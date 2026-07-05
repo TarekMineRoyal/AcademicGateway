@@ -4,7 +4,7 @@ using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
-using AcademicGateway.Domain.ProjectInstances.Services; // Added to resolve the Domain Service factory tracking dependency
+using AcademicGateway.Domain.ProjectInstances.Services;
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -64,9 +64,31 @@ builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Academic Gateway API", Version = "v1" });
 
-    // Swagger UI Grouping Logic: 
-    // Automatically tags endpoints based on their controller or folder name to prevent UI mess.
-    c.TagActionsBy(api => new[] { api.ActionDescriptor.RouteValues["controller"] ?? "Default" });
+    // Advanced Swagger UI Grouping Logic: 
+    // Decouples Swagger categories from individual Single-Action Controller filenames.
+    c.TagActionsBy(api =>
+    {
+        // 1. Honor explicit [Tags("...")] attributes placed on our controllers first
+        if (api.ActionDescriptor.EndpointMetadata.OfType<TagsAttribute>().FirstOrDefault() is { } tagsAttr && tagsAttr.Tags.Any())
+        {
+            return tagsAttr.Tags.ToArray();
+        }
+
+        // 2. Fallback: Parse the first path segment after 'api/' (e.g., api/project-instances -> "Project Instances")
+        var route = api.RelativePath;
+        if (route != null && route.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
+        {
+            var segments = route.Split('/');
+            if (segments.Length > 1)
+            {
+                var groupName = segments[1].Replace("-", " ");
+                return new[] { System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(groupName) };
+            }
+        }
+
+        // 3. Ultimate Fallback: Default back to standard controller runtime name evaluation
+        return new[] { api.ActionDescriptor.RouteValues["controller"] ?? "Default" };
+    });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
