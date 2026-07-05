@@ -4,6 +4,7 @@ using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure;
 using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Application.Features.Students.Commands.RegisterStudent;
+using AcademicGateway.Domain.ProjectInstances.Services; // Added to resolve the Domain Service factory tracking dependency
 using FluentValidation;
 using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -12,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using System.Text;
-using Infrastructure.Persistence.Context;
+using AcademicGateway.Infrastructure.Persistence.Context;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,10 @@ var builder = WebApplication.CreateBuilder(args);
 // ==========================================
 builder.Services.AddApplicationServices();
 builder.Services.AddInfrastructureServices(builder.Configuration);
+
+// Domain Service Factory Registration: Unlocks the design-time container setup 
+// required by the StartProjectCommandHandler during CLI migrations discovery loops.
+builder.Services.AddTransient<LocalMilestoneFactory>();
 
 // ==========================================
 // 2. Authentication (JWT)

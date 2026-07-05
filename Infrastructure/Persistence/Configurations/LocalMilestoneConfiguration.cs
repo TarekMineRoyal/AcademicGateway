@@ -6,7 +6,7 @@ namespace AcademicGateway.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// Mappings and table constraints governing the persistence storage layout of the <see cref="LocalMilestone"/> entity.
-/// Enhanced for Sprint 4 to manage granular evaluation metrics, grading scopes, and direct backing-field encapsulation for discussion threads.
+/// Enhanced to explicitly map owned dependent chronological constraint validation paths.
 /// </summary>
 public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilestone>
 {
@@ -64,11 +64,7 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
         builder.Property(m => m.SubmittedAt)
             .IsRequired(false);
 
-        // =========================================================================
-        // SPRINT 4: INDIVIDUAL MILESTONE EVALUATION PERISTENCE MAPPINGS
-        // =========================================================================
-
-        // Configure milestone score to preserve rounding precision inside SQL scales
+        // Individual Milestone Evaluation Persistence Mappings
         builder.Property(m => m.Grade)
             .IsRequired(false)
             .HasColumnType("decimal(5,2)");
@@ -81,11 +77,28 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
             .IsRequired(false);
 
         // =========================================================================
-        // SPRINT 4.5: CONVERSATION ENCAPSULATION SETTINGS
+        // DEPENDENCY GRAPH WORK INVARIANTS MAPS (OWNED ENTITY)
         // =========================================================================
 
-        // Direct EF Core to route materialization maps for the Comments collection 
-        // straight through its underlying private list backing field to honor strict domain invariants.
+        // Maps the MilestoneDependency collection as a tightly bound owned table 
+        // using a shadow composite primary key layout to cleanly build the DAG link matrix.
+        builder.OwnsMany(m => m.InboundDependencies, dep =>
+        {
+            dep.ToTable("MilestoneDependencies");
+
+            dep.WithOwner()
+                .HasForeignKey("LocalMilestoneId");
+
+            // Setup composite tracking key: Parent Node Identifier + Predecessor Node Identifier
+            dep.HasKey("LocalMilestoneId", "PredecessorId");
+
+            dep.Property(d => d.Type)
+                .IsRequired()
+                .HasConversion<string>()
+                .HasMaxLength(50);
+        });
+
+        // Conversation Encapsulation Settings
         builder.HasMany(m => m.Comments)
             .WithOne()
             .HasForeignKey(c => c.LocalMilestoneId)
@@ -94,7 +107,7 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
         builder.Metadata.FindNavigation(nameof(LocalMilestone.Comments))?
             .SetPropertyAccessMode(PropertyAccessMode.Field);
 
-        // Performance Optimization Index: Speeds up parent container workspace graph hydration passes
+        // Performance Optimization Index
         builder.HasIndex(m => m.ProjectInstanceId)
             .HasDatabaseName("IX_LocalMilestones_ProjectInstanceId");
     }

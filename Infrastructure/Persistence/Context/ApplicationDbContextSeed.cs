@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
+using AcademicGateway.Infrastructure.Persistence.Context;
 using AcademicGateway.Domain.Curriculum;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Reviewers;
@@ -9,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Infrastructure.Persistence.Context;
+namespace AcademicGateway.Infrastructure.Persistence.Context;
 
 /// <summary>
 /// Core structural data seeder executing framework role allocations, system-level lookup values, 
@@ -22,11 +23,11 @@ public static class ApplicationDbContextSeed
     /// </summary>
     public static async Task SeedDefaultUserAndDataAsync(
         UserManager<ApplicationUser> userManager,
-        RoleManager<IdentityRole<Guid>> roleManager, // Realigned signature matching Guid identity configurations
+        RoleManager<IdentityRole<Guid>> roleManager,
         ApplicationDbContext context)
     {
         // 1. Seed System Roles utilizing Explicit Guid configuration types
-        string[] roles = ["Administrator", "Reviewer", "Student", "Provider", "Professor"];
+        string[] roles = { "Administrator", "Reviewer", "Student", "Provider", "Professor" };
 
         foreach (var roleName in roles)
         {
@@ -64,7 +65,7 @@ public static class ApplicationDbContextSeed
             );
 
             await context.Reviewers.AddAsync(reviewerProfile);
-            await context.SaveChangesAsync(default);
+            await context.SaveChangesAsync();
         }
 
         // 4. Seed Base Lookup Skills via its behavior-driven constructor rules
@@ -80,7 +81,7 @@ public static class ApplicationDbContextSeed
             };
 
             await context.Skills.AddRangeAsync(defaultSkills);
-            await context.SaveChangesAsync(default);
+            await context.SaveChangesAsync();
         }
 
         // 5. Seed Majors and Specialties with their respective domain-driven design rules
@@ -96,7 +97,7 @@ public static class ApplicationDbContextSeed
             engineering.AddSpecialty("Power Systems");
 
             await context.Majors.AddRangeAsync(computerScience, engineering);
-            await context.SaveChangesAsync(default);
+            await context.SaveChangesAsync();
         }
     }
 }
