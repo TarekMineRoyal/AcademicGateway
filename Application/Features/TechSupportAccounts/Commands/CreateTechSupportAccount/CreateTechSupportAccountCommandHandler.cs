@@ -52,7 +52,8 @@ public class CreateTechSupportAccountCommandHandler(
         var (succeeded, identityUserId, errors) = await identityService.CreateUserAsync(
             request.Email,     // userName
             request.Email,     // email
-            request.Password); // password
+            request.Password,
+            "TechSupport"); // password
 
         if (!succeeded)
         {

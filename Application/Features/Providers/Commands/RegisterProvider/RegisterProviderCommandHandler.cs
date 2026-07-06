@@ -29,7 +29,8 @@ public class RegisterProviderCommandHandler(
         var (succeeded, userId, errors) = await identityService.CreateUserAsync(
             request.Username,
             request.Email,
-            request.Password);
+            request.Password,
+            "Provider");
 
         if (!succeeded)
         {

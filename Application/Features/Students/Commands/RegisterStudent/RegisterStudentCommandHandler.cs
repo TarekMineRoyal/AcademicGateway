@@ -30,7 +30,8 @@ public class RegisterStudentCommandHandler(
         var (succeeded, userId, errors) = await identityService.CreateUserAsync(
             request.Username,
             request.Email,
-            request.Password);
+            request.Password,
+            "Student");
 
         if (!succeeded)
         {
