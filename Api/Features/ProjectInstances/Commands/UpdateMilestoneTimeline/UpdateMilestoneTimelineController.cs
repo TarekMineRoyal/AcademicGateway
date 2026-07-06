@@ -21,7 +21,7 @@ public record UpdateMilestoneTimelineRequest(DateTime ScheduledStartDate, DateTi
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student")] // Restricted to student profiles managing their allocated execution timelines
+[Authorize(Roles = "Student,Professor")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/timeline")]
 public class UpdateMilestoneTimelineController(ISender mediator) : ControllerBase
 {

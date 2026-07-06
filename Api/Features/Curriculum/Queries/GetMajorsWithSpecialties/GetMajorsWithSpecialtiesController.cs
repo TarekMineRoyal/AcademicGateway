@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Curriculum.Queries.GetMajorsWithSpecialties;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,6 +10,7 @@ namespace AcademicGateway.Api.Features.Curriculum.Queries.GetMajorsWithSpecialti
 /// Endpoint for retrieving academic majors and their specialties.
 /// </summary>
 [ApiController]
+[AllowAnonymous]
 [Tags("Curriculum")]
 [Route("api/curriculum/majors")]
 public class GetMajorsWithSpecialtiesController(ISender mediator) : ControllerBase

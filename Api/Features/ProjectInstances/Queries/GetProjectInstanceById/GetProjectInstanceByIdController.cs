@@ -14,7 +14,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetProjectInstan
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize] // Available to authenticated participants (Students, Professors, Tech Support) linked to a workspace channel
+[Authorize(Roles = "Student,Professor,TechSupport")]
 [Route("api/project-instances/{projectInstanceId:guid}")]
 public class GetProjectInstanceByIdController(ISender mediator) : ControllerBase
 {

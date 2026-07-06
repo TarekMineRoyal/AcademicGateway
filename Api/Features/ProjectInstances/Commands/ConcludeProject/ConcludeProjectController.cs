@@ -13,7 +13,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.ConcludeProject
 /// Single Action Controller endpoint allowing authenticated student workspace owners to cleanly 
 /// close down and successfully wrap up a finished project instance.
 /// </summary>
-[Authorize] // Enforce an authenticated session so handlers can safely evaluate workspace ownership constraints
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/conclude")]

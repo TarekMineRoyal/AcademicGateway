@@ -13,7 +13,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.TransitionToSol
 /// Single Action Controller endpoint allowing authenticated student workspace owners to break out of 
 /// the academic matchmaking loop and transition their project workspace into an un-supervised solo track.
 /// </summary>
-[Authorize] // Enforce an authenticated session so use case handlers can verify workspace ownership constraints
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/transition-to-solo")]

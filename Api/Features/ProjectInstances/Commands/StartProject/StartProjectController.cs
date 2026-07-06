@@ -19,7 +19,7 @@ public record StartProjectRequest(Guid TemplateId, Guid? RequestedProfessorId);
 /// Single Action Controller endpoint allowing authenticated students to spin up a live operational workspace copy 
 /// from an approved project template blueprint using the Prototype Pattern.
 /// </summary>
-[Authorize] // Enforce that a valid authenticated security context exists to resolve student credentials
+[Authorize(Roles = "Student")] // Restrict gateway mapping entry strictly to Student roles
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances")]

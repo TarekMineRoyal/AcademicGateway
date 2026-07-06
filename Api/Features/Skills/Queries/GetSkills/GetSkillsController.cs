@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Skills.Queries.GetSkills;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace AcademicGateway.Api.Features.Skills.Queries.GetSkills;
 /// </summary>
 [ApiController]
 [Tags("Skills")]
+[Authorize]
 [Route("api/skills")]
 public class GetSkillsController(ISender mediator) : ControllerBase
 {

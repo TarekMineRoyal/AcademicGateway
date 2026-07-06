@@ -15,7 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetMilestoneComm
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize] // Available to all authenticated roles participating in live workspace conversation flows
+[Authorize(Roles = "Student,Professor,TechSupport")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/comments")]
 public class GetMilestoneCommentsController(ISender mediator) : ControllerBase
 {

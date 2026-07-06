@@ -23,7 +23,7 @@ public record AddMilestoneCommentRequest(string Content);
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize] // Permitted for all authenticated workspace roles associated with an instance execution lifecycle
+[Authorize(Roles = "Student,Professor,TechSupport")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/comments")]
 public class AddMilestoneCommentController(
     ISender mediator,

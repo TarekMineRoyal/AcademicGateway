@@ -18,7 +18,7 @@ public record SubmitSupervisionRequestRequest(Guid ProfessorId, string PitchText
 /// Single Action Controller endpoint allowing authenticated student workspace owners to submit a formal 
 /// supervision tracking invitation request to an academic professor.
 /// </summary>
-[Authorize] // Enforce authenticated context so the handler can execute inner user session security boundaries
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Supervision Requests")]
 [Route("api/project-instances/{projectInstanceId:guid}/supervision-requests")]

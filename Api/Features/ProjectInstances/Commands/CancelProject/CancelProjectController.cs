@@ -18,7 +18,7 @@ public record CancelProjectRequest(string? Reason);
 /// Single Action Controller endpoint allowing authenticated student workspace owners to prematurely 
 /// abort, drop, or abandon an active running project instance workspace context boundary.
 /// </summary>
-[Authorize] // Enforce an authenticated user session so handlers can safely evaluate workspace ownership constraints
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/cancel")]

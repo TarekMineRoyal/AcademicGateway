@@ -18,7 +18,7 @@ public record ReviewTechSupportProposalRequest(bool Accept, string? RejectionRea
 /// Single Action Controller endpoint allowing the authenticated student owner of a project instance workspace 
 /// to accept or decline a corporate technical support mentor assignment request.
 /// </summary>
-[Authorize] // Enforce an authenticated session so the handler can evaluate workspace owner boundaries safely
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Tech Support Proposals")]
 [Route("api/project-instances/{projectInstanceId:guid}/tech-support-proposals/{techSupportProposalId:guid}/review")]

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Professors.Commands.RegisterProfessor;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace AcademicGateway.Api.Features.Professors.Commands.RegisterProfessor;
 /// </summary>
 [ApiController]
 [Tags("Professors")]
+[AllowAnonymous]
 [Route("api/professors")]
 public class RegisterProfessorController(ISender mediator) : ControllerBase
 {

@@ -15,7 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetProjectInstan
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize] // Available to all authenticated roles participating in active workspace tracking loops
+[Authorize(Roles = "Student,Professor,TechSupport")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones")]
 public class GetProjectInstanceMilestonesController(ISender mediator) : ControllerBase
 {

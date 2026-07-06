@@ -10,13 +10,12 @@ using System.Threading.Tasks;
 namespace AcademicGateway.Api.Features.ProjectInstances.Commands.FinalizeProject;
 
 /// <summary>
-/// Single Action Controller endpoint enabling authorized workspace participants (assigned faculty supervisors
-/// or owner students in unsupervised tracks) to compute, compile, and permanently lock in the overall grade score
+/// Single Action Controller endpoint enabling authorized workspace participants (assigned faculty supervisors) to compute, compile, and permanently lock in the overall grade score
 /// for a concluded project instance workspace.
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize] // Operational access checked and verified down-pipeline against aggregate relational boundaries
+[Authorize(Roles = "Professor")]
 [Route("api/project-instances/{projectInstanceId:guid}/finalize")]
 public class FinalizeProjectController(
     ISender mediator,

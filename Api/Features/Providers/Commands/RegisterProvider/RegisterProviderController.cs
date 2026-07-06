@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Providers.Commands.RegisterProvider;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
@@ -11,6 +12,7 @@ namespace AcademicGateway.Api.Features.Providers.Commands.RegisterProvider;
 /// </summary>
 [ApiController]
 [Tags("Providers")]
+[AllowAnonymous]
 [Route("api/providers")]
 public class RegisterProviderController(ISender mediator) : ControllerBase
 {

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Identity.Commands.Login;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,6 +11,7 @@ namespace AcademicGateway.Api.Features.Identity.Commands.Login;
 /// </summary>
 [ApiController]
 [Tags("Identity")]
+[AllowAnonymous]
 [Route("api/auth")]
 public class LoginController(ISender mediator) : ControllerBase
 {

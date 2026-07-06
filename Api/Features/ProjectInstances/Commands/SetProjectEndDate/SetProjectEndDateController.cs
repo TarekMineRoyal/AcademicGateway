@@ -18,7 +18,7 @@ public record SetProjectEndDateRequest(DateTime NewEndDate);
 /// Single Action Controller endpoint allowing authorized academic supervisors to adjust or extend 
 /// the official operational completion deadline calendar target for a running project workspace runner.
 /// </summary>
-[Authorize(Roles = "Professor")] // Academic supervisors govern administrative calendar adjustments
+[Authorize(Roles = "Professor")]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/end-date")]

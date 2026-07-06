@@ -18,7 +18,7 @@ public record ReviewSupervisionRequestRequest(bool Accept, string? RejectionReas
 /// Single Action Controller endpoint allowing the targeted academic professor to accept or decline 
 /// an outstanding matchmaking supervision invitation request linked to a specific project workspace.
 /// </summary>
-[Authorize(Roles = "Professor")] // Protect the academic evaluation channel with explicit role security boundaries
+[Authorize(Roles = "Professor")]
 [ApiController]
 [Tags("Supervision Requests")]
 [Route("api/project-instances/{projectInstanceId:guid}/supervision-requests/{supervisionRequestId:guid}/review")]

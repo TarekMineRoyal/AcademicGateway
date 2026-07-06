@@ -11,7 +11,7 @@ namespace AcademicGateway.Api.Features.Students.Queries.GetStudentProfile;
 /// <summary>
 /// Endpoint for retrieving the authenticated student profile.
 /// </summary>
-[Authorize] // Only authenticated students should see their own profile
+[Authorize(Roles = "Student")]
 [ApiController]
 [Tags("Students")]
 [Route("api/students/profile")]
