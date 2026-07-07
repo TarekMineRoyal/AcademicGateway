@@ -3,6 +3,7 @@ using AcademicGateway.Infrastructure.Persistence.Context;
 using AcademicGateway.Domain.Curriculum;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Reviewers;
+using AcademicGateway.Domain.Providers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -50,13 +51,11 @@ public static class ApplicationDbContextSeed
                 EmailConfirmed = true
             };
 
-            // Provision user with standard complexity password parameters
             await userManager.CreateAsync(defaultReviewerUser, "GatewayReviewer123!");
             await userManager.AddToRoleAsync(defaultReviewerUser, "Reviewer");
         }
 
         // 3. Seed Default Reviewer Domain Profile Entity
-        // In the refactored 1:1 domain design, the Profile Id maps directly to the user authentication Id
         if (!await context.Reviewers.AnyAsync(r => r.Id == defaultReviewerUser.Id))
         {
             var reviewerProfile = new Reviewer(
@@ -68,7 +67,58 @@ public static class ApplicationDbContextSeed
             await context.SaveChangesAsync();
         }
 
-        // 4. Seed Base Lookup Skills via its behavior-driven constructor rules
+        // 4. Seed Default Provider Identity Account (For Onboarding Workflow Validation)
+        var defaultProviderEmail = "partner@acmesolutions.internal";
+        var defaultProviderUser = await userManager.FindByEmailAsync(defaultProviderEmail);
+
+        if (defaultProviderUser == null)
+        {
+            defaultProviderUser = new ApplicationUser
+            {
+                UserName = defaultProviderEmail,
+                Email = defaultProviderEmail,
+                EmailConfirmed = true
+            };
+
+            await userManager.CreateAsync(defaultProviderUser, "CorporatePartner123!");
+            await userManager.AddToRoleAsync(defaultProviderUser, "Provider");
+        }
+
+        // 5. Seed Default Unverified Provider Domain Profile Entity
+        if (!await context.Providers.AnyAsync(p => p.Id == defaultProviderUser.Id))
+        {
+            var providerProfile = new Provider(
+                id: defaultProviderUser.Id,
+                companyName: "Acme Corporate Innovations"
+            );
+
+            providerProfile.UpdateProfileDetails(
+                description: "Global enterprise specializing in cloud computing, infrastructure architecture, and technical software solutions.",
+                websiteUrl: "https://acme-innovations.internal"
+            );
+
+            await context.Providers.AddAsync(providerProfile);
+            await context.SaveChangesAsync();
+        }
+
+        // 6. Seed a Pending Onboarding Application to populate the Reviewer Dashboards instantly
+        if (!await context.ProviderApplications.AnyAsync(a => a.ProviderId == defaultProviderUser.Id))
+        {
+            var pendingApplication = new ProviderApplication(
+                providerId: defaultProviderUser.Id,
+                companyDetails: "Acme is seeking platform verification to sponsor high-scale distributed systems design and microservice architecture projects for final-year computer science tracks.",
+                verificationDocumentsUrl: "https://storage.academicgateway.internal/onboarding/acme-credentials.pdf",
+                createdAt: DateTime.UtcNow.AddDays(-2) // Submitted 2 days ago to simulate realistic operational backlog
+            );
+
+            // Transition the application out of Draft and straight into the Reviewer operational pool
+            pendingApplication.SubmitForReview();
+
+            await context.ProviderApplications.AddAsync(pendingApplication);
+            await context.SaveChangesAsync();
+        }
+
+        // 7. Seed Base Lookup Skills via its behavior-driven constructor rules
         if (!await context.Skills.AnyAsync())
         {
             var defaultSkills = new List<Skill>
@@ -84,7 +134,7 @@ public static class ApplicationDbContextSeed
             await context.SaveChangesAsync();
         }
 
-        // 5. Seed Majors and Specialties with their respective domain-driven design rules
+        // 8. Seed Majors and Specialties with their respective domain-driven design rules
         if (!await context.Majors.AnyAsync())
         {
             var computerScience = new Major("Computer Science");

@@ -13,11 +13,11 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateP
 
 /// <summary>
 /// Orchestrates the business command pipeline for instantiating, validating, and persisting a new <see cref="ProjectTemplate"/> blueprint.
-/// Fortified against Broken Object Level Authorization (BOLA) and side-channel resource enumeration vectors.
 /// </summary>
 public class CreateProjectTemplateCommandHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IDateTimeProvider dateTimeProvider)
     : IRequestHandler<CreateProjectTemplateCommand, Guid>
 {
     /// <summary>
@@ -49,12 +49,13 @@ public class CreateProjectTemplateCommandHandler(
             throw new ProviderNotVerifiedException(request.ProviderId);
         }
 
-        // 5. Instantiate the ProjectTemplate domain entity using our constructor ordering (Title, Description, ProviderId)
-        // This process guarantees all invariant domain validation guards fire cleanly before persistence.
+        // 5. Instantiate the ProjectTemplate domain entity using our updated constructor sequence (Title, Description, ProviderId, CreatedAt).
+        // Passing a deterministic timestamp from our abstracted system clock ensures full test isolation and decouples the domain from side effects.
         var template = new ProjectTemplate(
             request.Title,
             request.Description,
-            request.ProviderId);
+            request.ProviderId,
+            dateTimeProvider.UtcNow);
 
         // 6. Advance the template lifecycle out of initial draft status to match current workflow requirements
         template.SubmitForReview();

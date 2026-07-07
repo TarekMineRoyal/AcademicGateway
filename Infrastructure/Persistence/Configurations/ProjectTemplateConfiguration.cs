@@ -37,6 +37,13 @@ public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemp
             .IsRequired(false)
             .HasMaxLength(1000);
 
+        /// <summary>
+        /// Explicit relational persistence tracking mapping for the chronological creation timestamp.
+        /// Mandatory for executing dashboard query ordering pipelines without tracking side-effects.
+        /// </summary>
+        builder.Property(x => x.CreatedAt)
+            .IsRequired();
+
         // Relationship back to the Provider aggregate root
         builder.HasOne(x => x.Provider)
             .WithMany(p => p.ProjectTemplates)
