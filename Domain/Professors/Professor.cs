@@ -107,6 +107,35 @@ public class Professor : BaseEntity
     }
 
     /// <summary>
+    /// Updates the core structural profile details, legal naming alignments, and professional career paths for this professor.
+    /// </summary>
+    /// <param name="fullName">The updated textual legal full name of the professor member.</param>
+    /// <param name="department">The adjusted institutional department division tracking text assignment.</param>
+    /// <param name="rank">The updated professional instructional positional rank status tier designation.</param>
+    /// <exception cref="InvalidProfessorDetailsException">Thrown when any provided descriptive parameter string maps to empty or whitespace.</exception>
+    public void UpdateFacultyDetails(string fullName, string department, string rank)
+    {
+        if (string.IsNullOrWhiteSpace(fullName))
+        {
+            throw new InvalidProfessorDetailsException("Professor faculty identity full name cannot be empty or whitespace.");
+        }
+
+        if (string.IsNullOrWhiteSpace(department))
+        {
+            throw new InvalidProfessorDetailsException("Academic department assignment details cannot be empty or whitespace.");
+        }
+
+        if (string.IsNullOrWhiteSpace(rank))
+        {
+            throw new InvalidProfessorDetailsException("Faculty positional rank status details cannot be empty or whitespace.");
+        }
+
+        FullName = fullName.Trim();
+        Department = department.Trim();
+        Rank = rank.Trim();
+    }
+
+    /// <summary>
     /// Mutates the supervision boundary limitation rule values allocated to this professor profile asset.
     /// </summary>
     /// <param name="newCapacity">The targeted maximum count selection to assign onto the tracking records.</param>

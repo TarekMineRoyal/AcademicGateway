@@ -18,6 +18,11 @@ public class TechSupportAccount : BaseEntity
     public Guid Id { get; private set; }
 
     /// <summary>
+    /// Gets the unique identifier of the corporate Provider that spawned and owns this account context.
+    /// </summary>
+    public Guid ProviderId { get; private set; }
+
+    /// <summary>
     /// Gets the institutional staff or employee number assigned to this support agent for internal auditing.
     /// </summary>
     public string StaffNumber { get; private set; } = string.Empty;
@@ -46,14 +51,20 @@ public class TechSupportAccount : BaseEntity
     /// <param name="staffNumber">The corporate or institutional employee identifier tracking number.</param>
     /// <param name="supportTier">The assignment tier designation level.</param>
     /// <exception cref="InvalidTechSupportDetailsException">Thrown when essential tracking values are missing or blank.</exception>
-    public TechSupportAccount(Guid id, string staffNumber, string supportTier)
+    public TechSupportAccount(Guid id, Guid providerId, string staffNumber, string supportTier)
     {
         if (id == Guid.Empty)
         {
             throw new InvalidTechSupportDetailsException("Identity User ID cannot be empty.");
         }
 
+        if (providerId == Guid.Empty)
+        {
+            throw new InvalidTechSupportDetailsException("Parent Provider ID tenant assignment cannot be empty.");
+        }
+
         Id = id;
+        ProviderId = providerId;
         UpdateStaffDetails(staffNumber, supportTier);
         IsActive = true;
     }
