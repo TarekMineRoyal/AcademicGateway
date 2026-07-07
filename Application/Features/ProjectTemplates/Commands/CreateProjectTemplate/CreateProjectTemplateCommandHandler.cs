@@ -13,51 +13,53 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateP
 
 /// <summary>
 /// Orchestrates the business command pipeline for instantiating, validating, and persisting a new <see cref="ProjectTemplate"/> blueprint.
+/// Fortified against Broken Object Level Authorization (BOLA) and side-channel resource enumeration vectors.
 /// </summary>
-public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
+public class CreateProjectTemplateCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IRequestHandler<CreateProjectTemplateCommand, Guid>
 {
     /// <summary>
-    /// Processes the template creation command request, enforcing verification boundaries and tracking technical skill matrices.
+    /// Processes the template creation command request, enforcing verification boundaries and tracking technical skill matrices securely.
     /// </summary>
-    /// <param name="request">The incoming command container housing metadata descriptions and required validation arguments.</param>
-    /// <param name="cancellationToken">The operational signal tracking asynchronous processing cancellations.</param>
-    /// <returns>A unique tracking identifier primary key assigned onto the newly committed project template.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if the specified provider identification reference is missing from database records.</exception>
-    /// <exception cref="ProviderNotVerifiedException">Thrown if the requesting provider has not successfully completed onboarding verification gates.</exception>
-    /// <exception cref="InvalidTemplateDetailsException">Thrown if fundamental template parameters (title, description) fail domain invariant checks.</exception>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if transitioning the newly instantiated template state violates sequence boundaries.</exception>
     public async Task<Guid> Handle(CreateProjectTemplateCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the requesting Provider and enforce profile existence
+        // 1. Enforce active security session validation early before executing database logic
+        if (!currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to generate project template blueprints.");
+        }
+
+        // 2. Retrieve the requesting Provider context
         var provider = await context.Providers
             .FirstOrDefaultAsync(p => p.Id == request.ProviderId, cancellationToken);
 
-        if (provider == null)
+        // 3. Validate session boundary and prevent side-channel resource enumeration
+        // If the profile is completely missing OR does not align with the logged-in user session,
+        // throw a uniform error to fully obscure system data presence from scanning behavior.
+        if (provider == null || request.ProviderId != currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"Provider profile with ID '{request.ProviderId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested provider profile was not found, or you do not possess blueprint creation authorization permissions.");
         }
 
-        // 2. Enforce the platform verification rule using our strongly-typed domain exception
+        // 4. Enforce the platform verification rule using our strongly-typed domain exception
         if (!provider.IsVerified)
         {
             throw new ProviderNotVerifiedException(request.ProviderId);
         }
 
-        // 3. Instantiate the ProjectTemplate domain entity using our updated constructor ordering (Title, Description, ProviderId)
+        // 5. Instantiate the ProjectTemplate domain entity using our constructor ordering (Title, Description, ProviderId)
         // This process guarantees all invariant domain validation guards fire cleanly before persistence.
         var template = new ProjectTemplate(
             request.Title,
             request.Description,
             request.ProviderId);
 
-        // 4. Advance the template lifecycle out of initial draft status to match current workflow requirements
+        // 6. Advance the template lifecycle out of initial draft status to match current workflow requirements
         template.SubmitForReview();
 
-        // 5. Attach technical capability requirements using pure aggregate root behavioral methods.
-        // Architectural Optimization: Because the CreateProjectTemplateCommandValidator already runs an 
-        // asynchronous pre-check validating that all SkillIds exist in the system directory, we safely 
-        // eliminate a redundant database roundtrip here and map the IDs directly.
+        // 7. Attach technical capability requirements using pure aggregate root behavioral methods.
         if (request.SkillIds != null)
         {
             foreach (var skillId in request.SkillIds)
@@ -68,13 +70,13 @@ public class CreateProjectTemplateCommandHandler(IApplicationDbContext context)
             }
         }
 
-        // 6. Queue the tracked aggregate root structure for relational database persistence
+        // 8. Queue the tracked aggregate root structure for relational database persistence
         context.ProjectTemplates.Add(template);
 
-        // 7. Atomically save additions across all modified tracking tables
+        // 9. Atomically save additions across all modified tracking tables
         await context.SaveChangesAsync(cancellationToken);
 
-        // 8. Return the assigned surrogate tracking key identifier
+        // 10. Return the assigned surrogate tracking key identifier
         return template.Id;
     }
 }

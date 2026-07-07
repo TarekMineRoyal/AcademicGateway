@@ -36,49 +36,59 @@ public class ProposeTechSupportCommandHandler : IRequestHandler<ProposeTechSuppo
     }
 
     /// <summary>
-    /// Validates corporate tenancy boundaries, verifies support account existence, and tracks the mentorship proposal.
+    /// Validates corporate tenancy boundaries, verifies support account existence, and tracks the mentorship proposal securely.
     /// </summary>
     /// <param name="request">The incoming CQRS data payload containing workspace routing identifiers and assignment keys.</param>
     /// <param name="cancellationToken">The operational signal tracking asynchronous execution cancellations.</param>
     /// <returns>The generated primary tracking key Guid of the newly appended proposal entity log.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if either the target project workspace or support account profile does not exist.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown if an unauthenticated user or an unrelated corporate entity attempts the assignment.</exception>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails or tenancy bounds reject validation.</exception>
+    /// <exception cref="KeyNotFoundException">Thrown if the target technical staff profile does not exist.</exception>
     public async Task<Guid> Handle(ProposeTechSupportCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the target project instance workspace along with its active corporate engagement tracking loops
+        // 1. Enforce active session layout verification early before querying downstream persistence maps
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to assign technical support personnel.");
+        }
+
+        // 2. Retrieve the target project instance workspace along with its active corporate engagement tracking loops
         var projectInstance = await _context.ProjectInstances
             .Include(pi => pi.TechSupportProposals)
             .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
 
-        if (projectInstance == null)
+        // 3. Protect against side-channel resource enumeration
+        // Uniformly enforce the boundary validation check: If the item is missing OR owned by another provider context,
+        // throw an identical UnauthorizedAccessException to ensure the API never leaks structural presence indicators.
+        if (projectInstance == null || projectInstance.ProviderId != _currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project workspace was not found, or you do not possess management authorization permissions.");
         }
 
-        // 2. Security Boundaries: Enforce that only the specific corporate provider who owns the original template can pitch mentorship
-        if (!_currentUserService.IsAuthenticated || projectInstance.ProviderId != _currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Access Denied: You are not authorized to assign technical support personnel to this project workspace.");
-        }
-
-        // 3. Relational Pre-Check: Verify that the designated corporate tech support engineer account profile exists
+        // 4. Relational Pre-Check: Verify that the designated corporate tech support engineer account profile exists
         var techSupportAccountExists = await _context.TechSupportAccounts
             .AnyAsync(ts => ts.Id == request.TechSupportAccountId, cancellationToken);
 
         if (!techSupportAccountExists)
         {
-            throw new KeyNotFoundException($"The corporate tech support profile with ID '{request.TechSupportAccountId}' does not exist.");
+            throw new KeyNotFoundException($"The corporate tech support profile with ID '{request.TechSupportAccountId}' does not exist within the firm directory.");
         }
 
-        // 4. Delegate core state transition checks and entity initialization downstream to the Aggregate Root
+        // 5. Delegate core state transition checks and entity initialization downstream to the Aggregate Root
         projectInstance.ProposeTechSupport(request.TechSupportAccountId, _dateTimeProvider.UtcNow);
 
-        // 5. Commit state modifications down to physical relational rows atomically
+        // 6. Commit state modifications down to physical relational rows atomically
         await _context.SaveChangesAsync(cancellationToken);
 
-        // 6. Extract the tracking identifier of the newly appended proposal within our domain boundary collection
+        // 7. Avoid unsafe collection traversal assumptions
+        // Substitute the loose `.First()` implementation pattern for a safer `.LastOrDefault()` lookup constraint strategy.
+        // This naturally targets the exact tracking record appended during this specific transaction iteration context.
         var newlyCreatedProposal = projectInstance.TechSupportProposals
-            .First(p => p.TechSupportAccountId == request.TechSupportAccountId && p.Status == TechSupportProposalStatus.Pending);
+            .LastOrDefault(p => p.TechSupportAccountId == request.TechSupportAccountId && p.Status == TechSupportProposalStatus.Pending);
+
+        if (newlyCreatedProposal == null)
+        {
+            throw new InvalidOperationException("An unexpected processing error occurred while materializing the mentorship assignment tracking record.");
+        }
 
         return newlyCreatedProposal.Id;
     }

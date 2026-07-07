@@ -10,21 +10,29 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetProje
 
 /// <summary>
 /// Handles the execution of the <see cref="GetProjectTemplateByIdQuery"/> request.
-/// Employs clean, untracked relational projection patterns to gather deep configuration graphs.
+/// Employs clean, untracked relational projection patterns to gather deep configuration graphs securely.
 /// </summary>
-public class GetProjectTemplateByIdQueryHandler(IApplicationDbContext context)
+public class GetProjectTemplateByIdQueryHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IRequestHandler<GetProjectTemplateByIdQuery, ProjectTemplateDetailDto?>
 {
     /// <summary>
-    /// Processes the detailed blueprint deep-dive retrieval query, mapping full relational node matrices.
+    /// Processes the detailed blueprint deep-dive retrieval query, mapping full relational node matrices securely.
     /// </summary>
     /// <param name="request">The query container containing the target aggregate root identifier key.</param>
     /// <param name="cancellationToken">Propagates notification that operational threads should be canceled.</param>
     /// <returns>A detailed snapshot data transfer object of the template configuration, or null if not found.</returns>
     public async Task<ProjectTemplateDetailDto?> Handle(GetProjectTemplateByIdQuery request, CancellationToken cancellationToken)
     {
+        // Enforce active security session validation early before executing database logic
+        if (!currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to query template configurations.");
+        }
+
         // Query base: Deactivate object change-tracking for maximum read-side processing performance
-        return await context.ProjectTemplates
+        var dto = await context.ProjectTemplates
             .AsNoTracking()
             .Where(t => t.Id == request.Id)
             .Select(t => new ProjectTemplateDetailDto
@@ -60,5 +68,14 @@ public class GetProjectTemplateByIdQueryHandler(IApplicationDbContext context)
                     )).ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
+
+        // Validate presence boundaries and verify resource tenancy uniformly.
+        // Using a single unified error boundary protects against side-channel resource enumeration vectors.
+        if (dto == null || dto.ProviderId != currentUserService.UserId)
+        {
+            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found, or you do not possess read authorization permissions.");
+        }
+
+        return dto;
     }
 }

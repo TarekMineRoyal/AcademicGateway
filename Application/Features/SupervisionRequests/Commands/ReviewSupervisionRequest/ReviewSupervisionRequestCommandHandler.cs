@@ -35,48 +35,45 @@ public class ReviewSupervisionRequestCommandHandler : IRequestHandler<ReviewSupe
     }
 
     /// <summary>
-    /// Validates professor ownership permissions, invokes the aggregate review state machine, and saves changes.
+    /// Validates professor ownership permissions, invokes the aggregate review state machine, and saves changes securely.
     /// </summary>
     /// <param name="request">The incoming CQRS data payload containing evaluation routing keys and decisions.</param>
     /// <param name="cancellationToken">The operational signal tracking asynchronous execution cancellations.</param>
     /// <returns>A transactional execution confirmation wrapper unit.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if either the target project instance or specific invitation log does not exist.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown if an unauthenticated user or separate professor attempts to review the invitation.</exception>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if the session is unauthenticated, the resource is missing, or tenancy fails validation.</exception>
     public async Task<Unit> Handle(ReviewSupervisionRequestCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the target project instance along with its current supervision request entity log records
+        // 1. Enforce active security session validation early before executing relational queries
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to evaluate academic supervision invitations.");
+        }
+
+        // 2. Retrieve the target project instance along with its tracking supervision request entity log records
         var projectInstance = await _context.ProjectInstances
             .Include(pi => pi.SupervisionRequests)
             .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
 
-        if (projectInstance == null)
-        {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
-        }
-
-        // 2. Locate the individual invitation child entity mapping within our aggregate collection boundary
-        var supervisionRequest = projectInstance.SupervisionRequests
+        // 3. Extract the targeted individual invitation child entity mapping configuration if it exists
+        var supervisionRequest = projectInstance?.SupervisionRequests
             .FirstOrDefault(r => r.Id == request.SupervisionRequestId);
 
-        if (supervisionRequest == null)
+        // 4. Protect against side-channel resource enumeration
+        // Coalesce parent aggregate null checks, child entity null checks, and targeted ownership verification checks.
+        // Uniformly throw an UnauthorizedAccessException to prevent metadata leakage concerning resource presence.
+        if (projectInstance == null || supervisionRequest == null || supervisionRequest.ProfessorId != _currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"The requested academic supervision invite record with ID '{request.SupervisionRequestId}' was not found within this project context.");
+            throw new UnauthorizedAccessException("Access Denied: The requested invitation record was not found, or you do not possess evaluation authorization permissions.");
         }
 
-        // 3. Security Boundaries: Enforce that only the specific targeted professor can execute this evaluation review[cite: 2]
-        if (!_currentUserService.IsAuthenticated || supervisionRequest.ProfessorId != _currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Access Denied: You are not authorized to evaluate this supervision invitation.");
-        }
-
-        // 4. Delegate core state transition checks and multi-track state evaluations downstream to the Aggregate Root
+        // 5. Delegate core state transition checks and multi-track state evaluations downstream to the Aggregate Root boundary
         projectInstance.ReviewSupervisionRequest(
             request.SupervisionRequestId,
             request.Accept,
             request.RejectionReason,
             _dateTimeProvider.UtcNow);
 
-        // 5. Commit state modifications down to physical relational rows atomically
+        // 6. Commit state modifications down to physical relational rows atomically
         await _context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

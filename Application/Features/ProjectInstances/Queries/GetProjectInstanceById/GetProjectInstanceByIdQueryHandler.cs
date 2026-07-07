@@ -10,21 +10,30 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Queries.GetProje
 
 /// <summary>
 /// Handles the execution of the <see cref="GetProjectInstanceByIdQuery"/> request.
-/// Leverages optimized, untracked relational database queries to extract live workspace operational contexts.
+/// Leverages optimized, untracked relational database queries to extract live workspace operational contexts securely.
 /// </summary>
-public class GetProjectInstanceByIdQueryHandler(IApplicationDbContext context)
+public class GetProjectInstanceByIdQueryHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IRequestHandler<GetProjectInstanceByIdQuery, ProjectInstanceDetailDto?>
 {
     /// <summary>
-    /// Processes the live workspace deep-dive query, applying non-tracking projections across profile joins.
+    /// Processes the live workspace deep-dive query, applying non-tracking projections across profile joins securely.
     /// </summary>
     /// <param name="request">The query container holding the primary lookup identifier key for the instance workspace.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
-    /// <returns>A detailed snapshot view data transfer object of the runtime workspace instance state, or null if not found.</returns>
+    /// <returns>A detailed snapshot view data transfer object of the runtime workspace instance state.</returns>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, the resource is missing, or tenancy validation fails.</exception>
     public async Task<ProjectInstanceDetailDto?> Handle(GetProjectInstanceByIdQuery request, CancellationToken cancellationToken)
     {
+        // Enforce active security session validation early before executing database logic
+        if (!currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to query project workspace details.");
+        }
+
         // Query base: Deactivate object change-tracking overhead for maximum read-side execution performance
-        return await context.ProjectInstances
+        var dto = await context.ProjectInstances
             .AsNoTracking()
             .Where(pi => pi.Id == request.Id)
             .Select(pi => new ProjectInstanceDetailDto
@@ -50,7 +59,7 @@ public class GetProjectInstanceByIdQueryHandler(IApplicationDbContext context)
                 OverallGrade = pi.OverallGrade,
                 ProjectGradedAt = pi.ProjectGradedAt,
 
-                // Fixed: Correlate the skill tracking keys directly against the master Skills context block
+                // Correlate the skill tracking keys directly against the master Skills context block
                 // to pull down strings without depending on a non-existent navigation property.
                 SnapshotSkills = pi.SnapshotSkills.Select(ss => new InstanceSkillDto(
                     ss.SkillId,
@@ -61,5 +70,16 @@ public class GetProjectInstanceByIdQueryHandler(IApplicationDbContext context)
                 )).ToList()
             })
             .FirstOrDefaultAsync(cancellationToken);
+
+        // Validate aggregate presence and contextual user tenancy boundaries uniformly.
+        // Access is strictly restricted to the participating student, supervisor, or provider.
+        if (dto == null || (dto.StudentId != currentUserService.UserId &&
+                            dto.SupervisorId != currentUserService.UserId &&
+                            dto.ProviderId != currentUserService.UserId))
+        {
+            throw new UnauthorizedAccessException("Access Denied: The requested project workspace was not found, or you do not possess read authorization permissions.");
+        }
+
+        return dto;
     }
 }

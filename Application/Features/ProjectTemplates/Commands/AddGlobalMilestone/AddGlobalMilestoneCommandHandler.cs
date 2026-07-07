@@ -12,31 +12,35 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlob
 
 /// <summary>
 /// Orchestrates the application process for reading a target blueprint aggregate, 
-/// appending a structural milestone, and persisting changes.
+/// appending a structural milestone, and persisting changes securely.
 /// </summary>
-public class AddGlobalMilestoneCommandHandler(IApplicationDbContext context)
+public class AddGlobalMilestoneCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IRequestHandler<AddGlobalMilestoneCommand, Guid>
 {
     /// <summary>
-    /// Handles the operational request to attach a new milestone onto a project template graph boundary.
+    /// Handles the operational request to attach a new milestone onto a project template graph boundary securely.
     /// </summary>
-    /// <param name="request">The incoming command container housing metadata parameters and parent tracking references.</param>
-    /// <param name="cancellationToken">The operational token tracking asynchronous processing cancellations.</param>
-    /// <returns>The unique surrogate tracking identifier assigned to the newly appended milestone configuration.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if the target project template identifier is missing from database records.</exception>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate root is in an immutable state (Approved/Rejected).</exception>
-    /// <exception cref="InvalidTemplateDetailsException">Thrown if performance or boundary constraints fail invariants.</exception>
     public async Task<Guid> Handle(AddGlobalMilestoneCommand request, CancellationToken cancellationToken)
     {
+        // Enforce active session validation early before executing database logic
+        if (!currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to modify template configurations.");
+        }
+
         // Fetch the parent template aggregate root.
         // Eagerly load the internal collection so the aggregate can manage its internal limits correctly.
         var template = await context.ProjectTemplates
             .Include(t => t.GlobalMilestones)
             .FirstOrDefaultAsync(t => t.Id == request.ProjectTemplateId, cancellationToken);
 
-        if (template == null)
+        // Validate aggregate presence and provider tenancy uniformly.
+        // Using a single unified error boundary protects against side-channel resource enumeration vectors.
+        if (template == null || template.ProviderId != currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"Project Template with ID '{request.ProjectTemplateId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found, or you do not possess management authorization permissions.");
         }
 
         // Delegate behavioral instantiation completely to the aggregate root boundary method
@@ -49,9 +53,14 @@ public class AddGlobalMilestoneCommandHandler(IApplicationDbContext context)
         // Commit alterations down to the database persistence layer
         await context.SaveChangesAsync(cancellationToken);
 
-        // Locate the newly generated milestone entity from the tracking collection to return its tracking ID
+        // Avoid collection traversal assumptions by targeting the most recently appended structural tracking row matching the parameters
         var createdMilestone = template.GlobalMilestones
-            .First(m => m.Title == request.Title.Trim() && m.ExpectedEffortInHours == request.ExpectedEffortInHours);
+            .LastOrDefault(m => m.Title == request.Title.Trim() && m.ExpectedEffortInHours == request.ExpectedEffortInHours);
+
+        if (createdMilestone == null)
+        {
+            throw new InvalidOperationException("An unexpected processing error occurred while materializing the template milestone tracking record.");
+        }
 
         return createdMilestone.Id;
     }

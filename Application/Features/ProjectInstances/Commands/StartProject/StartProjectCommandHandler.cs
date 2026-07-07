@@ -12,13 +12,14 @@ using Microsoft.EntityFrameworkCore;
 namespace AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 
 /// <summary>
-/// Handles the business orchestration loop for initializing a live project workspace from a blueprint template.
+/// Handles the business orchestration loop for initializing a live project workspace from a blueprint template securely.
 /// </summary>
 public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, Guid>
 {
     private readonly IApplicationDbContext _context;
     private readonly IDateTimeProvider _dateTimeProvider;
     private readonly LocalMilestoneFactory _localMilestoneFactory;
+    private readonly ICurrentUserService _currentUserService;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="StartProjectCommandHandler"/> class.
@@ -26,18 +27,36 @@ public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, G
     public StartProjectCommandHandler(
         IApplicationDbContext context,
         IDateTimeProvider dateTimeProvider,
-        LocalMilestoneFactory localMilestoneFactory)
+        LocalMilestoneFactory localMilestoneFactory,
+        ICurrentUserService currentUserService)
     {
         _context = context;
         _dateTimeProvider = dateTimeProvider;
         _localMilestoneFactory = localMilestoneFactory;
+        _currentUserService = currentUserService;
     }
 
     /// <summary>
-    /// Processes the command to create a new live running project snapshot workspace.
+    /// Processes the command to create a new live running project snapshot workspace securely.
     /// </summary>
+    /// <param name="request">The command parameter payload detailing the blueprint template identity and assigned profiles.</param>
+    /// <param name="cancellationToken">Propagates notification that network execution threads should be canceled.</param>
+    /// <returns>A unique tracking identifier primary key assigned onto the newly initialized project instance.</returns>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, resources don't exist, or tenancy fails validation.</exception>
     public async Task<Guid> Handle(StartProjectCommand request, CancellationToken cancellationToken)
     {
+        // Enforce active security session validation early before executing database logic
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to initialize project workspaces.");
+        }
+
+        // Verify identity cross-referencing to ensure users can only start project lifecycles for themselves
+        if (request.StudentId != _currentUserService.UserId)
+        {
+            throw new UnauthorizedAccessException("Access Denied: You cannot initialize a project workspace on behalf of a different identity profile.");
+        }
+
         // Fetch the source template from database tracking, including its full milestone graph topology
         var template = await _context.ProjectTemplates
             .Include(t => t.ProjectTemplateSkills)
@@ -45,9 +64,10 @@ public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, G
                 .ThenInclude(m => m.InboundDependencies)
             .FirstOrDefaultAsync(t => t.Id == request.TemplateId, cancellationToken);
 
+        // Validate template presence boundaries uniformly to protect against resource scanning behaviors
         if (template == null)
         {
-            throw new KeyNotFoundException($"The requested project template blueprint with ID '{request.TemplateId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found, or you do not possess blueprint initialization permissions.");
         }
 
         // Pure DDD Execution: The aggregate method accepts the domain service and outputs a fully formed, completely valid aggregate root instance.

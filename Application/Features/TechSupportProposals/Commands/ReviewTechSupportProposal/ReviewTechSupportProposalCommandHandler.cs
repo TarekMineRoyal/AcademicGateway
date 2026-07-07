@@ -29,44 +29,41 @@ public class ReviewTechSupportProposalCommandHandler : IRequestHandler<ReviewTec
     }
 
     /// <summary>
-    /// Validates student ownership permissions, executes the evaluation transition inside the aggregate root, and saves changes.
+    /// Validates student ownership permissions, executes the evaluation transition inside the aggregate root, and saves changes securely.
     /// </summary>
     /// <param name="request">The incoming CQRS data payload detailing the student's evaluation decision.</param>
     /// <param name="cancellationToken">The operational signal tracking asynchronous execution cancellations.</param>
     /// <returns>A transactional execution confirmation wrapper unit.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if either the target workspace or specific corporate proposal entry cannot be located.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown if an unauthorized user attempts to act on the proposal.</exception>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if authentication is missing, resources don't exist, or tenancy parameters break invariants.</exception>
     public async Task<Unit> Handle(ReviewTechSupportProposalCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the target project instance along with its nested child proposal collections
+        // 1. Enforce active security session validation early before executing database queries
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to review technical support proposals.");
+        }
+
+        // 2. Retrieve the target project instance along with its nested child proposal collections
         var projectInstance = await _context.ProjectInstances
             .Include(pi => pi.TechSupportProposals)
             .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
 
-        if (projectInstance == null)
-        {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
-        }
-
-        // 2. Security Boundaries: Enforce that only the student owner who initialized the workspace can review corporate offers
-        if (!_currentUserService.IsAuthenticated || projectInstance.StudentId != _currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Access Denied: You are not authorized to evaluate corporate assistance offers for this workspace.");
-        }
-
-        // 3. Locate the targeted individual corporate proposal child entity within our aggregate scope
-        var proposal = projectInstance.TechSupportProposals
+        // 3. Locate the targeted individual corporate proposal child entity within our aggregate scope using defensive navigation mapping
+        var proposal = projectInstance?.TechSupportProposals
             .FirstOrDefault(p => p.Id == request.TechSupportProposalId);
 
-        if (proposal == null)
+        // 4. Protect against side-channel resource enumeration
+        // Coalesce parent aggregate null checks, child entity null checks, and student user owner tenancy checks.
+        // Uniformly throw an UnauthorizedAccessException to completely obscure whether the ID is missing or unowned.
+        if (projectInstance == null || proposal == null || projectInstance.StudentId != _currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"Corporate mentor proposal with tracking key '{request.TechSupportProposalId}' was not found in this workspace context.");
+            throw new UnauthorizedAccessException("Access Denied: The requested proposal record was not found, or you do not possess evaluation authorization permissions.");
         }
 
-        // 4. Delegate core business invariant processing and state alterations downstream to the Aggregate Root
+        // 5. Delegate core business invariant processing and state alterations downstream to the Aggregate Root
         projectInstance.ReviewTechSupportProposal(request.TechSupportProposalId, request.Accept, request.RejectionReason);
 
-        // 5. Commit state mutations down to physical database layers atomically
+        // 6. Commit state mutations down to physical database layers atomically
         await _context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

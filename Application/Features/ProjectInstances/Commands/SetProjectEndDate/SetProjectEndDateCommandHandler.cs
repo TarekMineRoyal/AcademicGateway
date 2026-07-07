@@ -10,7 +10,7 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Commands.SetProj
 
 /// <summary>
 /// Orchestrates the application logic for adjusting a project instance's scheduled completion date
-/// by delegating security validation and state modifications to the domain aggregate root.
+/// by delegating security validation and state modifications to the domain aggregate root securely.
 /// </summary>
 public class SetProjectEndDateCommandHandler : IRequestHandler<SetProjectEndDateCommand, Unit>
 {
@@ -27,30 +27,38 @@ public class SetProjectEndDateCommandHandler : IRequestHandler<SetProjectEndDate
     }
 
     /// <summary>
-    /// Fetches the live workspace aggregate, verifies identity presence, and triggers the domain rule method.
+    /// Fetches the live workspace aggregate, verifies identity presence, and triggers the domain rule method securely.
     /// </summary>
+    /// <param name="request">The incoming command container tracking the target workspace and new date parameters.</param>
+    /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
+    /// <returns>A MediatR completion compliance unit instance.</returns>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, the resource is missing, or tenancy validation fails.</exception>
     public async Task<Unit> Handle(SetProjectEndDateCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the target project instance workspace aggregate root
-        var projectInstance = await _context.ProjectInstances
-            .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
-
-        if (projectInstance == null)
-        {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
-        }
-
-        // 2. Pre-routing Authentication Guard
+        // Enforce active session validation early before executing database logic
         if (!_currentUserService.IsAuthenticated)
         {
             throw new UnauthorizedAccessException("Access Denied: You must be authenticated to alter workspace deadlines.");
         }
 
-        // 3. Invoke the explicit domain behavior method established in Step 1.7.
-        // This naturally passes the executor's ID down so the aggregate root can guard its own rules.
+        // Retrieve the target project instance workspace aggregate root
+        var projectInstance = await _context.ProjectInstances
+            .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
+
+        // Validate presence boundaries and verify resource tenancy uniformly.
+        // Restricting initial execution to the bound student, supervisor, or provider masks resource presence indicators.
+        if (projectInstance == null || (projectInstance.StudentId != _currentUserService.UserId &&
+                                        projectInstance.SupervisorId != _currentUserService.UserId &&
+                                        projectInstance.ProviderId != _currentUserService.UserId))
+        {
+            throw new UnauthorizedAccessException("Access Denied: The requested project workspace was not found, or you do not possess deadline management authorization permissions.");
+        }
+
+        // Invoke the explicit domain behavior method
+        // This passes the verified executor's ID down so the aggregate root can guard fine-grained business rules.
         projectInstance.SetProjectEndDate(request.NewEndDate, _currentUserService.UserId ?? Guid.Empty);
 
-        // 4. Flush the state mutations down to physical rows atomically
+        // Flush the state mutations down to physical rows atomically
         await _context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

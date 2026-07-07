@@ -11,54 +11,54 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewP
 
 /// <summary>
 /// Handles the transaction routine to process a <see cref="ReviewProjectTemplateCommand"/>.
-/// Locates the template aggregate, verifies evaluator profile presence, and invokes internal state machine rules.
+/// Locates the template aggregate, verifies evaluator profile presence, and invokes internal state machine rules securely.
 /// </summary>
-public class ReviewProjectTemplateCommandHandler(IApplicationDbContext context)
+public class ReviewProjectTemplateCommandHandler(
+    IApplicationDbContext context,
+    ICurrentUserService currentUserService)
     : IRequestHandler<ReviewProjectTemplateCommand>
 {
     /// <summary>
-    /// Processes the audit decision, executes the corresponding domain state transition, and flushes changes to storage.
+    /// Processes the audit decision, executes the corresponding domain state transition, and flushes changes to storage securely.
     /// </summary>
     /// <param name="request">The structural parameter bundle tracking evaluation state results and reviewer signatures.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
     /// <returns>A completed asynchronous execution task.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if either the target project blueprint or the reviewer profile cannot be found.</exception>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if executing the evaluation transition violates lifecycle order rules.</exception>
-    /// <exception cref="InvalidTemplateDetailsException">Thrown if provided feedback or rejection reasoning parameters break content invariants.</exception>
+    /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, resources don't exist, or tenancy fails validation.</exception>
     public async Task Handle(ReviewProjectTemplateCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the incoming project template from the database
+        // Enforce active security session validation early before executing database logic
+        if (!currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to execute template audits.");
+        }
+
+        // Retrieve the incoming project template from the database
         var template = await context.ProjectTemplates
             .FirstOrDefaultAsync(pt => pt.Id == request.TemplateId, cancellationToken);
 
-        if (template == null)
-        {
-            throw new KeyNotFoundException($"Project template with ID '{request.TemplateId}' was not found.");
-        }
-
-        // 2. Retrieve the Reviewer domain profile linked to the current identity session
-        // Architectural Alignment: Reviewer.Id directly stores and maps 1:1 to the identity user account context.
+        // Retrieve the Reviewer domain profile linked to the target context
         var reviewerExists = await context.Reviewers
             .AnyAsync(r => r.Id == request.ReviewerId, cancellationToken);
 
-        if (!reviewerExists)
+        // Validate presence boundaries and verify that the session user ID matches the target Reviewer identity.
+        // Using a single unified error boundary protects against side-channel resource enumeration vectors.
+        if (template == null || !reviewerExists || request.ReviewerId != currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"Reviewer domain profile with ID '{request.ReviewerId}' was not found within the audit directory.");
+            throw new UnauthorizedAccessException("Access Denied: The requested resource was not found, or you do not possess audit evaluation authorization permissions.");
         }
 
-        // 3. Invoke explicit domain-level state machine boundaries
-        // This ensures tracking histories are sealed cleanly and private states remain fully encapsulated.
+        // Invoke explicit domain-level state machine boundaries
         if (request.IsApproved)
         {
             template.Approve();
         }
         else
         {
-            // Maps to your domain's formal denial lifecycle sequence rule
             template.RejectPermanently(request.RejectionReason ?? "No specific rejection details provided by reviewer.");
         }
 
-        // 4. Save the workflow updates to PostgreSQL
+        // Save the workflow updates securely
         await context.SaveChangesAsync(cancellationToken);
     }
 }

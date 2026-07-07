@@ -10,6 +10,7 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Commands.CancelP
 
 /// <summary>
 /// Handles the orchestration flow to prematurely abort or cancel an active running project workspace.
+/// Fortified against Broken Object Level Authorization (BOLA) and side-channel resource enumeration vectors.
 /// </summary>
 public class CancelProjectCommandHandler : IRequestHandler<CancelProjectCommand, Unit>
 {
@@ -24,23 +25,27 @@ public class CancelProjectCommandHandler : IRequestHandler<CancelProjectCommand,
 
     public async Task<Unit> Handle(CancelProjectCommand request, CancellationToken cancellationToken)
     {
+        // 1. Enforce active session presence before hitting data persistence layers
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to adjust workspace lifecycle states.");
+        }
+
         var projectInstance = await _context.ProjectInstances
             .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
 
-        if (projectInstance == null)
+        // 2. Protect against side-channel resource enumeration
+        // Uniformly throw an UnauthorizedAccessException if the record is missing OR owned by another entity.
+        // This hides the system's internal object existence parameters from scanning behaviors.
+        if (projectInstance == null || projectInstance.StudentId != _currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project workspace was not found, or you do not possess ownership authorization permissions.");
         }
 
-        // Security Boundary: Only the student owner who initialized the run has the authority to abandon it
-        if (!_currentUserService.IsAuthenticated || projectInstance.StudentId != _currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Access Denied: Only the student owner can cancel this project workspace.");
-        }
-
-        // Invoking the parameterless domain method to trigger the lifecycle state-machine
+        // 3. Invoke the encapsulated domain lifecycle transition rules
         projectInstance.CancelProject();
 
+        // 4. Atomically persist state tracking shifts
         await _context.SaveChangesAsync(cancellationToken);
 
         return Unit.Value;

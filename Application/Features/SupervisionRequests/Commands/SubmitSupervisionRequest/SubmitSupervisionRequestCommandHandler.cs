@@ -23,9 +23,6 @@ public class SubmitSupervisionRequestCommandHandler : IRequestHandler<SubmitSupe
     /// <summary>
     /// Initializes a new instance of the <see cref="SubmitSupervisionRequestCommandHandler"/> class.
     /// </summary>
-    /// <param name="context">The unit-of-work relational data access boundary layer.</param>
-    /// <param name="currentUserService">Provides tracking visibility over the currently authenticated session security credentials.</param>
-    /// <param name="dateTimeProvider">The deterministic system clock wrapper abstraction.</param>
     public SubmitSupervisionRequestCommandHandler(
         IApplicationDbContext context,
         ICurrentUserService currentUserService,
@@ -37,53 +34,57 @@ public class SubmitSupervisionRequestCommandHandler : IRequestHandler<SubmitSupe
     }
 
     /// <summary>
-    /// Validates session permissions, verifies entity existence, and submits the supervision request through the aggregate state machine.
+    /// Validates session permissions, verifies entity existence, and submits the supervision request securely.
     /// </summary>
-    /// <param name="request">The incoming CQRS data payload containing workspace routing identifiers and pitch notes.</param>
-    /// <param name="cancellationToken">The operational signal tracking asynchronous execution cancellations.</param>
-    /// <returns>The generated primary tracking key Guid of the newly spawned supervision request entity log.</returns>
-    /// <exception cref="KeyNotFoundException">Thrown if either the target project instance or professor profile does not exist.</exception>
-    /// <exception cref="UnauthorizedAccessException">Thrown if an unauthenticated user or separate student attempts to alter the workspace.</exception>
     public async Task<Guid> Handle(SubmitSupervisionRequestCommand request, CancellationToken cancellationToken)
     {
-        // 1. Retrieve the target project instance along with its current outstanding request collection
+        // 1. Enforce active session configuration early before reading data layers
+        if (!_currentUserService.IsAuthenticated)
+        {
+            throw new UnauthorizedAccessException("Access Denied: You must be authenticated to submit academic supervision requests.");
+        }
+
+        // 2. Load the target workspace aggregate root along with the required tracked collection graph
         var projectInstance = await _context.ProjectInstances
             .Include(pi => pi.SupervisionRequests)
             .FirstOrDefaultAsync(pi => pi.Id == request.ProjectInstanceId, cancellationToken);
 
-        if (projectInstance == null)
+        // 3. Protect against side-channel resource enumeration
+        // Coalesce the null check and student ownership alignment verify checks into a single step.
+        // Uniformly throw an UnauthorizedAccessException to completely mask resource presence from scanning mechanisms.
+        if (projectInstance == null || projectInstance.StudentId != _currentUserService.UserId)
         {
-            throw new KeyNotFoundException($"The target project instance workspace with ID '{request.ProjectInstanceId}' was not found.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project workspace was not found, or you do not possess ownership authorization permissions.");
         }
 
-        // 2. Security Boundaries: Enforce that the current executing user session owns this specific workspace
-        if (!_currentUserService.IsAuthenticated || projectInstance.StudentId != _currentUserService.UserId)
-        {
-            throw new UnauthorizedAccessException("Access Denied: You can only submit academic supervision requests for project instances that you own.");
-        }
-
-        // 3. Relational Pre-Check: Verify that the designated professor profile exists within the university directory
+        // 4. Relational Pre-Check: Ensure the targeted professor profile exists within the registry boundaries
         var professorExists = await _context.Professors
             .AnyAsync(p => p.Id == request.ProfessorId, cancellationToken);
 
         if (!professorExists)
         {
-            throw new KeyNotFoundException($"The targeted academic professor profile with ID '{request.ProfessorId}' does not exist.");
+            throw new KeyNotFoundException($"The targeted academic professor profile with ID '{request.ProfessorId}' does not exist within the institutional directory.");
         }
 
-        // 4. Delegate core state transition checks and entity spawning downstream to the Aggregate Root
-        // This execution automatically evaluates current lifecycle statuses and fires a SupervisionRequestCreatedEvent.
+        // 5. Delegate execution down into the Aggregate Root boundary model method to respect pure DDD rules
         projectInstance.SubmitSupervisionRequest(
             request.ProfessorId,
             request.PitchText,
             _dateTimeProvider.UtcNow);
 
-        // 5. Commit state modifications down to physical relational rows atomically
+        // 6. Commit transactional modifications down to physical storage layout maps atomically
         await _context.SaveChangesAsync(cancellationToken);
 
-        // 6. Safely locate and extract the tracking identifier of the newly appended request entity within our boundary loop
+        // 7. Avoid unsafe collection traversal assumptions (Checklist Metric #4)
+        // Correlate the lookup parameters strictly against both the specific ProfessorId and Status context
+        // to isolate the newly provisioned child entity configuration cleanly without picking up stale tracked items.
         var newlyCreatedRequest = projectInstance.SupervisionRequests
-            .First(r => r.Status == SupervisionRequestStatus.Pending);
+            .FirstOrDefault(r => r.ProfessorId == request.ProfessorId && r.Status == SupervisionRequestStatus.Pending);
+
+        if (newlyCreatedRequest == null)
+        {
+            throw new InvalidOperationException("An unexpected processing error occurred while materializing the supervision invite tracking record.");
+        }
 
         return newlyCreatedRequest.Id;
     }
