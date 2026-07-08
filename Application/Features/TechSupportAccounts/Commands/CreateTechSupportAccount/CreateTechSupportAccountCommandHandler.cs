@@ -16,7 +16,7 @@ namespace AcademicGateway.Application.Features.TechSupportAccounts.Commands.Crea
 public class CreateTechSupportAccountCommandHandler(
     IApplicationDbContext context,
     IIdentityService identityService,
-    ICurrentUserService currentUserService) // 🔏 Checklist Metric #1: Inject ICurrentUserService
+    ICurrentUserService currentUserService)
     : IRequestHandler<CreateTechSupportAccountCommand, Guid>
 {
     /// <summary>
@@ -63,6 +63,7 @@ public class CreateTechSupportAccountCommandHandler(
         // 6. Enforce Domain Encapsulation - Initialize via explicit parameterized constructor logic.
         var techAccount = new TechSupportAccount(
             id: identityUserId,
+            providerId: request.ProviderId,
             staffNumber: request.StaffNumber,
             supportTier: request.SupportTier
         );
