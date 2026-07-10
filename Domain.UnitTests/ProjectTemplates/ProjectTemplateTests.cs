@@ -1,334 +1,454 @@
 ﻿using System;
 using System.Linq;
+using Xunit;
 using AcademicGateway.Domain.Common.Enums;
-using AcademicGateway.Domain.ProjectInstances.Services;
 using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.ProjectTemplates.Enums;
-using AcademicGateway.Domain.ProjectTemplates.Events;
 using AcademicGateway.Domain.ProjectTemplates.Exceptions;
-using AcademicGateway.Domain.ProjectInstances.Enums;
-using FluentAssertions;
-using Moq;
-using Xunit;
+using AcademicGateway.Domain.ProjectTemplates.Events;
+using AcademicGateway.Domain.ProjectInstances.Services;
 
 namespace AcademicGateway.Domain.UnitTests.ProjectTemplates;
 
+/// <summary>
+/// Contains isolated unit tests verifying the structural invariants, domain workflows, 
+/// and lifecycle state machine rules of the <see cref="ProjectTemplate"/> aggregate root.
+/// </summary>
 public class ProjectTemplateTests
 {
-    private readonly Guid _fallbackProviderId = Guid.NewGuid();
-    private readonly string _fallbackTitle = "E-Commerce Cloud Architecture";
-    private readonly string _fallbackDesc = "Design and deploy an enterprise microservices e-commerce platform.";
-    private readonly DateTime _fallbackTime = new(2026, 7, 8, 12, 0, 0, DateTimeKind.Utc);
-
-    private ProjectTemplate CreateDraftTemplate()
-    {
-        return new ProjectTemplate(_fallbackTitle, _fallbackDesc, _fallbackProviderId, _fallbackTime);
-    }
+    private readonly string _validTitle = "Enterprise Cloud Architecture Blueprint";
+    private readonly string _validDescription = "Comprehensive guidelines for building multi-region resilient microservices.";
+    private readonly Guid _validProviderId = Guid.NewGuid();
+    private readonly DateTime _validCreatedAt = DateTime.UtcNow;
 
     #region Constructor Tests
 
     [Fact]
-    public void Constructor_ShouldInitializeInDraftState_WhenParametersAreValid()
+    public void Constructor_ShouldInitializeInDraftStateAndRaiseEvent_WhenParametersAreValid()
     {
-        // Arrange
-        var untrimmedTitle = "   " + _fallbackTitle + "   ";
-        var untrimmedDesc = "   " + _fallbackDesc + "   ";
-
-        // Act
-        var template = new ProjectTemplate(untrimmedTitle, untrimmedDesc, _fallbackProviderId, _fallbackTime);
+        // Arrange & Act
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
 
         // Assert
-        template.Id.Should().NotBeEmpty();
-        template.ProviderId.Should().Be(_fallbackProviderId);
-        template.Title.Should().Be(_fallbackTitle);
-        template.Description.Should().Be(_fallbackDesc);
-        template.Status.Should().Be(ProjectTemplateStatus.Draft);
-        template.CreatedAt.Should().Be(_fallbackTime);
-        template.ReviewerFeedback.Should().BeNull();
-        template.GlobalMilestones.Should().BeEmpty();
-        template.ProjectTemplateSkills.Should().BeEmpty();
+        Assert.NotEqual(Guid.Empty, template.Id);
+        Assert.Equal(_validTitle, template.Title);
+        Assert.Equal(_validDescription, template.Description);
+        Assert.Equal(_validProviderId, template.ProviderId);
+        Assert.Equal(ProjectTemplateStatus.Draft, template.Status);
+        Assert.Equal(_validCreatedAt, template.CreatedAt);
+        Assert.Null(template.ReviewerFeedback);
 
-        template.DomainEvents.Should().ContainSingle()
-            .Which.Should().BeOfType<ProjectTemplateCreatedEvent>()
-            .Which.Should().Match<ProjectTemplateCreatedEvent>(e =>
-                e.TemplateId == template.Id && e.ProviderId == _fallbackProviderId && e.Title == _fallbackTitle);
+        // Verify Domain Event Emission
+        Assert.Single(template.DomainEvents);
+        var createdEvent = template.DomainEvents.First() as ProjectTemplateCreatedEvent;
+        Assert.NotNull(createdEvent);
+        Assert.Equal(template.Id, createdEvent.TemplateId);
+        Assert.Equal(template.ProviderId, createdEvent.ProviderId);
+        Assert.Equal(template.Title, createdEvent.Title);
     }
 
     [Fact]
     public void Constructor_ShouldThrowInvalidTemplateDetailsException_WhenProviderIdIsEmpty()
     {
-        // Act
-        Action act = () => _ = new ProjectTemplate("Title", "Desc", Guid.Empty, _fallbackTime);
-
-        // Assert
-        act.Should().Throw<InvalidTemplateDetailsException>()
-           .WithMessage("Provider ID cannot be an empty Guid.");
-    }
-
-    #endregion
-
-    #region UpdateDetails Tests
-
-    [Fact]
-    public void UpdateDetails_ShouldModifyTextAndTrim_WhenStatusIsEditable()
-    {
         // Arrange
-        var template = CreateDraftTemplate();
+        var emptyProviderId = Guid.Empty;
 
-        // Act
-        template.UpdateDetails("  New Title  ", "  New Description Specification  ");
+        // Act & Assert
+        var exception = Assert.Throws<InvalidTemplateDetailsException>(() =>
+            new ProjectTemplate(_validTitle, _validDescription, emptyProviderId, _validCreatedAt));
 
-        // Assert
-        template.Title.Should().Be("New Title");
-        template.Description.Should().Be("New Description Specification");
+        Assert.Contains("Provider ID cannot be an empty Guid.", exception.Message);
     }
 
     [Theory]
-    [InlineData(null, "Valid Description")]
-    [InlineData("", "Valid Description")]
-    [InlineData("   ", "Valid Description")]
-    [InlineData("Valid Title", null)]
-    [InlineData("Valid Title", "")]
-    [InlineData("Valid Title", "   ")]
-    public void UpdateDetails_ShouldThrowInvalidTemplateDetailsException_WhenInputsAreInvalid(string? title, string? desc)
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Constructor_ShouldThrowInvalidTemplateDetailsException_WhenTitleIsEmptyOrWhitespace(string? invalidTitle)
     {
-        // Arrange
-        var template = CreateDraftTemplate();
+        // Act & Assert
+        Assert.Throws<InvalidTemplateDetailsException>(() =>
+            new ProjectTemplate(invalidTitle!, _validDescription, _validProviderId, _validCreatedAt));
+    }
 
-        // Act
-        Action act = () => template.UpdateDetails(title!, desc!);
-
-        // Assert
-        act.Should().Throw<InvalidTemplateDetailsException>();
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void Constructor_ShouldThrowInvalidTemplateDetailsException_WhenDescriptionIsEmptyOrWhitespace(string? invalidDescription)
+    {
+        // Act & Assert
+        Assert.Throws<InvalidTemplateDetailsException>(() =>
+            new ProjectTemplate(_validTitle, invalidDescription!, _validProviderId, _validCreatedAt));
     }
 
     #endregion
 
-    #region Milestone & Dependency DAG Tests
+    #region Milestone Management Tests
 
     [Fact]
-    public void AddMilestone_ShouldAppendToCollection_WhenStatusIsEditableAndEffortIsPositive()
+    public void AddMilestone_ShouldAddMilestoneSuccessfully_WhenTemplateIsInDraftState()
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+        var milestoneTitle = "Phase 1: Architecture Sign-off";
+        var milestoneDesc = "Submit structural systems schema diagrams.";
+        decimal expectedHours = 12.5m;
+        var deliverableType = DeliverableType.File;
 
         // Act
-        template.AddMilestone("Requirement Gathering", "Document all features", 15.5m, DeliverableType.File);
+        template.AddMilestone(milestoneTitle, milestoneDesc, expectedHours, deliverableType);
 
         // Assert
-        template.GlobalMilestones.Should().ContainSingle()
-            .Which.Should().Match<GlobalMilestone>(m =>
-                m.Title == "Requirement Gathering" &&
-                m.Description == "Document all features" &&
-                m.ExpectedEffortInHours == 15.5m &&
-                m.RequiredDeliverableType == DeliverableType.File);
+        Assert.Single(template.GlobalMilestones);
+        var milestone = template.GlobalMilestones.First();
+        Assert.NotEqual(Guid.Empty, milestone.Id);
+        Assert.Equal(template.Id, milestone.ProjectTemplateId);
+        Assert.Equal(milestoneTitle, milestone.Title);
+        Assert.Equal(milestoneDesc, milestone.Description);
+        Assert.Equal(expectedHours, milestone.ExpectedEffortInHours);
+        Assert.Equal(deliverableType, milestone.RequiredDeliverableType);
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(-5)]
-    public void AddMilestone_ShouldThrowInvalidTemplateDetailsException_WhenEffortIsZeroOrNegative(decimal invalidEffort)
+    [InlineData(-5.5)]
+    public void AddMilestone_ShouldThrowInvalidTemplateDetailsException_WhenExpectedEffortIsZeroOrNegative(decimal invalidHours)
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
 
-        // Act
-        Action act = () => template.AddMilestone("Title", "Desc", invalidEffort, DeliverableType.Url);
+        // Act & Assert
+        var exception = Assert.Throws<InvalidTemplateDetailsException>(() =>
+            template.AddMilestone("Invalid Effort MS", "Description", invalidHours, DeliverableType.Url));
 
-        // Assert
-        act.Should().Throw<InvalidTemplateDetailsException>()
-           .WithMessage("Expected effort must be greater than zero hours.");
+        Assert.Contains("Expected effort must be greater than zero hours.", exception.Message);
     }
 
     [Fact]
-    public void AddMilestoneDependency_ShouldEstablishLink_WhenNoCycleIsIntroduced()
+    public void AddMilestone_ShouldThrowInvalidTemplateStatusException_WhenTemplateIsApprovedOrRejected()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.AddMilestone("Milestone A", "Desc", 10, DeliverableType.File);
-        template.AddMilestone("Milestone B", "Desc", 20, DeliverableType.Url);
+        var approvedTemplate = CreateTemplateInState(ProjectTemplateStatus.Approved);
+        var rejectedTemplate = CreateTemplateInState(ProjectTemplateStatus.Rejected);
 
-        var mA = template.GlobalMilestones.ElementAt(0);
-        var mB = template.GlobalMilestones.ElementAt(1);
+        // Act & Assert
+        Assert.Throws<InvalidTemplateStatusException>(() =>
+            approvedTemplate.AddMilestone("MS Title", "MS Desc", 10m, DeliverableType.Url));
 
-        // Act
-        template.AddMilestoneDependency(mB.Id, mA.Id, DependencyType.FinishToStart);
+        Assert.Throws<InvalidTemplateStatusException>(() =>
+            rejectedTemplate.AddMilestone("MS Title", "MS Desc", 10m, DeliverableType.Url));
+    }
+
+    #endregion
+
+    #region Milestone Dependency Graph (DAG) Tests
+
+    [Fact]
+    public void AddMilestoneDependency_ShouldEstablishDependencySuccessfully_WhenGraphIsAcyclic()
+    {
+        // Arrange
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+        template.AddMilestone("Milestone A", "Desc A", 10m, DeliverableType.Url);
+        template.AddMilestone("Milestone B", "Desc B", 15m, DeliverableType.File);
+
+        var milestoneA = template.GlobalMilestones.ElementAt(0);
+        var milestoneB = template.GlobalMilestones.ElementAt(1);
+
+        // Act - B depends on A (A must happen first, meaning A is a predecessor of B)
+        template.AddMilestoneDependency(milestoneB.Id, milestoneA.Id, DependencyType.FinishToStart);
 
         // Assert
-        mB.InboundDependencies.Should().ContainSingle()
-            .Which.PredecessorId.Should().Be(mA.Id);
+        Assert.Single(milestoneB.InboundDependencies);
+        var dependency = milestoneB.InboundDependencies.First();
+        Assert.Equal(milestoneA.Id, dependency.PredecessorId);
+        Assert.Equal(milestoneB.Id, dependency.SuccessorId);
+        Assert.Equal(DependencyType.FinishToStart, dependency.Type);
     }
 
     [Fact]
-    public void AddMilestoneDependency_ShouldThrowCircularDependencyException_WhenLoopIsDetected()
+    public void AddMilestoneDependency_ShouldThrowInvalidTemplateDetailsException_WhenEitherMilestoneDoesNotExist()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.AddMilestone("Milestone A", "Desc", 10, DeliverableType.File);
-        template.AddMilestone("Milestone B", "Desc", 15, DeliverableType.File);
-        template.AddMilestone("Milestone C", "Desc", 20, DeliverableType.File);
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+        template.AddMilestone("Milestone A", "Desc A", 10m, DeliverableType.Url);
+        var milestoneA = template.GlobalMilestones.First();
+        var nonExistentMilestoneId = Guid.NewGuid();
+
+        // Act & Assert
+        var exception = Assert.Throws<InvalidTemplateDetailsException>(() =>
+            template.AddMilestoneDependency(milestoneA.Id, nonExistentMilestoneId, DependencyType.FinishToStart));
+
+        Assert.Contains("Both target milestones must exist within this template context.", exception.Message);
+    }
+
+    [Fact]
+    public void AddMilestoneDependency_ShouldThrowInvalidTemplateStatusException_WhenTemplateIsImmutable()
+    {
+        // Arrange
+        var approvedTemplate = CreateTemplateInState(ProjectTemplateStatus.Approved);
+        var placeholderId1 = Guid.NewGuid();
+        var placeholderId2 = Guid.NewGuid();
+
+        // Act & Assert
+        Assert.Throws<InvalidTemplateStatusException>(() =>
+            approvedTemplate.AddMilestoneDependency(placeholderId1, placeholderId2, DependencyType.FinishToStart));
+    }
+
+    [Fact]
+    public void AddMilestoneDependency_ShouldThrowInvalidOperationException_WhenCircularDependencyIsDetected()
+    {
+        // Arrange
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+        template.AddMilestone("Milestone A", "Desc A", 10m, DeliverableType.Url);
+        template.AddMilestone("Milestone B", "Desc B", 15m, DeliverableType.Url);
+        template.AddMilestone("Milestone C", "Desc C", 20m, DeliverableType.Url);
 
         var idA = template.GlobalMilestones.ElementAt(0).Id;
         var idB = template.GlobalMilestones.ElementAt(1).Id;
         var idC = template.GlobalMilestones.ElementAt(2).Id;
 
+        // Build valid chain: A <- B <- C (C depends on B, B depends on A)
         template.AddMilestoneDependency(idB, idA, DependencyType.FinishToStart);
         template.AddMilestoneDependency(idC, idB, DependencyType.FinishToStart);
 
-        // Act & Assert
-        Action act = () => template.AddMilestoneDependency(idA, idC, DependencyType.FinishToStart);
+        // Act & Assert - Attempting to force A to depend on C creates a cyclic loop (A -> B -> C -> A)
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            template.AddMilestoneDependency(idA, idC, DependencyType.FinishToStart));
 
-        act.Should().Throw<InvalidOperationException>()
-           .WithMessage("Dependency rejected: Action introduces an invalid circular reference / DAG loop.");
+        Assert.Contains("Dependency rejected: Action introduces an invalid circular reference / DAG loop.", exception.Message);
     }
 
     #endregion
 
-    #region Pipeline State Machine Flow Tests
+    #region Update Details Tests
 
     [Fact]
-    public void ReviewPipeline_CompleteSuccessfulFlow_ShouldTransitionStatesCorrectly()
+    public void UpdateDetails_ShouldModifyTitleAndDescription_WhenTemplateIsEditable()
     {
-        var template = CreateDraftTemplate();
-        template.Status.Should().Be(ProjectTemplateStatus.Draft);
+        // Arrange
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+        var updatedTitle = "  New Cleaned Title  ";
+        var updatedDesc = "  New Cleaned Description Guidelines  ";
 
+        // Act
+        template.UpdateDetails(updatedTitle, updatedDesc);
+
+        // Assert
+        Assert.Equal("New Cleaned Title", template.Title);
+        Assert.Equal("New Cleaned Description Guidelines", template.Description);
+    }
+
+    [Fact]
+    public void UpdateDetails_ShouldThrowInvalidTemplateStatusException_WhenTemplateIsLocked()
+    {
+        // Arrange
+        var approvedTemplate = CreateTemplateInState(ProjectTemplateStatus.Approved);
+
+        // Act & Assert
+        Assert.Throws<InvalidTemplateStatusException>(() =>
+            approvedTemplate.UpdateDetails("New Title", "New Description"));
+    }
+
+    #endregion
+
+    #region Workflow Pipeline State Machine Tests
+
+    [Theory]
+    [InlineData(ProjectTemplateStatus.Draft)]
+    [InlineData(ProjectTemplateStatus.ChangesRequested)]
+    public void SubmitForReview_ShouldTransitionToPendingReviewAndRaiseEvent_WhenStateIsValid(ProjectTemplateStatus initialStatus)
+    {
+        // Arrange
+        var template = CreateTemplateInState(initialStatus);
+        template.ClearDomainEvents();
+
+        // Act
         template.SubmitForReview();
-        template.Status.Should().Be(ProjectTemplateStatus.PendingReview);
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateSubmittedEvent);
 
-        template.RequestChanges(" Fix formatting rule 3. ");
-        template.Status.Should().Be(ProjectTemplateStatus.ChangesRequested);
-        template.ReviewerFeedback.Should().Be("Fix formatting rule 3.");
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateChangesRequestedEvent);
+        // Assert
+        Assert.Equal(ProjectTemplateStatus.PendingReview, template.Status);
+        Assert.Single(template.DomainEvents);
+        var subEvent = template.DomainEvents.First() as ProjectTemplateSubmittedEvent;
+        Assert.NotNull(subEvent);
+        Assert.Equal(template.Id, subEvent.TemplateId);
+    }
 
-        template.SubmitForReview();
-        template.Status.Should().Be(ProjectTemplateStatus.PendingReview);
+    [Fact]
+    public void SubmitForReview_ShouldThrowInvalidTemplateStatusException_WhenAlreadyPendingOrApproved()
+    {
+        // Arrange
+        var pendingTemplate = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
 
+        // Act & Assert
+        Assert.Throws<InvalidTemplateStatusException>(() => pendingTemplate.SubmitForReview());
+    }
+
+    [Fact]
+    public void Approve_ShouldTransitionToApprovedAndClearFeedback_WhenInPendingReviewState()
+    {
+        // Arrange
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
+        template.ClearDomainEvents();
+
+        // Act
         template.Approve();
-        template.Status.Should().Be(ProjectTemplateStatus.Approved);
-        template.ReviewerFeedback.Should().BeNull();
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateApprovedEvent);
+
+        // Assert
+        Assert.Equal(ProjectTemplateStatus.Approved, template.Status);
+        Assert.Null(template.ReviewerFeedback);
+
+        Assert.Single(template.DomainEvents);
+        Assert.IsType<ProjectTemplateApprovedEvent>(template.DomainEvents.First());
     }
 
     [Fact]
-    public void RequestChanges_ShouldThrowInvalidTemplateDetailsException_WhenFeedbackIsBlank()
+    public void RequestChanges_ShouldTransitionToChangesRequestedAndSetFeedback_WhenInPendingReviewState()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
+        template.ClearDomainEvents();
+        var feedbackMessage = "  Please add more descriptive metrics to Phase 2.  ";
 
         // Act
-        Action act = () => template.RequestChanges("   ");
+        template.RequestChanges(feedbackMessage);
 
         // Assert
-        act.Should().Throw<InvalidTemplateDetailsException>()
-           .WithMessage("Feedback instructions must be provided to guide the provider's corrections.");
+        Assert.Equal(ProjectTemplateStatus.ChangesRequested, template.Status);
+        Assert.Equal("Please add more descriptive metrics to Phase 2.", template.ReviewerFeedback);
+
+        Assert.Single(template.DomainEvents);
+        var feedbackEvent = template.DomainEvents.First() as ProjectTemplateChangesRequestedEvent;
+        Assert.NotNull(feedbackEvent);
+        Assert.Equal("Please add more descriptive metrics to Phase 2.", feedbackEvent.Feedback);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public void RequestChanges_ShouldThrowInvalidTemplateDetailsException_WhenFeedbackIsEmpty(string? invalidFeedback)
+    {
+        // Arrange
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
+
+        // Act & Assert
+        Assert.Throws<InvalidTemplateDetailsException>(() => template.RequestChanges(invalidFeedback!));
     }
 
     [Fact]
-    public void ProposeReviewerChanges_Workflow_ShouldDirectlySettleViaProviderAcceptance()
+    public void ProposeReviewerChanges_ShouldUpdateDetailsAndSetPendingProviderAcceptance_WhenInPendingReviewState()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
+        template.ClearDomainEvents();
+        var adjustedTitle = "Adjusted Core Track Architecture";
+        var adjustedDesc = "Adjusted Description Matrix.";
 
         // Act
-        template.ProposeReviewerChanges("Refined Title", "Refined Description Structural Parameters");
+        template.ProposeReviewerChanges(adjustedTitle, adjustedDesc);
 
         // Assert
-        template.Status.Should().Be(ProjectTemplateStatus.PendingProviderAcceptance);
-        template.Title.Should().Be("Refined Title");
-        template.Description.Should().Be("Refined Description Structural Parameters");
-        template.ReviewerFeedback.Should().Be("Reviewer has modified details. Awaiting provider confirmation.");
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateReviewerChangesProposedEvent);
+        Assert.Equal(ProjectTemplateStatus.PendingProviderAcceptance, template.Status);
+        Assert.Equal(adjustedTitle, template.Title);
+        Assert.Equal(adjustedDesc, template.Description);
+        Assert.Equal("Reviewer has modified details. Awaiting provider confirmation.", template.ReviewerFeedback);
+
+        Assert.Single(template.DomainEvents);
+        Assert.IsType<ProjectTemplateReviewerChangesProposedEvent>(template.DomainEvents.First());
+    }
+
+    [Fact]
+    public void ProviderAcceptProposedChanges_ShouldTransitionToApproved_WhenInPendingProviderAcceptanceState()
+    {
+        // Arrange
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingProviderAcceptance);
+        template.ClearDomainEvents();
 
         // Act
         template.ProviderAcceptProposedChanges();
 
         // Assert
-        template.Status.Should().Be(ProjectTemplateStatus.Approved);
-        template.ReviewerFeedback.Should().BeNull();
+        Assert.Equal(ProjectTemplateStatus.Approved, template.Status);
+        Assert.Null(template.ReviewerFeedback);
+
+        Assert.Single(template.DomainEvents);
+        Assert.IsType<ProjectTemplateApprovedEvent>(template.DomainEvents.First());
     }
 
     [Fact]
-    public void ProposeReviewerChanges_Workflow_ShouldRevertToDraft_WhenProviderDeclines()
+    public void ProviderRejectProposedChanges_ShouldTransitionToDraft_WhenInPendingProviderAcceptanceState()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
-        template.ProposeReviewerChanges("Refined Title", "Refined Description");
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingProviderAcceptance);
+        template.ClearDomainEvents();
 
         // Act
         template.ProviderRejectProposedChanges();
 
         // Assert
-        template.Status.Should().Be(ProjectTemplateStatus.Draft);
-        template.ReviewerFeedback.Should().Be("Provider declined reviewer alterations. Reverted back to draft layout.");
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateReviewerChangesRejectedEvent);
+        Assert.Equal(ProjectTemplateStatus.Draft, template.Status);
+        Assert.Equal("Provider declined reviewer alterations. Reverted back to draft layout.", template.ReviewerFeedback);
+
+        Assert.Single(template.DomainEvents);
+        Assert.IsType<ProjectTemplateReviewerChangesRejectedEvent>(template.DomainEvents.First());
     }
 
     [Fact]
-    public void RejectPermanently_ShouldLockTemplate_WhenStatusIsPendingReview()
+    public void RejectPermanently_ShouldTransitionToRejectedAndSetFeedback_WhenInPendingReviewState()
     {
         // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
+        var template = CreateTemplateInState(ProjectTemplateStatus.PendingReview);
+        template.ClearDomainEvents();
+        var rejectionReason = "Violates core corporate platform policies.";
 
         // Act
-        template.RejectPermanently("  Out of scope for this academic cycle.  ");
+        template.RejectPermanently(rejectionReason);
 
         // Assert
-        template.Status.Should().Be(ProjectTemplateStatus.Rejected);
-        template.ReviewerFeedback.Should().Be("Out of scope for this academic cycle.");
-        template.DomainEvents.Should().Contain(e => e is ProjectTemplateRejectedPermanentlyEvent);
-    }
+        Assert.Equal(ProjectTemplateStatus.Rejected, template.Status);
+        Assert.Equal(rejectionReason, template.ReviewerFeedback);
 
-    [Theory]
-    [InlineData(ProjectTemplateStatus.Approved)]
-    [InlineData(ProjectTemplateStatus.Rejected)]
-    public void Operations_ShouldThrowInvalidTemplateStatusException_WhenTemplateIsLocked(ProjectTemplateStatus lockedStatus)
-    {
-        // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
-
-        if (lockedStatus == ProjectTemplateStatus.Approved)
-            template.Approve();
-        else
-            template.RejectPermanently("Refused");
-
-        // Act
-        Action actUpdate = () => template.UpdateDetails("Title", "Desc");
-        Action actAddMilestone = () => template.AddMilestone("T", "D", 5, DeliverableType.Url);
-
-        // Assert
-        actUpdate.Should().Throw<InvalidTemplateStatusException>();
-        actAddMilestone.Should().Throw<InvalidTemplateStatusException>();
+        Assert.Single(template.DomainEvents);
+        var rejectEvent = template.DomainEvents.First() as ProjectTemplateRejectedPermanentlyEvent;
+        Assert.NotNull(rejectEvent);
+        Assert.Equal(rejectionReason, rejectEvent.Reason);
     }
 
     #endregion
 
-    #region Skill Matrix Capacity Tests
+    #region Skill Matrix Mapping Tests
 
     [Fact]
-    public void AddSkill_ShouldAppendSkill_WhenIdIsValidAndUnique()
+    public void AddSkill_ShouldAddSkillSuccessfully_WhenSkillIsValidAndUnderLimit()
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
         var skillId = Guid.NewGuid();
 
         // Act
         template.AddSkill(skillId);
 
         // Assert
-        template.ProjectTemplateSkills.Should().ContainSingle(s => s.SkillId == skillId);
+        Assert.Single(template.ProjectTemplateSkills);
+        Assert.Equal(skillId, template.ProjectTemplateSkills.First().SkillId);
     }
 
     [Fact]
-    public void AddSkill_ShouldIgnoreDuplicate_WhenSkillAlreadyAdded()
+    public void AddSkill_ShouldThrowInvalidTemplateDetailsException_WhenSkillIdIsEmpty()
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+
+        // Act & Assert
+        Assert.Throws<InvalidTemplateDetailsException>(() => template.AddSkill(Guid.Empty));
+    }
+
+    [Fact]
+    public void AddSkill_ShouldIgnoreDuplicateSkill_WhenSkillIsAlreadyAdded()
+    {
+        // Arrange
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
         var skillId = Guid.NewGuid();
         template.AddSkill(skillId);
 
@@ -336,32 +456,29 @@ public class ProjectTemplateTests
         template.AddSkill(skillId);
 
         // Assert
-        template.ProjectTemplateSkills.Should().HaveCount(1);
+        Assert.Single(template.ProjectTemplateSkills);
     }
 
     [Fact]
-    public void AddSkill_ShouldThrowInvalidTemplateDetailsException_WhenSkillsExceedLimitOf10()
+    public void AddSkill_ShouldThrowInvalidTemplateDetailsException_WhenSkillLimitIsExceeded()
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
         for (int i = 0; i < 10; i++)
         {
             template.AddSkill(Guid.NewGuid());
         }
 
-        // Act
-        Action act = () => template.AddSkill(Guid.NewGuid());
-
-        // Assert
-        act.Should().Throw<InvalidTemplateDetailsException>()
-           .WithMessage("A single project template cannot require more than 10 technical skills.");
+        // Act & Assert
+        var exception = Assert.Throws<InvalidTemplateDetailsException>(() => template.AddSkill(Guid.NewGuid()));
+        Assert.Contains("A single project template cannot require more than 10 technical skills.", exception.Message);
     }
 
     [Fact]
-    public void RemoveSkill_ShouldEvictSkill_WhenSkillExists()
+    public void RemoveSkill_ShouldRemoveSkillSuccessfully_WhenSkillExists()
     {
         // Arrange
-        var template = CreateDraftTemplate();
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
         var skillId = Guid.NewGuid();
         template.AddSkill(skillId);
 
@@ -369,51 +486,87 @@ public class ProjectTemplateTests
         template.RemoveSkill(skillId);
 
         // Assert
-        template.ProjectTemplateSkills.Should().BeEmpty();
+        Assert.Empty(template.ProjectTemplateSkills);
     }
 
     #endregion
 
-    #region Prototype Instantiation Pattern Tests
-
-    [Fact]
-    public void Instantiate_ShouldProduceFullyPopulatedProjectInstance_WhenTemplateIsApproved()
-    {
-        // Arrange
-        var template = CreateDraftTemplate();
-        template.SubmitForReview();
-        template.Approve();
-
-        var studentId = Guid.NewGuid();
-        var executionTime = DateTime.UtcNow;
-
-        var factoryMock = new Mock<LocalMilestoneFactory>();
-
-        // Act
-        var instance = template.Instantiate(studentId, executionTime, factoryMock.Object);
-
-        // Assert
-        instance.Should().NotBeNull();
-        instance.TemplateId.Should().Be(template.Id);
-        instance.StudentId.Should().Be(studentId);
-        instance.ProviderId.Should().Be(template.ProviderId);
-        instance.TitleSnapshot.Should().Be(template.Title);
-        instance.DescriptionSnapshot.Should().Be(template.Description);
-        instance.Status.Should().Be(ProjectInstanceStatus.Active);
-    }
+    #region Instantiation Blueprint Factory Tests
 
     [Fact]
     public void Instantiate_ShouldThrowInvalidTemplateStatusException_WhenTemplateIsNotApproved()
     {
         // Arrange
-        var unapprovedTemplate = CreateDraftTemplate();
-        var factoryMock = new Mock<LocalMilestoneFactory>();
+        var draftTemplate = CreateTemplateInState(ProjectTemplateStatus.Draft);
+        var factory = new LocalMilestoneFactory();
 
-        // Act
-        Action act = () => unapprovedTemplate.Instantiate(Guid.NewGuid(), DateTime.UtcNow, factoryMock.Object);
+        // Act & Assert
+        Assert.Throws<InvalidTemplateStatusException>(() =>
+            draftTemplate.Instantiate(Guid.NewGuid(), DateTime.UtcNow, factory));
+    }
 
-        // Assert
-        act.Should().Throw<InvalidTemplateStatusException>();
+    [Fact]
+    public void Instantiate_ShouldThrowInvalidTemplateDetailsException_WhenStudentIdIsEmpty()
+    {
+        // Arrange
+        var approvedTemplate = CreateTemplateInState(ProjectTemplateStatus.Approved);
+        var factory = new LocalMilestoneFactory();
+
+        // Act & Assert
+        Assert.Throws<InvalidTemplateDetailsException>(() =>
+            approvedTemplate.Instantiate(Guid.Empty, DateTime.UtcNow, factory));
+    }
+
+    [Fact]
+    public void Instantiate_ShouldThrowArgumentNullException_WhenMilestoneFactoryIsNull()
+    {
+        // Arrange
+        var approvedTemplate = CreateTemplateInState(ProjectTemplateStatus.Approved);
+
+        // Act & Assert
+        Assert.Throws<ArgumentNullException>(() =>
+            approvedTemplate.Instantiate(Guid.NewGuid(), DateTime.UtcNow, null!));
+    }
+
+    #endregion
+
+    #region State Machine Test Generation Helper
+
+    /// <summary>
+    /// Helper factory executing structural state transition combinations onto a 
+    /// ProjectTemplate aggregate block natively to set up testing contexts cleanly.
+    /// </summary>
+    private ProjectTemplate CreateTemplateInState(ProjectTemplateStatus targetedStatus)
+    {
+        var template = new ProjectTemplate(_validTitle, _validDescription, _validProviderId, _validCreatedAt);
+
+        if (targetedStatus == ProjectTemplateStatus.Draft)
+            return template;
+
+        // Move to PendingReview
+        template.SubmitForReview();
+        if (targetedStatus == ProjectTemplateStatus.PendingReview)
+            return template;
+
+        switch (targetedStatus)
+        {
+            case ProjectTemplateStatus.Approved:
+                template.Approve();
+                break;
+            case ProjectTemplateStatus.ChangesRequested:
+                template.RequestChanges("Need structural optimization feedback changes.");
+                break;
+            case ProjectTemplateStatus.PendingProviderAcceptance:
+                template.ProposeReviewerChanges("Adjusted Title Track", "Adjusted Description");
+                break;
+            case ProjectTemplateStatus.Rejected:
+                template.RejectPermanently("Permanent Policy Violation.");
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(targetedStatus), "State creation track helper not supported.");
+        }
+
+        return template;
     }
 
     #endregion

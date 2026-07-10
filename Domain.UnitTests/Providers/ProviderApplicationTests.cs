@@ -24,6 +24,24 @@ public class ProviderApplicationTests
     #region Constructor Tests
 
     [Fact]
+    public void PrivateConstructor_ShouldInitializeDefaults_ForEfCoreHydration()
+    {
+        // Arrange & Act
+        var application = (ProviderApplication)Activator.CreateInstance(typeof(ProviderApplication), true)!;
+
+        // Assert
+        application.Should().NotBeNull();
+        application.Id.Should().Be(Guid.Empty);
+        application.ProviderId.Should().Be(Guid.Empty);
+        application.CompanyDetails.Should().BeEmpty();
+        application.VerificationDocumentsUrl.Should().BeEmpty();
+        application.Status.Should().Be(ProviderApplicationStatus.Draft);
+        application.ReviewedById.Should().BeNull();
+        application.RejectionReason.Should().BeNull();
+        application.ReviewedAt.Should().BeNull();
+    }
+
+    [Fact]
     public void Constructor_ShouldInitializeInDraftState_WhenParametersAreValid()
     {
         // Arrange
@@ -125,23 +143,25 @@ public class ProviderApplicationTests
     #region Resubmit Tests
 
     [Fact]
-    public void Resubmit_ShouldResetReviewTrackingAndTransitionBackToPendingReview_WhenCurrentStatusIsRejected()
+    public void Resubmit_ShouldResetReviewTrackingAndTrimInputs_WhenCurrentStatusIsRejected()
     {
         // Arrange
         var application = CreateValidTestInstance();
         application.SubmitForReview();
         application.Reject(Guid.NewGuid(), "Incomplete compliance forms.", _fallbackCreatedTime.AddDays(1));
 
-        var updatedDetails = "Updated enterprise profiles and documents.";
-        var updatedDocsUrl = "https://storage.gateway.local/verifications/updated_docs.pdf";
+        var untrimmedDetails = "   Updated enterprise profiles and documents.   ";
+        var untrimmedDocsUrl = "   https://storage.gateway.local/verifications/updated_docs.pdf   ";
+        var expectedDetails = "Updated enterprise profiles and documents.";
+        var expectedDocsUrl = "https://storage.gateway.local/verifications/updated_docs.pdf";
 
         // Act
-        application.Resubmit(updatedDetails, updatedDocsUrl);
+        application.Resubmit(untrimmedDetails, untrimmedDocsUrl);
 
         // Assert
         application.Status.Should().Be(ProviderApplicationStatus.PendingReview);
-        application.CompanyDetails.Should().Be(updatedDetails);
-        application.VerificationDocumentsUrl.Should().Be(updatedDocsUrl);
+        application.CompanyDetails.Should().Be(expectedDetails);
+        application.VerificationDocumentsUrl.Should().Be(expectedDocsUrl);
         application.ReviewedById.Should().BeNull();
         application.ReviewedAt.Should().BeNull();
         application.RejectionReason.Should().BeNull();
@@ -224,6 +244,22 @@ public class ProviderApplicationTests
     }
 
     [Fact]
+    public void Approve_ShouldSucceed_WhenApprovalTimeIsExactlyEqualToCreationTime()
+    {
+        // Arrange
+        var application = CreateValidTestInstance();
+        application.SubmitForReview();
+        var reviewerId = Guid.NewGuid();
+
+        // Act
+        application.Approve(reviewerId, _fallbackCreatedTime);
+
+        // Assert
+        application.Status.Should().Be(ProviderApplicationStatus.Approved);
+        application.ReviewedAt.Should().Be(_fallbackCreatedTime);
+    }
+
+    [Fact]
     public void Approve_ShouldThrowInvalidApplicationStatusException_WhenStatusIsNotPendingReview()
     {
         // Arrange
@@ -296,6 +332,22 @@ public class ProviderApplicationTests
                 e.ProviderId == _fallbackProviderId &&
                 e.ReviewerId == reviewerId &&
                 e.Reason == "Invalid operational license key formats.");
+    }
+
+    [Fact]
+    public void Reject_ShouldSucceed_WhenRejectionTimeIsExactlyEqualToCreationTime()
+    {
+        // Arrange
+        var application = CreateValidTestInstance();
+        application.SubmitForReview();
+        var reviewerId = Guid.NewGuid();
+
+        // Act
+        application.Reject(reviewerId, "Valid Reason Mapping", _fallbackCreatedTime);
+
+        // Assert
+        application.Status.Should().Be(ProviderApplicationStatus.Rejected);
+        application.ReviewedAt.Should().Be(_fallbackCreatedTime);
     }
 
     [Fact]

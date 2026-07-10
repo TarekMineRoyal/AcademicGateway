@@ -7,6 +7,10 @@ using Xunit;
 
 namespace AcademicGateway.Domain.UnitTests.Professors;
 
+/// <summary>
+/// Contains comprehensive unit tests verifying the structural invariants, capacity boundaries, 
+/// and validation constraints of the <see cref="Professor"/> aggregate root, its join records, and lookup entities.
+/// </summary>
 public class ProfessorTests
 {
     #region Constructor Tests
@@ -196,6 +200,21 @@ public class ProfessorTests
            .WithMessage("*cannot drop beneath the total of current active allocations (2).*");
     }
 
+    [Fact]
+    public void UpdateSupervisionCapacity_ShouldSucceed_WhenValueIsExactlyEqualToCurrentProjectCount()
+    {
+        // Arrange
+        var professor = new Professor(Guid.NewGuid(), "Name", "Dept", "Rank", 3);
+        professor.IncrementActiveProjects();
+        professor.IncrementActiveProjects(); // Current project count is exactly 2
+
+        // Act
+        professor.UpdateSupervisionCapacity(2);
+
+        // Assert
+        professor.MaxSupervisionCapacity.Should().Be(2);
+    }
+
     #endregion
 
     #region Increment / Decrement Active Projects Tests
@@ -332,6 +351,93 @@ public class ProfessorTests
 
         // Assert
         professor.ResearchInterests.Should().HaveCount(1);
+    }
+
+    #endregion
+
+    #region Join Entity Isolated Invariant Tests
+
+    [Fact]
+    public void ProfessorResearchInterest_Constructor_ShouldThrowInvalidProfessorDetailsException_WhenProfessorIdIsEmpty()
+    {
+        // Act
+        Action act = () => _ = new ProfessorResearchInterest(Guid.Empty, Guid.NewGuid());
+
+        // Assert
+        act.Should().Throw<InvalidProfessorDetailsException>()
+           .WithMessage("Professor identification tracker context cannot be empty.");
+    }
+
+    [Fact]
+    public void ProfessorResearchInterest_Constructor_ShouldThrowInvalidProfessorDetailsException_WhenResearchInterestIdIsEmpty()
+    {
+        // Act
+        Action act = () => _ = new ProfessorResearchInterest(Guid.NewGuid(), Guid.Empty);
+
+        // Assert
+        act.Should().Throw<InvalidProfessorDetailsException>()
+           .WithMessage("Research interest identity tracking reference context cannot be empty.");
+    }
+
+    #endregion
+
+    #region Research Interest Lookup Entity Tests
+
+    [Fact]
+    public void ResearchInterest_Constructor_ShouldInitializeCorrectly_WhenAreaIsValid()
+    {
+        // Arrange
+        var validArea = "   Machine Learning   ";
+
+        // Act
+        var researchInterest = new ResearchInterest(validArea);
+
+        // Assert
+        researchInterest.Id.Should().NotBeEmpty();
+        researchInterest.Area.Should().Be("Machine Learning");
+        researchInterest.ProfessorLinks.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResearchInterest_Constructor_ShouldThrowEmptyResearchInterestAreaException_WhenAreaIsInvalid(string? invalidArea)
+    {
+        // Act
+        Action act = () => _ = new ResearchInterest(invalidArea!);
+
+        // Assert
+        act.Should().Throw<EmptyResearchInterestAreaException>();
+    }
+
+    [Fact]
+    public void ResearchInterest_UpdateArea_ShouldModifyAndTrim_WhenParameterIsValid()
+    {
+        // Arrange
+        var researchInterest = new ResearchInterest("Computer Vision");
+
+        // Act
+        researchInterest.UpdateArea("   Natural Language Processing   ");
+
+        // Assert
+        researchInterest.Area.Should().Be("Natural Language Processing");
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ResearchInterest_UpdateArea_ShouldThrowEmptyResearchInterestAreaException_WhenParameterIsInvalid(string? invalidArea)
+    {
+        // Arrange
+        var researchInterest = new ResearchInterest("Distributed Systems");
+
+        // Act
+        Action act = () => researchInterest.UpdateArea(invalidArea!);
+
+        // Assert
+        act.Should().Throw<EmptyResearchInterestAreaException>();
     }
 
     #endregion
