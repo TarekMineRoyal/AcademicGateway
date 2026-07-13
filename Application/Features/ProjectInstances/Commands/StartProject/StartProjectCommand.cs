@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using System;
+using System.Text.Json.Serialization;
 
 namespace AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 
@@ -22,7 +23,8 @@ public record StartProjectCommand : IRequest<Guid>
 
     /// <summary>
     /// Gets the optional identifier of an academic supervisor chosen at workspace startup.
-    /// If provided, the instance initializes in a paused AwaitingSupervision track.
+    /// Aliased using JsonPropertyName to automatically align with the frontend payload wire-format.
     /// </summary>
+    [JsonPropertyName("professorId")]
     public Guid? RequestedProfessorId { get; init; }
 }

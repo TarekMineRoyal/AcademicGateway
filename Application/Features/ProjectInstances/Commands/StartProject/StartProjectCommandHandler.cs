@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.ProjectInstances;
+using AcademicGateway.Domain.ProjectInstances.Enums;
 using AcademicGateway.Domain.ProjectInstances.Services;
 using AcademicGateway.Domain.ProjectTemplates;
 using MediatR;
@@ -43,6 +44,7 @@ public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, G
     /// <param name="cancellationToken">Propagates notification that network execution threads should be canceled.</param>
     /// <returns>A unique tracking identifier primary key assigned onto the newly initialized project instance.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, resources don't exist, or tenancy fails validation.</exception>
+    /// <exception cref="InvalidOperationException">Thrown if a duplicate active project instance invariant check fails.</exception>
     public async Task<Guid> Handle(StartProjectCommand request, CancellationToken cancellationToken)
     {
         // Enforce active security session validation early before executing database logic
@@ -55,6 +57,21 @@ public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, G
         if (request.StudentId != _currentUserService.UserId)
         {
             throw new UnauthorizedAccessException("Access Denied: You cannot initialize a project workspace on behalf of a different identity profile.");
+        }
+
+        // Guard Invariant: Prevent duplicate concurrent active workspace tracks for the exact same project blueprint template.
+        // It validates that the student does not have any active pipeline instance currently running or awaiting supervisor approval.
+        bool alreadyActive = await _context.ProjectInstances
+            .AnyAsync(pi => pi.StudentId == request.StudentId
+                         && pi.TemplateId == request.TemplateId
+                         && pi.Status != ProjectInstanceStatus.Concluded
+                         && pi.Status != ProjectInstanceStatus.Canceled,
+                      cancellationToken);
+
+        if (alreadyActive)
+        {
+            // Substitutes for a custom BadRequestException if required by your pipeline architecture conventions
+            throw new InvalidOperationException("Conflict: You already possess an active or pending workspace track for this project blueprint.");
         }
 
         // Fetch the source template from database tracking, including its full milestone graph topology

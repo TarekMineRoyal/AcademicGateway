@@ -24,6 +24,7 @@ public class StartProjectCommandValidator : AbstractValidator<StartProjectComman
         RuleFor(v => v.RequestedProfessorId)
             .NotEqual(System.Guid.Empty)
             .When(v => v.RequestedProfessorId.HasValue)
-            .WithMessage("The requested academic supervisor ID cannot be an empty Guid.");
+            .WithName("professorId")
+            .WithMessage("The requested academic supervisor ID ('professorId') cannot be an empty Guid.");
     }
 }
