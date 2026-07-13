@@ -132,6 +132,61 @@ public class ProjectTemplate : BaseEntity
     }
 
     /// <summary>
+    /// Updates the architectural parameters and requirements criteria of an existing global milestone configuration.
+    /// </summary>
+    /// <param name="milestoneId">The tracking identifier code of the milestone blueprint node to modify.</param>
+    /// <param name="title">The updated descriptive headline title assigned to the milestone phase.</param>
+    /// <param name="description">The revised contextual parameters mapping work item scope.</param>
+    /// <param name="expectedEffortInHours">The updated effort constraint metrics measured in project work hours.</param>
+    /// <param name="deliverableType">The formatting rule restriction token expected for submissions.</param>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate root has been locked from lifecycle edits.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if the milestone tracking row is missing or updates violate text validation constraints.</exception>
+    public void UpdateMilestone(Guid milestoneId, string title, string description, decimal expectedEffortInHours, DeliverableType deliverableType)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(UpdateMilestone));
+        }
+
+        var milestone = _globalMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (milestone == null)
+        {
+            throw new InvalidTemplateDetailsException("The requested milestone blueprint node does not exist within this template configuration context.");
+        }
+
+        // Delegate core parameter mutations cleanly to the internal milestone domain entity worker
+        milestone.UpdateDetails(title, description, expectedEffortInHours, deliverableType);
+    }
+
+    /// <summary>
+    /// Safely purges a global milestone blueprint node from the aggregate tracking layout, cascading deletion constraints across all dependent graph links.
+    /// </summary>
+    /// <param name="milestoneId">The unique key tracking identifier of the milestone blueprint node to drop.</param>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate root state is currently immutable.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if the target milestone node could not be resolved.</exception>
+    public void RemoveMilestone(Guid milestoneId)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(RemoveMilestone));
+        }
+
+        var milestoneToRemove = _globalMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (milestoneToRemove == null)
+        {
+            throw new InvalidTemplateDetailsException("The targeted milestone blueprint node does not exist within this template configuration context.");
+        }
+
+        // Graph Cascade Cleanup: Iterate through all other internal milestones to sever any inbound restriction edges mapping back to this predecessor
+        foreach (var milestone in _globalMilestones)
+        {
+            milestone.RemovePredecessor(milestoneId);
+        }
+
+        _globalMilestones.Remove(milestoneToRemove);
+    }
+
+    /// <summary>
     /// Establishes a graph dependency constraint between two internal blueprint milestones with cyclic validation protection.
     /// </summary>
     /// <param name="successorId">The identifier of the milestone that depends on the predecessor.</param>
@@ -159,6 +214,40 @@ public class ProjectTemplate : BaseEntity
 
         // Verify that this new link does not introduce a cyclic graph trap
         EnsureGraphIsAcyclic();
+    }
+
+    /// <summary>
+    /// Severs an existing timeline dependency restriction constraint link separating two internal blueprint milestones.
+    /// </summary>
+    /// <param name="successorId">The tracking identifier of the milestone node carrying the inbound restriction edge.</param>
+    /// <param name="predecessorId">The tracking identifier of the milestone node representing the prerequisite boundary.</param>
+    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate state is currently locked from operational adjustments.</exception>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown if either of the structural milestones or the underlying edge link cannot be resolved.</exception>
+    public void RemoveMilestoneDependency(Guid successorId, Guid predecessorId)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(RemoveMilestoneDependency));
+        }
+
+        var successor = _globalMilestones.FirstOrDefault(m => m.Id == successorId);
+        if (successor == null)
+        {
+            throw new InvalidTemplateDetailsException("The requested successor milestone configuration node does not exist within this template context.");
+        }
+
+        var predecessorExists = _globalMilestones.Any(m => m.Id == predecessorId);
+        if (!predecessorExists)
+        {
+            throw new InvalidTemplateDetailsException("The requested predecessor milestone configuration node does not exist within this template context.");
+        }
+
+        // Execute structural un-linking on the target boundary milestone
+        var edgeWasSevered = successor.RemovePredecessor(predecessorId);
+        if (!edgeWasSevered)
+        {
+            throw new InvalidTemplateDetailsException("An active dependency sequencing constraint link between the specified milestone nodes could not be located.");
+        }
     }
 
     /// <summary>

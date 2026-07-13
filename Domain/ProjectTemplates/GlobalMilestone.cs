@@ -1,5 +1,9 @@
-﻿using AcademicGateway.Domain.Common;
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using AcademicGateway.Domain.Common;
 using AcademicGateway.Domain.Common.Enums;
+using AcademicGateway.Domain.ProjectTemplates.Exceptions;
 
 namespace AcademicGateway.Domain.ProjectTemplates;
 
@@ -99,5 +103,54 @@ public class GlobalMilestone : BaseEntity
         {
             _inboundDependencies.Add(dependency);
         }
+    }
+
+    /// <summary>
+    /// Updates the core metadata criteria and effort configurations for this global milestone blueprint node.
+    /// Marked as internal to guarantee mutations are strictly driven by the parent ProjectTemplate aggregate root.
+    /// </summary>
+    /// <param name="title">The newly updated structural headline title of the milestone.</param>
+    /// <param name="description">The revised conceptual context mapping work item goals.</param>
+    /// <param name="expectedEffortInHours">The nominal estimation workload metrics in execution hours.</param>
+    /// <param name="requiredDeliverableType">The explicit deliverable tracking submission constraint rule token.</param>
+    /// <exception cref="InvalidTemplateDetailsException">Thrown when title strings or effort durations fail verification.</exception>
+    internal void UpdateDetails(
+        string title,
+        string description,
+        decimal expectedEffortInHours,
+        DeliverableType requiredDeliverableType)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new InvalidTemplateDetailsException("Project template milestone title cannot be empty or whitespace.");
+        }
+
+        if (expectedEffortInHours <= 0)
+        {
+            throw new InvalidTemplateDetailsException("Expected effort must be greater than zero hours.");
+        }
+
+        Title = title.Trim();
+        Description = description?.Trim() ?? string.Empty;
+        ExpectedEffortInHours = expectedEffortInHours;
+        RequiredDeliverableType = requiredDeliverableType;
+    }
+
+    /// <summary>
+    /// Severs an inbound sequencing dependency restriction link originating from a specified predecessor node.
+    /// Marked as internal to guarantee graph edge deletions are strictly managed by the parent aggregate context layout.
+    /// </summary>
+    /// <param name="predecessorId">The primary identifier of the prerequisite milestone constraint edge to clean up.</param>
+    /// <returns>True if an established dependency link matching the tracking parameters was successfully detached; otherwise false.</returns>
+    internal bool RemovePredecessor(Guid predecessorId)
+    {
+        var dependency = _inboundDependencies.FirstOrDefault(d => d.PredecessorId == predecessorId);
+        if (dependency != null)
+        {
+            _inboundDependencies.Remove(dependency);
+            return true;
+        }
+
+        return false;
     }
 }
