@@ -71,9 +71,21 @@ public class GetProjectTemplateByIdQueryHandler(
 
         // Validate presence boundaries and verify resource tenancy uniformly.
         // Using a single unified error boundary protects against side-channel resource enumeration vectors.
-        if (dto == null || dto.ProviderId != currentUserService.UserId)
+        // 1. Guard Invariant: Check if the resource even exists first
+        if (dto == null)
         {
-            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found, or you do not possess read authorization permissions.");
+            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found.");
+        }
+
+        // 2. Evaluate Visibility Matrix:
+        // If it is NOT publicly approved, strictly enforce that only the authoring provider can see it.
+        // If it IS publicly approved, let students and other ecosystem actors read it.
+        bool isOwner = dto.ProviderId == currentUserService.UserId;
+        bool isPubliclyAvailable = dto.Status == AcademicGateway.Domain.ProjectTemplates.Enums.ProjectTemplateStatus.Approved;
+
+        if (!isOwner && !isPubliclyAvailable)
+        {
+            throw new UnauthorizedAccessException("Access Denied: You do not possess read authorization permissions for this template blueprint.");
         }
 
         return dto;
