@@ -13,6 +13,7 @@ namespace AcademicGateway.Api.Features.Skills.Queries.GetSkills;
 [ApiController]
 [Tags("Skills")]
 [Authorize]
+[AllowAnonymous]
 [Route("api/skills")]
 public class GetSkillsController(ISender mediator) : ControllerBase
 {

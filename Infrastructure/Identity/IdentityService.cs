@@ -101,10 +101,10 @@ public class IdentityService(
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
-        // Inject each assigned role context as a standard ClaimTypes.Role metadata token
+        // The standard "role" string literal
         foreach (var role in userRoles)
         {
-            claims.Add(new Claim(ClaimTypes.Role, role));
+            claims.Add(new Claim("role", role));
         }
 
         // Construct the lifecycle parameter details for the token asset structure

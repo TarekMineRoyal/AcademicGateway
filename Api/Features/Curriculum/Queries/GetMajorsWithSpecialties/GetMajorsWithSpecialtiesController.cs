@@ -12,7 +12,7 @@ namespace AcademicGateway.Api.Features.Curriculum.Queries.GetMajorsWithSpecialti
 [ApiController]
 [AllowAnonymous]
 [Tags("Curriculum")]
-[Route("api/curriculum/majors")]
+[Route("api/curriculum/majors-with-specialties")]
 public class GetMajorsWithSpecialtiesController(ISender mediator) : ControllerBase
 {
     /// <summary>
