@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Common.Interfaces;
@@ -35,4 +36,15 @@ public interface IIdentityService
     /// <param name="password">The secret plain-text verification string passed for profile match confirmation.</param>
     /// <returns>A signed cryptographically encrypted JSON Web Token (JWT) bearer string if authentication clears; otherwise, <c>null</c>.</returns>
     Task<string?> AuthenticateAsync(string email, string password);
+
+    /// <summary>
+    /// Asynchronously searches across user security identity account records where the assigned role context is matching 'Professor'.
+    /// Filters profiles case-insensitively using partial text validation across full name metrics, electronic mail records, or login handles.
+    /// </summary>
+    /// <param name="searchTerm">The optional keyword phrase token used to evaluate matching boundary filters.</param>
+    /// <param name="cancellationToken">Propagates notification that network database operations should be canceled.</param>
+    /// <returns>An immutable read-only sequence containing matching lightweight presentational professor search records.</returns>
+    Task<IReadOnlyCollection<Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+        string? searchTerm,
+        CancellationToken cancellationToken);
 }

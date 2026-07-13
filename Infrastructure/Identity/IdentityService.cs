@@ -1,5 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
@@ -8,17 +10,20 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AcademicGateway.Infrastructure.Identity;
 
 /// <summary>
 /// Infrastructure-tier adapter implementing the <see cref="IIdentityService"/> abstraction contract.
-/// Plugs directly into ASP.NET Core Identity's security state machines and issues securely signed JWT bearer tokens.
+/// Plugs directly into ASP.NET Core Identity's security state machines, issues securely signed JWT bearer tokens,
+/// and aggregates cross-cutting data lookups between identity profiles and business core entities.
 /// </summary>
 public class IdentityService(
     UserManager<ApplicationUser> userManager,
-    IConfiguration configuration) : IIdentityService
+    IConfiguration configuration,
+    ApplicationDbContext dbContext) : IIdentityService
 {
     /// <summary>
     /// Asynchronously provisions a new secure identity credential within the backing ASP.NET Core Identity storage provider
@@ -117,5 +122,43 @@ public class IdentityService(
         );
 
         return new JwtSecurityTokenHandler().WriteToken(token);
+    }
+
+    /// <summary>
+    /// Asynchronously searches across professor security identity account records using a case-insensitive keyword phrase match.
+    /// Performs an optimal join projection between core domain aggregates and security database structures.
+    /// </summary>
+    /// <param name="searchTerm">The optional keyword phrase token used to evaluate matching boundary filters.</param>
+    /// <param name="cancellationToken">Propagates notification that network database operations should be canceled.</param>
+    /// <returns>An immutable read-only sequence containing matching lightweight presentational professor search records.</returns>
+    public async Task<IReadOnlyCollection<Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+        string? searchTerm,
+        CancellationToken cancellationToken)
+    {
+        // Establish an optimized relational join query between the profile boundaries and security records.
+        // Joining against the Professors table implicitly handles scoping to the 'Professor' system role.
+        var query = from professor in dbContext.Professors
+                    join user in userManager.Users on professor.Id equals user.Id
+                    select new { professor, user };
+
+        // Apply string segment criteria filters conditionally only if a non-whitespace keyword parameter is supplied
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var lowerSearchTerm = searchTerm.ToLower();
+            query = query.Where(x => x.professor.FullName.ToLower().Contains(lowerSearchTerm) ||
+                                     x.user.Email!.ToLower().Contains(lowerSearchTerm) ||
+                                     x.user.UserName!.ToLower().Contains(lowerSearchTerm));
+        }
+
+        // Execute untracked relational projection to maximize throughput and minimize garbage collection allocation pressures
+        return await query
+            .AsNoTracking()
+            .Select(x => new Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto
+            {
+                Id = x.professor.Id,
+                FullName = x.professor.FullName,
+                Email = x.user.Email!
+            })
+            .ToListAsync(cancellationToken);
     }
 }
