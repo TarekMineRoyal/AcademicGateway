@@ -13,7 +13,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.StartProject;
 /// <summary>
 /// API Request payload schema for initializing a new live project instance workspace from a blueprint template.
 /// </summary>
-public record StartProjectRequest(Guid TemplateId, Guid? RequestedProfessorId);
+public record StartProjectRequest(Guid TemplateId, Guid? ProfessorId);
 
 /// <summary>
 /// Single Action Controller endpoint allowing authenticated students to spin up a live operational workspace copy 
@@ -47,7 +47,7 @@ public class StartProjectController(ISender mediator, ICurrentUserService curren
         var command = new StartProjectCommand
         {
             TemplateId = request.TemplateId,
-            RequestedProfessorId = request.RequestedProfessorId,
+            RequestedProfessorId = request.ProfessorId,
             StudentId = currentUserService.UserId.Value
         };
 
