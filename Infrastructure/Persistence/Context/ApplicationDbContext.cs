@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Reflection;
 
 namespace AcademicGateway.Infrastructure.Persistence.Context;
 
@@ -61,6 +60,11 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
     public DbSet<SupervisionRequest> SupervisionRequests => Set<SupervisionRequest>();
     public DbSet<TechSupportProposal> TechSupportProposals => Set<TechSupportProposal>();
 
+    // New Weighted Work Breakdown Structure (WBS) Child Entities
+    public DbSet<GlobalMilestone> GlobalMilestones => Set<GlobalMilestone>();
+    public DbSet<GlobalTask> GlobalTasks => Set<GlobalTask>();
+    public DbSet<LocalTask> LocalTasks => Set<LocalTask>();
+
     /// <summary>
     /// Configures structural model mappings via automated reflection-based assembly discovery.
     /// </summary>
@@ -70,7 +74,8 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, IdentityR
         base.OnModelCreating(builder);
 
         // Automatically scan, instantiate, and register every single IEntityTypeConfiguration class 
-        // isolated inside the Persistence/Configurations directory boundary
+        // isolated inside the Persistence/Configurations directory boundary, including our newly added 
+        // GlobalMilestoneConfiguration, GlobalTaskConfiguration, and LocalTaskConfiguration maps.
         builder.ApplyConfigurationsFromAssembly(typeof(ApplicationDbContext).Assembly);
     }
 }

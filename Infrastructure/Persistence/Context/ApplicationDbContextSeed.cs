@@ -14,6 +14,7 @@ using AcademicGateway.Domain.Students;
 using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.Professors;
 using AcademicGateway.Domain.ProjectInstances.Services;
+using AcademicGateway.Domain.Common.Enums;
 
 namespace AcademicGateway.Infrastructure.Persistence.Context;
 
@@ -259,7 +260,9 @@ public static class ApplicationDbContextSeed
         {
             var seededSkills = await context.Skills.ToListAsync();
 
+            // =========================================================================
             // --- Template 1: Cloud Migration ---
+            // =========================================================================
             var cloudTemplate = new ProjectTemplate(
                 title: "Distributed E-Commerce Cloud Infrastructure Migration",
                 description: "Design and implement a fully automated microservices deployment pipeline using Docker and PostgreSQL backend clusters.",
@@ -273,19 +276,38 @@ public static class ApplicationDbContextSeed
                 cloudTemplate.AddSkill(seededSkills.First(s => s.Name.Contains("PostgreSQL")).Id);
             }
 
+            // Milestone 1 (WBS: 40%, Grading: 20%)
             cloudTemplate.AddMilestone(
-                title: "Architecture & Schema Topology Draft",
-                description: "Submit a complete entity relational chart along with cloud infrastructure networking layouts.",
+                title: "Research & Requirements Specification",
+                description: "Analyze system bottlenecks and formulate a complete cloud schema migration roadmap.",
                 expectedEffortInHours: 15.5m,
-                deliverableType: AcademicGateway.Domain.Common.Enums.DeliverableType.File
+                wbsWeight: 40.00m,
+                gradingWeight: 20.00m
             );
+            var cloudMilestone1 = cloudTemplate.GlobalMilestones.First(m => m.Title == "Research & Requirements Specification");
+            cloudTemplate.AddGlobalTaskToMilestone(cloudMilestone1.Id, "Literature Review", "Evaluate standard containerization practices.", 50.00m, DeliverableType.File);
+            cloudTemplate.AddGlobalTaskToMilestone(cloudMilestone1.Id, "Use Case Specification", "Outline data durability scenarios.", 50.00m, DeliverableType.Text);
+
+            // Milestone 2 (WBS: 60%, Grading: 80%)
+            cloudTemplate.AddMilestone(
+                title: "Core Implementation & Thesis Synthesis",
+                description: "Deploy production-ready cluster configurations and compile structural defense documentation.",
+                expectedEffortInHours: 30.0m,
+                wbsWeight: 60.00m,
+                gradingWeight: 80.00m
+            );
+            var cloudMilestone2 = cloudTemplate.GlobalMilestones.First(m => m.Title == "Core Implementation & Thesis Synthesis");
+            cloudTemplate.AddGlobalTaskToMilestone(cloudMilestone2.Id, "API Development", "Construct robust database access pipelines.", 70.00m, DeliverableType.Url);
+            cloudTemplate.AddGlobalTaskToMilestone(cloudMilestone2.Id, "Final Thesis Submission", "Publish finalized project codebase metrics.", 30.00m, DeliverableType.File);
 
             cloudTemplate.SubmitForReview();
             cloudTemplate.Approve();
 
             await context.ProjectTemplates.AddAsync(cloudTemplate);
 
-            // --- Template 2: Predictive Analytics (NEW) ---
+            // =========================================================================
+            // --- Template 2: Predictive Analytics ---
+            // =========================================================================
             var analyticsTemplate = new ProjectTemplate(
                 title: "Enterprise Predictive Analytics Dashboard Engine",
                 description: "Develop an end-to-end predictive analytics data pipeline using Python ML modeling, served via an interactive React TypeScript tracking interface.",
@@ -299,12 +321,29 @@ public static class ApplicationDbContextSeed
                 analyticsTemplate.AddSkill(seededSkills.First(s => s.Name.Contains("React")).Id);
             }
 
+            // Milestone 1 (WBS: 40%, Grading: 20%)
             analyticsTemplate.AddMilestone(
-                title: "Model Training Evaluation & API Specification",
-                description: "Train the core predictive model variant and publish formal OpenAPI endpoint execution schemas.",
+                title: "Research & Requirements Blueprint",
+                description: "Survey predictive variance paradigms and capture business logic rules metrics.",
                 expectedEffortInHours: 22.0m,
-                deliverableType: AcademicGateway.Domain.Common.Enums.DeliverableType.File
+                wbsWeight: 40.00m,
+                gradingWeight: 20.00m
             );
+            var analyticsMilestone1 = analyticsTemplate.GlobalMilestones.First(m => m.Title == "Research & Requirements Blueprint");
+            analyticsTemplate.AddGlobalTaskToMilestone(analyticsMilestone1.Id, "Literature Review", "Document feature selection frameworks.", 50.00m, DeliverableType.File);
+            analyticsTemplate.AddGlobalTaskToMilestone(analyticsMilestone1.Id, "Use Case Specification", "Formulate mathematical model bounds.", 50.00m, DeliverableType.Text);
+
+            // Milestone 2 (WBS: 60%, Grading: 80%)
+            analyticsTemplate.AddMilestone(
+                title: "Core Implementation & Thesis Delivery",
+                description: "Train active analytics model iterations and connect modern graphical presentation dashboards.",
+                expectedEffortInHours: 40.0m,
+                wbsWeight: 60.00m,
+                gradingWeight: 80.00m
+            );
+            var analyticsMilestone2 = analyticsTemplate.GlobalMilestones.First(m => m.Title == "Core Implementation & Thesis Delivery");
+            analyticsTemplate.AddGlobalTaskToMilestone(analyticsMilestone2.Id, "API Development", "Expose secure high-performance serialization sockets.", 70.00m, DeliverableType.Url);
+            analyticsTemplate.AddGlobalTaskToMilestone(analyticsMilestone2.Id, "Final Thesis Submission", "Upload verified engine telemetry files.", 30.00m, DeliverableType.File);
 
             analyticsTemplate.SubmitForReview();
             analyticsTemplate.Approve();
@@ -314,13 +353,16 @@ public static class ApplicationDbContextSeed
             // Commit both templates to the database
             await context.SaveChangesAsync();
 
-            // 14. Instantiate Live Project Workspace utilizing Domain Prototype and Factory Services
+            // =========================================================================
+            // 14. Instantiate Live Project Workspace utilizing Prototype Patterns
+            // =========================================================================
             if (!await context.ProjectInstances.AnyAsync())
             {
                 var milestoneFactory = new LocalMilestoneFactory();
                 var executionClockSnapshot = DateTime.UtcNow;
 
                 // Manufacture clean running channel context with a tracking supervisor invitation initialized
+                // Internally invokes LocalMilestoneFactory to clone milestones and match corresponding LocalTasks
                 var projectInstance = cloudTemplate.Instantiate(
                     studentId: defaultStudentUser.Id,
                     createdAt: executionClockSnapshot,

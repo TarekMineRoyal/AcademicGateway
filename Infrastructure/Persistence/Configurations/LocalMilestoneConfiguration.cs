@@ -6,7 +6,7 @@ namespace AcademicGateway.Infrastructure.Persistence.Configurations;
 
 /// <summary>
 /// Mappings and table constraints governing the persistence storage layout of the <see cref="LocalMilestone"/> entity.
-/// Enhanced to explicitly map owned dependent chronological constraint validation paths.
+/// Enhanced to explicitly map owned dependent chronological constraint validation paths and manage nested operational task workflows.
 /// </summary>
 public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilestone>
 {
@@ -39,12 +39,16 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
             .IsRequired()
             .HasColumnType("decimal(6,2)");
 
-        // Enum data mapping transformations
-        builder.Property(m => m.RequiredDeliverableType)
+        // Weighted Work Breakdown Structure (WBS) progress and score priority mappings
+        builder.Property(m => m.WbsWeight)
             .IsRequired()
-            .HasConversion<string>()
-            .HasMaxLength(50);
+            .HasColumnType("decimal(5,2)");
 
+        builder.Property(m => m.GradingWeight)
+            .IsRequired()
+            .HasColumnType("decimal(5,2)");
+
+        // Enum data mapping transformations
         builder.Property(m => m.Status)
             .IsRequired()
             .HasConversion<string>()
@@ -55,25 +59,6 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
             .IsRequired(false);
 
         builder.Property(m => m.ScheduledEndDate)
-            .IsRequired(false);
-
-        builder.Property(m => m.SubmissionPayload)
-            .IsRequired(false)
-            .HasMaxLength(4000);
-
-        builder.Property(m => m.SubmittedAt)
-            .IsRequired(false);
-
-        // Individual Milestone Evaluation Persistence Mappings
-        builder.Property(m => m.Grade)
-            .IsRequired(false)
-            .HasColumnType("decimal(5,2)");
-
-        builder.Property(m => m.EvaluationFeedback)
-            .IsRequired(false)
-            .HasMaxLength(4000);
-
-        builder.Property(m => m.GradedAt)
             .IsRequired(false);
 
         // =========================================================================
@@ -97,6 +82,15 @@ public class LocalMilestoneConfiguration : IEntityTypeConfiguration<LocalMilesto
                 .HasConversion<string>()
                 .HasMaxLength(50);
         });
+
+        // Nested Operational and Academic Tasks Navigation Mapping
+        builder.HasMany(m => m.LocalTasks)
+            .WithOne()
+            .HasForeignKey(t => t.LocalMilestoneId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Metadata.FindNavigation(nameof(LocalMilestone.LocalTasks))?
+            .SetPropertyAccessMode(PropertyAccessMode.Field);
 
         // Conversation Encapsulation Settings
         builder.HasMany(m => m.Comments)
