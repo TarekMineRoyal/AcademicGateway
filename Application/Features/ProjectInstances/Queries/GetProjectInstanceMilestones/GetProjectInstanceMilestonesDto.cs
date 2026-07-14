@@ -7,7 +7,7 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Queries.GetProje
 
 /// <summary>
 /// Data transfer object representing the complete runtime snapshot execution matrix, including scheduling deadlines,
-/// delivery payloads, evaluation outcomes, and relationship edges for active local milestone tracking nodes.
+/// weights, balance states, and relationship edges for active local milestone tracking nodes.
 /// </summary>
 public record ProjectInstanceMilestoneDto
 {
@@ -37,55 +37,61 @@ public record ProjectInstanceMilestoneDto
     public decimal ExpectedEffortInHours { get; init; }
 
     /// <summary>
-    /// Gets the verification format category constraint token mapping student payload submissions.
-    /// </summary>
-    public DeliverableType RequiredDeliverableType { get; init; }
-
-    /// <summary>
     /// Gets the current execution state within the individual step state machine configuration.
     /// </summary>
     public LocalMilestoneStatus Status { get; init; }
 
     /// <summary>
-    /// Gets the student-assigned work kickoff date for this phase, or null if unallocated per Rule 3.
+    /// Gets the student-assigned work kickoff date for this phase, or null if unallocated.
     /// </summary>
     public DateTime? ScheduledStartDate { get; init; }
 
     /// <summary>
-    /// Gets the student-assigned deadline target timestamp constraint, or null if unallocated per Rule 3.
+    /// Gets the student-assigned deadline target timestamp constraint, or null if unallocated.
     /// </summary>
     public DateTime? ScheduledEndDate { get; init; }
 
     /// <summary>
-    /// Gets the polymorphic raw text copy or storage asset pointer representing the student's deliverable push.
+    /// Gets the operational work breakdown structure (WBS) weight percentage relative to total project effort.
     /// </summary>
-    public string? SubmissionPayload { get; init; }
+    public decimal WbsWeight { get; init; }
 
     /// <summary>
-    /// Gets the precise synchronized tracking timestamp indicating when the upload submission was committed.
+    /// Gets the academic grading score weight contribution percentage relative to total score.
     /// </summary>
-    public DateTime? SubmittedAt { get; init; }
+    public decimal GradingWeight { get; init; }
 
     /// <summary>
-    /// Gets the numerical evaluation performance score value awarded by the grading faculty mentor.
+    /// Gets a value indicating whether the internal nested task breakdown weights sum up accurately to 100%.
     /// </summary>
-    public decimal? Grade { get; init; }
-
-    /// <summary>
-    /// Gets the qualitative formal feedback commentary text logged by the grading faculty member.
-    /// </summary>
-    public string? EvaluationFeedback { get; init; }
-
-    /// <summary>
-    /// Gets the point-in-time timestamp coordinate tracking when evaluation modifications were frozen.
-    /// </summary>
-    public DateTime? GradedAt { get; init; }
+    public bool IsWbsBalanced { get; init; }
 
     /// <summary>
     /// Gets the collection of active runtime execution dependency constraints targeting this specific node checkpoint.
     /// </summary>
     public List<LocalMilestoneDependencyDto> InboundDependencies { get; init; } = [];
+
+    /// <summary>
+    /// Gets the hierarchical child collection of nested tasks carrying individual milestones breakdown and performance metrics.
+    /// </summary>
+    public List<LocalTaskDto> Tasks { get; init; } = [];
 }
+
+/// <summary>
+/// Sub-DTO tracking runtime execution variables and grading states for a localized task nested under an active milestone tracking node.
+/// </summary>
+public record LocalTaskDto(
+    Guid Id,
+    string TitleSnapshot,
+    string DescriptionSnapshot,
+    decimal Weight,
+    DeliverableType RequiredDeliverableType,
+    LocalTaskStatus Status,
+    string? SubmissionPayload,
+    DateTime? SubmittedAt,
+    decimal? Grade,
+    string? EvaluationFeedback,
+    DateTime? GradedAt);
 
 /// <summary>
 /// Sub-DTO tracking runtime sequencing relationship constraints between localized project milestones.

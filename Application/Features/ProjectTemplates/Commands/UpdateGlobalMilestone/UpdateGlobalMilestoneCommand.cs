@@ -1,5 +1,4 @@
-﻿using AcademicGateway.Domain.Common.Enums;
-using MediatR;
+﻿using MediatR;
 using System;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.UpdateGlobalMilestone;
@@ -11,32 +10,37 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.UpdateG
 public class UpdateGlobalMilestoneCommand : IRequest
 {
     /// <summary>
-    /// Gets or sets the primary tracking key identifying the parent ProjectTemplate aggregate root.
+    /// Gets the primary tracking key identifying the parent ProjectTemplate aggregate root.
     /// </summary>
-    public Guid ProjectTemplateId { get; set; }
+    public Guid ProjectTemplateId { get; init; }
 
     /// <summary>
-    /// Gets or sets the tracking identifier code of the specific milestone blueprint node to modify.
+    /// Gets the tracking identifier code of the specific milestone blueprint node to modify.
     /// </summary>
-    public Guid MilestoneId { get; set; }
+    public Guid MilestoneId { get; init; }
 
     /// <summary>
-    /// Gets or sets the newly updated descriptive headline title assigned to the milestone phase.
+    /// Gets the newly updated descriptive headline title assigned to the milestone phase.
     /// </summary>
-    public string Title { get; set; } = string.Empty;
+    public string Title { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the revised contextual parameters mapping work item goals and academic scope.
+    /// Gets the revised contextual parameters mapping work item goals and academic scope.
     /// </summary>
-    public string Description { get; set; } = string.Empty;
+    public string Description { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the nominal estimation metrics mapping work effort constraints measured in hours.
+    /// Gets the nominal estimation metrics mapping work effort constraints measured in hours.
     /// </summary>
-    public decimal ExpectedEffortInHours { get; set; }
+    public decimal ExpectedEffortInHours { get; init; }
 
     /// <summary>
-    /// Gets or sets the explicit deliverable tracking submission constraint rule token (e.g., File, Url).
+    /// Gets the operational work breakdown structure (WBS) weight percentage relative to the total project effort.
     /// </summary>
-    public DeliverableType RequiredDeliverableType { get; set; }
+    public decimal WbsWeight { get; init; }
+
+    /// <summary>
+    /// Gets the academic grading score weight contribution percentage relative to the total project score.
+    /// </summary>
+    public decimal GradingWeight { get; init; }
 }

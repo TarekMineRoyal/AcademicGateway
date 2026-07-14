@@ -1,13 +1,13 @@
 ﻿using MediatR;
 using System;
 
-namespace AcademicGateway.Application.Features.ProjectInstances.Commands.EvaluateMilestone;
+namespace AcademicGateway.Application.Features.ProjectInstances.Commands.EvaluateTask;
 
 /// <summary>
-/// CQRS Command invoked by an academic supervisor to grade and provide feedback for a submitted milestone.
+/// CQRS Command invoked by an academic supervisor to grade and provide feedback for a submitted nested task.
 /// Triggers internal domain execution checks against the project's chosen grading strategy policy.
 /// </summary>
-public record EvaluateMilestoneCommand : IRequest<Unit>
+public record EvaluateTaskCommand : IRequest<Unit>
 {
     /// <summary>
     /// Gets the unique tracking identifier of the parent ProjectInstance aggregate root workspace.
@@ -15,9 +15,14 @@ public record EvaluateMilestoneCommand : IRequest<Unit>
     public Guid ProjectInstanceId { get; init; }
 
     /// <summary>
-    /// Gets the unique tracking identifier of the target LocalMilestone node being evaluated.
+    /// Gets the unique tracking identifier of the target LocalMilestone container.
     /// </summary>
     public Guid LocalMilestoneId { get; init; }
+
+    /// <summary>
+    /// Gets the unique tracking identifier of the target child LocalTask being evaluated.
+    /// </summary>
+    public Guid LocalTaskId { get; init; }
 
     /// <summary>
     /// Gets the numerical score awarded by the grading faculty mentor.

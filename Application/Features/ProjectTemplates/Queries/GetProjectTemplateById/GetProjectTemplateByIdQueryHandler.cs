@@ -49,16 +49,25 @@ public class GetProjectTemplateByIdQueryHandler(
                     pts.Skill != null ? pts.Skill.Name : "Unknown Skill"
                 )).ToList(),
 
-                // Map out the core milestone nodes configured on this blueprint
-                Milestones = t.GlobalMilestones.Select(gm => new TemplateGlobalMilestoneDto(
-                    gm.Id,
-                    gm.Title,
-                    gm.Description,
-                    gm.ExpectedEffortInHours,
-                    gm.RequiredDeliverableType
-                )).ToList(),
+                // Map out the core milestone containers and their nested hierarchical tasks tree
+                Milestones = t.GlobalMilestones.Select(gm => new TemplateGlobalMilestoneDto
+                {
+                    Id = gm.Id,
+                    Title = gm.Title,
+                    Description = gm.Description,
+                    ExpectedEffortInHours = gm.ExpectedEffortInHours,
+                    WbsWeight = gm.WbsWeight,
+                    GradingWeight = gm.GradingWeight,
+                    Tasks = gm.GlobalTasks.Select(gt => new GlobalTaskDto(
+                        gt.Id,
+                        gt.Title,
+                        gt.Description,
+                        gt.Weight,
+                        gt.RequiredDeliverableType
+                    )).ToList()
+                }).ToList(),
 
-                // Flatten out the directed dependency graph matrix edges from all milestones combined
+                // Flatten out the directed execution graph matrix edges from all milestones combined
                 Dependencies = t.GlobalMilestones
                     .SelectMany(gm => gm.InboundDependencies)
                     .Select(dep => new TemplateMilestoneDependencyDto(

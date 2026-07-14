@@ -60,11 +60,52 @@ public record TemplateSkillDto(Guid SkillId, string Name);
 /// <summary>
 /// Sub-DTO carrying structural node metadata for an abstract milestone stage configured on the template blueprint.
 /// </summary>
-public record TemplateGlobalMilestoneDto(
+public record TemplateGlobalMilestoneDto
+{
+    /// <summary>
+    /// Gets the unique identifier for this global milestone blueprint node.
+    /// </summary>
+    public Guid Id { get; init; }
+
+    /// <summary>
+    /// Gets the operational title assigned to the milestone blueprint phase.
+    /// </summary>
+    public string Title { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the detailed text description mapping execution requirements and goals.
+    /// </summary>
+    public string Description { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the estimated nominal effort duration calculated in hours.
+    /// </summary>
+    public decimal ExpectedEffortInHours { get; init; }
+
+    /// <summary>
+    /// Gets the operational work breakdown structure (WBS) weight percentage relative to the total project effort.
+    /// </summary>
+    public decimal WbsWeight { get; init; }
+
+    /// <summary>
+    /// Gets the academic grading score weight contribution percentage relative to the total project score.
+    /// </summary>
+    public decimal GradingWeight { get; init; }
+
+    /// <summary>
+    /// Gets the hierarchical sub-collection of localized task requirements nested under this milestone blueprint container.
+    /// </summary>
+    public IReadOnlyCollection<GlobalTaskDto> Tasks { get; init; } = Array.Empty<GlobalTaskDto>();
+}
+
+/// <summary>
+/// Sub-DTO tracking details of a specific localized task nested within a global milestone blueprint definition.
+/// </summary>
+public record GlobalTaskDto(
     Guid Id,
     string Title,
     string Description,
-    decimal ExpectedEffortInHours,
+    decimal Weight,
     DeliverableType RequiredDeliverableType);
 
 /// <summary>

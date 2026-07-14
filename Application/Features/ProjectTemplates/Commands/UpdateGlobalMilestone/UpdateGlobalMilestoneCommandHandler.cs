@@ -47,7 +47,8 @@ public class UpdateGlobalMilestoneCommandHandler(
             request.Title,
             request.Description,
             request.ExpectedEffortInHours,
-            request.RequiredDeliverableType);
+            request.WbsWeight,
+            request.GradingWeight);
 
         // Commit alterations down to the database persistence layer
         await context.SaveChangesAsync(cancellationToken);

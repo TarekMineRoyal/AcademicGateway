@@ -23,7 +23,7 @@ public class GetProjectInstanceMilestonesQueryHandler(
     /// </summary>
     /// <param name="request">The query container holding the primary lookup identifier of the parent project instance workspace.</param>
     /// <param name="cancellationToken">Propagates notification that operational execution threads should be canceled.</param>
-    /// <returns>A flat sequence list matching all local execution milestone nodes configured in the target workspace graph.</returns>
+    /// <returns>A hierarchical structured checklist matching all local execution milestone nodes and their inner tasks configured in the target workspace graph.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, the resource is missing, or tenancy validation fails.</exception>
     public async Task<List<ProjectInstanceMilestoneDto>> Handle(GetProjectInstanceMilestonesQuery request, CancellationToken cancellationToken)
     {
@@ -61,21 +61,33 @@ public class GetProjectInstanceMilestonesQueryHandler(
                 TitleSnapshot = m.TitleSnapshot,
                 DescriptionSnapshot = m.DescriptionSnapshot,
                 ExpectedEffortInHours = m.ExpectedEffortInHours,
-                RequiredDeliverableType = m.RequiredDeliverableType,
                 Status = m.Status,
                 ScheduledStartDate = m.ScheduledStartDate,
                 ScheduledEndDate = m.ScheduledEndDate,
-                SubmissionPayload = m.SubmissionPayload,
-                SubmittedAt = m.SubmittedAt,
-                Grade = m.Grade,
-                EvaluationFeedback = m.EvaluationFeedback,
-                GradedAt = m.GradedAt,
+                WbsWeight = m.WbsWeight,
+                GradingWeight = m.GradingWeight,
+                IsWbsBalanced = m.IsWbsBalanced,
 
                 // Project out the directed runtime milestone scheduling dependency edges
                 InboundDependencies = m.InboundDependencies.Select(d => new LocalMilestoneDependencyDto(
                     d.PredecessorId,
                     d.SuccessorId,
                     d.Type
+                )).ToList(),
+
+                // Deeply project the hierarchical child collection of nested tasks carrying localized variables and submission parameters
+                Tasks = m.LocalTasks.Select(t => new LocalTaskDto(
+                    t.Id,
+                    t.TitleSnapshot,
+                    t.DescriptionSnapshot,
+                    t.Weight,
+                    t.RequiredDeliverableType,
+                    t.Status,
+                    t.SubmissionPayload,
+                    t.SubmittedAt,
+                    t.Grade,
+                    t.EvaluationFeedback,
+                    t.GradedAt
                 )).ToList()
             })
             .ToListAsync(cancellationToken);

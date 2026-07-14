@@ -48,14 +48,18 @@ public class AddGlobalMilestoneCommandHandler(
             request.Title,
             request.Description,
             request.ExpectedEffortInHours,
-            request.RequiredDeliverableType);
+            request.WbsWeight,
+            request.GradingWeight);
 
         // Commit alterations down to the database persistence layer
         await context.SaveChangesAsync(cancellationToken);
 
         // Avoid collection traversal assumptions by targeting the most recently appended structural tracking row matching the parameters
         var createdMilestone = template.GlobalMilestones
-            .LastOrDefault(m => m.Title == request.Title.Trim() && m.ExpectedEffortInHours == request.ExpectedEffortInHours);
+            .LastOrDefault(m => m.Title == request.Title.Trim()
+                             && m.ExpectedEffortInHours == request.ExpectedEffortInHours
+                             && m.WbsWeight == request.WbsWeight
+                             && m.GradingWeight == request.GradingWeight);
 
         if (createdMilestone == null)
         {

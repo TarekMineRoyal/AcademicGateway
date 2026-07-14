@@ -1,18 +1,18 @@
 ﻿using FluentValidation;
 using System;
 
-namespace AcademicGateway.Application.Features.ProjectInstances.Commands.EvaluateMilestone;
+namespace AcademicGateway.Application.Features.ProjectInstances.Commands.EvaluateTask;
 
 /// <summary>
-/// Enforces basic data integrity and boundary sanitation constraints for incoming <see cref="EvaluateMilestoneCommand"/> requests.
+/// Enforces basic data integrity and boundary sanitation constraints for incoming <see cref="EvaluateTaskCommand"/> requests.
 /// Acts as an early application pipeline filter before checking specialized domain strategy algorithms.
 /// </summary>
-public class EvaluateMilestoneCommandValidator : AbstractValidator<EvaluateMilestoneCommand>
+public class EvaluateTaskCommandValidator : AbstractValidator<EvaluateTaskCommand>
 {
     /// <summary>
-    /// Initializes data structure validation rules for supervisor milestone evaluation passes.
+    /// Initializes data structure validation rules for supervisor nested task evaluation passes.
     /// </summary>
-    public EvaluateMilestoneCommandValidator()
+    public EvaluateTaskCommandValidator()
     {
         RuleFor(x => x.ProjectInstanceId)
             .NotEmpty()
@@ -20,7 +20,11 @@ public class EvaluateMilestoneCommandValidator : AbstractValidator<EvaluateMiles
 
         RuleFor(x => x.LocalMilestoneId)
             .NotEmpty()
-            .WithMessage("The target Local Milestone Identifier code is mandatory.");
+            .WithMessage("The target Local Milestone Identifier container code is mandatory.");
+
+        RuleFor(x => x.LocalTaskId)
+            .NotEmpty()
+            .WithMessage("The target Local Task Identifier code is mandatory.");
 
         RuleFor(x => x.Grade)
             .InclusiveBetween(0.00m, 100.00m)

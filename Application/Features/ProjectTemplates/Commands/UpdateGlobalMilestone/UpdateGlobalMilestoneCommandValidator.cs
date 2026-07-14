@@ -38,8 +38,12 @@ public class UpdateGlobalMilestoneCommandValidator : AbstractValidator<UpdateGlo
             .GreaterThan(0)
             .WithMessage("Expected milestone effort estimation must be strictly greater than zero hours.");
 
-        RuleFor(x => x.RequiredDeliverableType)
-            .IsInEnum()
-            .WithMessage("The specified deliverable layout format selection is invalid.");
+        RuleFor(x => x.WbsWeight)
+            .InclusiveBetween(0, 100)
+            .WithMessage("Operational WBS weight percentage must be between 0% and 100% inclusive.");
+
+        RuleFor(x => x.GradingWeight)
+            .InclusiveBetween(0, 100)
+            .WithMessage("Academic grading weight percentage must be between 0% and 100% inclusive.");
     }
 }

@@ -53,7 +53,7 @@ public class EvaluateMilestoneController(
         }
 
         // Hydrate the CQRS command object mapping path route keys alongside body parameters and user identifiers
-        var command = new EvaluateMilestoneCommand
+        var command = new EvaluateTaskCommand
         {
             ProjectInstanceId = projectInstanceId,
             LocalMilestoneId = localMilestoneId,

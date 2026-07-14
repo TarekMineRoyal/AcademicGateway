@@ -43,7 +43,7 @@ public class SubmitMilestoneDeliverableController(ISender mediator) : Controller
         [FromBody] SubmitMilestoneDeliverableRequest request)
     {
         // Hydrate the CQRS command pattern, weaving route-based mapping properties securely alongside body attributes
-        var command = new SubmitMilestoneDeliverableCommand
+        var command = new SubmitTaskDeliverableCommand
         {
             ProjectInstanceId = projectInstanceId,
             LocalMilestoneId = localMilestoneId,

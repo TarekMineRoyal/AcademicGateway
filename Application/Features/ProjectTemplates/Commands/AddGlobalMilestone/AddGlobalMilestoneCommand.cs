@@ -1,5 +1,4 @@
-﻿using AcademicGateway.Domain.Common.Enums;
-using MediatR;
+﻿using MediatR;
 using System;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalMilestone;
@@ -32,7 +31,12 @@ public record AddGlobalMilestoneCommand : IRequest<Guid>
     public decimal ExpectedEffortInHours { get; init; }
 
     /// <summary>
-    /// Gets the polymorphic expected format constraint for future student submissions.
+    /// Gets the operational work breakdown structure (WBS) weight percentage relative to the total project effort.
     /// </summary>
-    public DeliverableType RequiredDeliverableType { get; init; }
+    public decimal WbsWeight { get; init; }
+
+    /// <summary>
+    /// Gets the academic grading score weight contribution percentage relative to the total project score.
+    /// </summary>
+    public decimal GradingWeight { get; init; }
 }
