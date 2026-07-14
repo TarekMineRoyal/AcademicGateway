@@ -93,19 +93,23 @@ public class GetProjectsByActorQueryHandler(
                     .Select(m => m.TitleSnapshot)
                     .FirstOrDefault(),
 
-                // Captures nested task weight sums inside the currently active milestone with nullability checks to safeguard translations
+                // FIXED: Moved the (decimal?) cast INSIDE the Sum selector. 
+                // This forces EF Core to use a nullable overload for the sum calculation, ensuring that if 
+                // zero tasks match the predicate, a SQL NULL is safely returned and coalesced into 0m instead of throwing an unboxing crash.
                 CurrentMilestoneProgress = pi.LocalMilestones
                     .Where(m => m.Status == LocalMilestoneStatus.InProgress)
-                    .Select(m => (decimal?)m.LocalTasks
+                    .Select(m => m.LocalTasks
                         .Where(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded)
-                        .Sum(t => t.Weight))
+                        .Sum(t => (decimal?)t.Weight))
                     .FirstOrDefault() ?? 0m,
 
-                // 4. Cumulative Macro Progress Formula matching WBS weights against completed sub-task totals
+                // FIXED: Wrapped the absolute milestone progress weight formula in an outer (decimal?) expression cast.
+                // This ensures that if a project contains no initialized milestones yet, the outer SQL SUM expression evaluates 
+                // cleanly to a nullable decimal, which is then safely caught by the null-coalescing operator (?? 0m).
                 TotalProjectProgress = pi.LocalMilestones.Sum(m =>
-                    m.WbsWeight * ((m.LocalTasks
+                    (decimal?)(m.WbsWeight * ((m.LocalTasks
                         .Where(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded)
-                        .Sum(t => (decimal?)t.Weight) ?? 0m) / 100m)),
+                        .Sum(t => (decimal?)t.Weight) ?? 0m) / 100m))) ?? 0m,
 
                 // 5. Matchmaking / Pending Supervision Tracking using professor navigation routes on supervision requests
                 RequestedProfessorId = pi.SupervisionRequests
