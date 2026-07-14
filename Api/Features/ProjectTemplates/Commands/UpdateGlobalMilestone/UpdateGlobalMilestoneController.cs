@@ -1,5 +1,4 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.UpdateGlobalMilestone;
-using AcademicGateway.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -46,7 +45,8 @@ public class UpdateGlobalMilestoneController(IMediator mediator) : ControllerBas
             Title = request.Title,
             Description = request.Description,
             ExpectedEffortInHours = request.ExpectedEffortInHours,
-            RequiredDeliverableType = request.RequiredDeliverableType
+            WbsWeight = request.WbsWeight,
+            GradingWeight = request.GradingWeight
         };
 
         // Dispatch the initialized command down through the request pipeline validation behaviors and handlers
@@ -59,8 +59,14 @@ public class UpdateGlobalMilestoneController(IMediator mediator) : ControllerBas
 /// <summary>
 /// Defines the specific payload data structure required in the request body envelope to update a milestone's details.
 /// </summary>
+/// <param name="Title">The newly updated descriptive headline title assigned to the milestone phase.</param>
+/// <param name="Description">The revised contextual parameters mapping work item goals and academic scope.</param>
+/// <param name="ExpectedEffortInHours">The nominal estimation metrics mapping work effort constraints measured in hours.</param>
+/// <param name="WbsWeight">The operational work breakdown structure (WBS) weight percentage relative to the total project effort.</param>
+/// <param name="GradingWeight">The academic grading score weight contribution percentage relative to total project score.</param>
 public record UpdateGlobalMilestoneRequest(
     string Title,
     string Description,
     decimal ExpectedEffortInHours,
-    DeliverableType RequiredDeliverableType);
+    decimal WbsWeight,
+    decimal GradingWeight);

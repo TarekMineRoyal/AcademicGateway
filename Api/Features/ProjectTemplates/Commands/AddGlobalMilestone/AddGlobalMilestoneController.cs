@@ -1,6 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalMilestone;
-using AcademicGateway.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -16,12 +15,14 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Commands.AddGlobalMilest
 /// <param name="Title">The descriptive functional headline assigned to the milestone phase.</param>
 /// <param name="Description">The contextual parameters detailing completion conditions and academic target scope.</param>
 /// <param name="ExpectedEffortInHours">The nominal estimation metrics mapping work effort constraints.</param>
-/// <param name="RequiredDeliverableType">The explicit polymorphic submission type checking token (e.g., File, Text, Repository Link).</param>
+/// <param name="WbsWeight">The operational work breakdown structure (WBS) weight percentage relative to total project effort.</param>
+/// <param name="GradingWeight">The academic grading score weight contribution percentage relative to total project score.</param>
 public record AddGlobalMilestoneRequest(
     string Title,
     string Description,
     decimal ExpectedEffortInHours,
-    DeliverableType RequiredDeliverableType);
+    decimal WbsWeight,
+    decimal GradingWeight);
 
 /// <summary>
 /// Single Action Controller endpoint enabling authenticated corporate industry providers
@@ -39,7 +40,7 @@ public class AddGlobalMilestoneController(
     /// Appends a new global milestone validation boundary node into the parent template blueprint framework.
     /// </summary>
     /// <param name="projectTemplateId">The tracking identifier key parsing out the targeted parent aggregate layout root.</param>
-    /// <param name="request">The structural payload defining the metadata, effort, and deliverable format profiles.</param>
+    /// <param name="request">The structural payload defining the metadata, effort, and independent weight distributions.</param>
     /// <returns>A 201 Created collection response delivering the primary tracking key of the created milestone.</returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created)]
@@ -64,7 +65,8 @@ public class AddGlobalMilestoneController(
             Title = request.Title,
             Description = request.Description,
             ExpectedEffortInHours = request.ExpectedEffortInHours,
-            RequiredDeliverableType = request.RequiredDeliverableType
+            WbsWeight = request.WbsWeight,
+            GradingWeight = request.GradingWeight
         };
 
         // Dispatch downstream into the application service pipeline boundary layer via MediatR bus
