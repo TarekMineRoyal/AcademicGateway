@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Domain.ProjectInstances.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -61,6 +62,7 @@ public class GetProjectsByActorQueryHandler(
         return await databaseQuery
             .Select(pi => new ActorProjectDto
             {
+                // --- Retained Existing Properties ---
                 Id = pi.Id,
                 StudentId = pi.StudentId,
                 SupervisorId = pi.SupervisorId,
@@ -70,7 +72,51 @@ public class GetProjectsByActorQueryHandler(
                 Status = pi.Status,
                 CreatedAt = pi.CreatedAt,
                 EndDate = pi.EndDate,
-                OverallGrade = pi.OverallGrade
+                OverallGrade = pi.OverallGrade,
+
+                // --- Extended Redesign Properties ---
+
+                // 1. Resolve Company Name directly from Providers table subquery due to missing navigational path
+                ProviderCompanyName = context.Providers
+                    .Where(p => p.Id == pi.ProviderId)
+                    .Select(p => p.CompanyName)
+                    .FirstOrDefault() ?? string.Empty,
+
+                // 2. Active Mentorship Mapping and Solo status calculation
+                ProfessorId = pi.SupervisorId,
+                ProfessorName = pi.Supervisor != null ? pi.Supervisor.FullName : null,
+                IsSoloMode = pi.Status == ProjectInstanceStatus.Active && !pi.SupervisorId.HasValue,
+
+                // 3. Current Milestone Tracking Telemetry (Captures active milestone title)
+                CurrentMilestoneTitle = pi.LocalMilestones
+                    .Where(m => m.Status == LocalMilestoneStatus.InProgress)
+                    .Select(m => m.TitleSnapshot)
+                    .FirstOrDefault(),
+
+                // Captures nested task weight sums inside the currently active milestone with nullability checks to safeguard translations
+                CurrentMilestoneProgress = pi.LocalMilestones
+                    .Where(m => m.Status == LocalMilestoneStatus.InProgress)
+                    .Select(m => (decimal?)m.LocalTasks
+                        .Where(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded)
+                        .Sum(t => t.Weight))
+                    .FirstOrDefault() ?? 0m,
+
+                // 4. Cumulative Macro Progress Formula matching WBS weights against completed sub-task totals
+                TotalProjectProgress = pi.LocalMilestones.Sum(m =>
+                    m.WbsWeight * ((m.LocalTasks
+                        .Where(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded)
+                        .Sum(t => (decimal?)t.Weight) ?? 0m) / 100m)),
+
+                // 5. Matchmaking / Pending Supervision Tracking using professor navigation routes on supervision requests
+                RequestedProfessorId = pi.SupervisionRequests
+                    .Where(r => r.Status == SupervisionRequestStatus.Pending)
+                    .Select(r => (Guid?)r.ProfessorId)
+                    .FirstOrDefault(),
+
+                RequestedProfessorName = pi.SupervisionRequests
+                    .Where(r => r.Status == SupervisionRequestStatus.Pending)
+                    .Select(r => r.Professor.FullName)
+                    .FirstOrDefault()
             })
             .ToListAsync(cancellationToken);
     }

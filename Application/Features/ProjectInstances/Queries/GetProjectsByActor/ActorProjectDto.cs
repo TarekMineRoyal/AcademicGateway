@@ -58,4 +58,53 @@ public class ActorProjectDto
     /// Gets or sets the final evaluation numerical score awarded to the aggregate project workspace once concluded.
     /// </summary>
     public decimal? OverallGrade { get; set; }
+
+    // =========================================================================
+    // EXTENDED PROPERTIES FOR REDESIGNED STUDENT DASHBOARD
+    // =========================================================================
+
+    /// <summary>
+    /// Gets or sets the snapshot text title of the milestone currently marked in-progress, if any.
+    /// </summary>
+    public string? CurrentMilestoneTitle { get; set; }
+
+    /// <summary>
+    /// Gets or sets the accumulated numerical tracking progress ratio for tasks in the active milestone.
+    /// </summary>
+    public decimal CurrentMilestoneProgress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the macro cumulative completion progress score across the entire project lifespan.
+    /// </summary>
+    public decimal TotalProjectProgress { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique identifier for the active professor mentor supervising this active project.
+    /// </summary>
+    public Guid? ProfessorId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the full name string snapshot of the supervising professor mentor.
+    /// </summary>
+    public string? ProfessorName { get; set; }
+
+    /// <summary>
+    /// Gets or sets a value indicating whether this active project is operating without assigned faculty supervision.
+    /// </summary>
+    public bool IsSoloMode { get; set; }
+
+    /// <summary>
+    /// Gets or sets the unique identifier mapping to the targeted professor for an unapproved, pending supervision request.
+    /// </summary>
+    public Guid? RequestedProfessorId { get; set; }
+
+    /// <summary>
+    /// Gets or sets the full name string copy of the professor tied to a pending matchmaking supervision request.
+    /// </summary>
+    public string? RequestedProfessorName { get; set; }
+
+    /// <summary>
+    /// Gets or sets the explicit corporate company name published by the entity providing the template blueprint.
+    /// </summary>
+    public string ProviderCompanyName { get; set; } = string.Empty;
 }
