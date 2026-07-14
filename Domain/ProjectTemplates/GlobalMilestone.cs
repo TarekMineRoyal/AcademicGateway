@@ -13,6 +13,9 @@ namespace AcademicGateway.Domain.ProjectTemplates;
 /// </summary>
 public class GlobalMilestone : BaseEntity
 {
+    private readonly List<MilestoneDependency> _inboundDependencies = new();
+    private readonly List<GlobalTask> _globalTasks = new();
+
     /// <summary>
     /// Gets the unique identifier for this specific global milestone blueprint.
     /// </summary>
@@ -40,21 +43,25 @@ public class GlobalMilestone : BaseEntity
     public decimal ExpectedEffortInHours { get; private set; }
 
     /// <summary>
-    /// Gets the expected format type for the deliverable submission.
+    /// Gets the operational work/progress weight of this milestone out of 100% total project effort.
     /// </summary>
-    public DeliverableType RequiredDeliverableType { get; private set; }
+    public decimal WbsWeight { get; internal set; }
 
     /// <summary>
-    /// Internal collection tracking the incoming constraints that must be satisfied 
-    /// before this milestone can proceed.
+    /// Gets the academic grading weight of this milestone out of 100% total project score.
     /// </summary>
-    private readonly List<MilestoneDependency> _inboundDependencies = new();
+    public decimal GradingWeight { get; internal set; }
 
     /// <summary>
     /// Exposes the inbound dependencies (predecessors) as a read-only collection 
     /// to preserve domain encapsulation.
     /// </summary>
     public IReadOnlyCollection<MilestoneDependency> InboundDependencies => _inboundDependencies.AsReadOnly();
+
+    /// <summary>
+    /// Exposes the child tasks as a read-only collection to preserve domain encapsulation.
+    /// </summary>
+    public IReadOnlyCollection<GlobalTask> GlobalTasks => _globalTasks.AsReadOnly();
 
     /// <summary>
     /// Parameterless constructor required by EF Core for materialization.
@@ -72,20 +79,23 @@ public class GlobalMilestone : BaseEntity
     /// <param name="title">The milestone title.</param>
     /// <param name="description">The milestone description.</param>
     /// <param name="expectedEffortInHours">The estimated effort in hours.</param>
-    /// <param name="requiredDeliverableType">The formatting rule for submission.</param>
+    /// <param name="wbsWeight">The operational breakdown structure effort weight percentage.</param>
+    /// <param name="gradingWeight">The academic assessment weight percentage.</param>
     public GlobalMilestone(
         Guid projectTemplateId,
         string title,
         string description,
         decimal expectedEffortInHours,
-        DeliverableType requiredDeliverableType)
+        decimal wbsWeight,
+        decimal gradingWeight)
     {
         Id = Guid.NewGuid();
         ProjectTemplateId = projectTemplateId;
         Title = title;
         Description = description;
         ExpectedEffortInHours = expectedEffortInHours;
-        RequiredDeliverableType = requiredDeliverableType;
+        WbsWeight = wbsWeight;
+        GradingWeight = gradingWeight;
     }
 
     /// <summary>
@@ -95,10 +105,8 @@ public class GlobalMilestone : BaseEntity
     /// <param name="type">The behavioral constraint type (e.g., FinishToStart).</param>
     public void AddPredecessor(Guid predecessorId, DependencyType type)
     {
-        // The domain guard for self-dependency is already enforced inside the MilestoneDependency constructor.
         var dependency = new MilestoneDependency(predecessorId, this.Id, type);
 
-        // Prevent duplicate dependency constraints
         if (!_inboundDependencies.Any(d => d.PredecessorId == predecessorId))
         {
             _inboundDependencies.Add(dependency);
@@ -112,13 +120,15 @@ public class GlobalMilestone : BaseEntity
     /// <param name="title">The newly updated structural headline title of the milestone.</param>
     /// <param name="description">The revised conceptual context mapping work item goals.</param>
     /// <param name="expectedEffortInHours">The nominal estimation workload metrics in execution hours.</param>
-    /// <param name="requiredDeliverableType">The explicit deliverable tracking submission constraint rule token.</param>
+    /// <param name="wbsWeight">The operational weight percentage assigned to this milestone node config.</param>
+    /// <param name="gradingWeight">The academic evaluation weight percentage assigned to this milestone node config.</param>
     /// <exception cref="InvalidTemplateDetailsException">Thrown when title strings or effort durations fail verification.</exception>
     internal void UpdateDetails(
         string title,
         string description,
         decimal expectedEffortInHours,
-        DeliverableType requiredDeliverableType)
+        decimal wbsWeight,
+        decimal gradingWeight)
     {
         if (string.IsNullOrWhiteSpace(title))
         {
@@ -133,7 +143,8 @@ public class GlobalMilestone : BaseEntity
         Title = title.Trim();
         Description = description?.Trim() ?? string.Empty;
         ExpectedEffortInHours = expectedEffortInHours;
-        RequiredDeliverableType = requiredDeliverableType;
+        WbsWeight = wbsWeight;
+        GradingWeight = gradingWeight;
     }
 
     /// <summary>
@@ -152,5 +163,47 @@ public class GlobalMilestone : BaseEntity
         }
 
         return false;
+    }
+
+    /// <summary>
+    /// Appends a nested blueprint task configuration to this milestone container node.
+    /// </summary>
+    internal void AddTask(string title, string description, decimal weight, DeliverableType requiredDeliverableType)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            throw new InvalidTemplateDetailsException("Project template task title cannot be empty or whitespace.");
+        }
+
+        var task = new GlobalTask(this.Id, title.Trim(), description?.Trim() ?? string.Empty, weight, requiredDeliverableType);
+        _globalTasks.Add(task);
+    }
+
+    /// <summary>
+    /// Updates an existing child blueprint task node with modified metadata or allocation weights.
+    /// </summary>
+    internal void UpdateTask(Guid taskId, string title, string description, decimal weight, DeliverableType requiredDeliverableType)
+    {
+        var task = _globalTasks.FirstOrDefault(t => t.Id == taskId);
+        if (task == null)
+        {
+            throw new InvalidTemplateDetailsException("The requested task blueprint node does not exist within this milestone configuration context.");
+        }
+
+        task.UpdateDetails(title, description, weight, requiredDeliverableType);
+    }
+
+    /// <summary>
+    /// Safely purges a child task node definition from this milestone configuration container context.
+    /// </summary>
+    internal void RemoveTask(Guid taskId)
+    {
+        var task = _globalTasks.FirstOrDefault(t => t.Id == taskId);
+        if (task == null)
+        {
+            throw new InvalidTemplateDetailsException("The requested task blueprint node does not exist within this milestone configuration context.");
+        }
+
+        _globalTasks.Remove(task);
     }
 }

@@ -99,7 +99,7 @@ public class ProjectTemplate : BaseEntity
         Id = Guid.NewGuid();
         ProviderId = providerId;
         Status = ProjectTemplateStatus.Draft;
-        CreatedAt = createdAt; // Assigned cleanly to preserve architectural decoupling
+        CreatedAt = createdAt;
 
         UpdateDetails(title, description);
 
@@ -107,15 +107,20 @@ public class ProjectTemplate : BaseEntity
         AddDomainEvent(new ProjectTemplateCreatedEvent(Id, ProviderId, Title));
     }
 
+    // ==========================================
+    // MILESTONE MANAGEMENT (MUTATORS)
+    // ==========================================
+
     /// <summary>
     /// Adds a new global milestone blueprint configuration to this template aggregate root.
     /// </summary>
     /// <param name="title">The title of the milestone.</param>
     /// <param name="description">The detailed milestone implementation instructions.</param>
     /// <param name="expectedEffortInHours">The effort-based scheduling estimation value.</param>
-    /// <param name="deliverableType">The expected format constraint for submissions.</param>
+    /// <param name="wbsWeight">The operational work progress distribution weight percentage.</param>
+    /// <param name="gradingWeight">The academic credit valuation weight percentage.</param>
     /// <exception cref="InvalidTemplateStatusException">Thrown if the template is already locked from edits.</exception>
-    public void AddMilestone(string title, string description, decimal expectedEffortInHours, DeliverableType deliverableType)
+    public void AddMilestone(string title, string description, decimal expectedEffortInHours, decimal wbsWeight, decimal gradingWeight)
     {
         if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
         {
@@ -127,7 +132,7 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateDetailsException("Expected effort must be greater than zero hours.");
         }
 
-        var milestone = new GlobalMilestone(this.Id, title, description, expectedEffortInHours, deliverableType);
+        var milestone = new GlobalMilestone(this.Id, title, description, expectedEffortInHours, wbsWeight, gradingWeight);
         _globalMilestones.Add(milestone);
     }
 
@@ -138,10 +143,11 @@ public class ProjectTemplate : BaseEntity
     /// <param name="title">The updated descriptive headline title assigned to the milestone phase.</param>
     /// <param name="description">The revised contextual parameters mapping work item scope.</param>
     /// <param name="expectedEffortInHours">The updated effort constraint metrics measured in project work hours.</param>
-    /// <param name="deliverableType">The formatting rule restriction token expected for submissions.</param>
+    /// <param name="wbsWeight">The updated operational progress weight distribution percentage.</param>
+    /// <param name="gradingWeight">The updated academic grading metric assignment percentage.</param>
     /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate root has been locked from lifecycle edits.</exception>
     /// <exception cref="InvalidTemplateDetailsException">Thrown if the milestone tracking row is missing or updates violate text validation constraints.</exception>
-    public void UpdateMilestone(Guid milestoneId, string title, string description, decimal expectedEffortInHours, DeliverableType deliverableType)
+    public void UpdateMilestone(Guid milestoneId, string title, string description, decimal expectedEffortInHours, decimal wbsWeight, decimal gradingWeight)
     {
         if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
         {
@@ -154,8 +160,7 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateDetailsException("The requested milestone blueprint node does not exist within this template configuration context.");
         }
 
-        // Delegate core parameter mutations cleanly to the internal milestone domain entity worker
-        milestone.UpdateDetails(title, description, expectedEffortInHours, deliverableType);
+        milestone.UpdateDetails(title, description, expectedEffortInHours, wbsWeight, gradingWeight);
     }
 
     /// <summary>
@@ -177,7 +182,6 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateDetailsException("The targeted milestone blueprint node does not exist within this template configuration context.");
         }
 
-        // Graph Cascade Cleanup: Iterate through all other internal milestones to sever any inbound restriction edges mapping back to this predecessor
         foreach (var milestone in _globalMilestones)
         {
             milestone.RemovePredecessor(milestoneId);
@@ -186,14 +190,74 @@ public class ProjectTemplate : BaseEntity
         _globalMilestones.Remove(milestoneToRemove);
     }
 
+    // ==========================================
+    // NESTED TASK ROUTING (PASS-THROUGH METHODS)
+    // ==========================================
+
+    /// <summary>
+    /// Routes the creation of a nested global task blueprint configuration down to a specific milestone.
+    /// </summary>
+    public void AddGlobalTaskToMilestone(Guid milestoneId, string title, string description, decimal weight, DeliverableType requiredDeliverableType)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(AddGlobalTaskToMilestone));
+        }
+
+        var milestone = _globalMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (milestone == null)
+        {
+            throw new InvalidTemplateDetailsException("The target milestone blueprint node does not exist within this template configuration context.");
+        }
+
+        milestone.AddTask(title, description, weight, requiredDeliverableType);
+    }
+
+    /// <summary>
+    /// Routes the update of a nested global task blueprint configuration down to a specific milestone container.
+    /// </summary>
+    public void UpdateGlobalTaskInMilestone(Guid milestoneId, Guid taskId, string title, string description, decimal weight, DeliverableType requiredDeliverableType)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(UpdateGlobalTaskInMilestone));
+        }
+
+        var milestone = _globalMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (milestone == null)
+        {
+            throw new InvalidTemplateDetailsException("The target milestone blueprint node does not exist within this template configuration context.");
+        }
+
+        milestone.UpdateTask(taskId, title, description, weight, requiredDeliverableType);
+    }
+
+    /// <summary>
+    /// Routes the removal of a nested global task blueprint configuration down to a specific milestone container.
+    /// </summary>
+    public void RemoveGlobalTaskFromMilestone(Guid milestoneId, Guid taskId)
+    {
+        if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
+        {
+            throw new InvalidTemplateStatusException(Status, nameof(RemoveGlobalTaskFromMilestone));
+        }
+
+        var milestone = _globalMilestones.FirstOrDefault(m => m.Id == milestoneId);
+        if (milestone == null)
+        {
+            throw new InvalidTemplateDetailsException("The target milestone blueprint node does not exist within this template configuration context.");
+        }
+
+        milestone.RemoveTask(taskId);
+    }
+
+    // ==========================================
+    // GRAPH DEPENDENCY METHODS (DAG VALIDATION)
+    // ==========================================
+
     /// <summary>
     /// Establishes a graph dependency constraint between two internal blueprint milestones with cyclic validation protection.
     /// </summary>
-    /// <param name="successorId">The identifier of the milestone that depends on the predecessor.</param>
-    /// <param name="predecessorId">The identifier of the milestone that must occur first.</param>
-    /// <param name="type">The dependency constraint type rules (e.g. FinishToStart).</param>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate state is immutable.</exception>
-    /// <exception cref="InvalidOperationException">Thrown if a cyclic loop violation is detected.</exception>
     public void AddMilestoneDependency(Guid successorId, Guid predecessorId, DependencyType type)
     {
         if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
@@ -209,20 +273,13 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateDetailsException("Both target milestones must exist within this template context.");
         }
 
-        // Apply execution constraint locally to trace tentative graph mutations
         successor.AddPredecessor(predecessorId, type);
-
-        // Verify that this new link does not introduce a cyclic graph trap
         EnsureGraphIsAcyclic();
     }
 
     /// <summary>
     /// Severs an existing timeline dependency restriction constraint link separating two internal blueprint milestones.
     /// </summary>
-    /// <param name="successorId">The tracking identifier of the milestone node carrying the inbound restriction edge.</param>
-    /// <param name="predecessorId">The tracking identifier of the milestone node representing the prerequisite boundary.</param>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if the aggregate state is currently locked from operational adjustments.</exception>
-    /// <exception cref="InvalidTemplateDetailsException">Thrown if either of the structural milestones or the underlying edge link cannot be resolved.</exception>
     public void RemoveMilestoneDependency(Guid successorId, Guid predecessorId)
     {
         if (Status == ProjectTemplateStatus.Approved || Status == ProjectTemplateStatus.Rejected)
@@ -242,7 +299,6 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateDetailsException("The requested predecessor milestone configuration node does not exist within this template context.");
         }
 
-        // Execute structural un-linking on the target boundary milestone
         var edgeWasSevered = successor.RemovePredecessor(predecessorId);
         if (!edgeWasSevered)
         {
@@ -250,12 +306,8 @@ public class ProjectTemplate : BaseEntity
         }
     }
 
-    /// <summary>
-    /// Executes a continuous Directed Acyclic Graph (DAG) analysis using a Depth-First Search (DFS) topological loop tracking approach.
-    /// </summary>
     private void EnsureGraphIsAcyclic()
     {
-        // State tracker dictionary: Key = Milestone ID, Value: true = In Recursion Stack (Visiting), false = Fully Evaluated (Visited)
         var evaluationStates = new Dictionary<Guid, bool>();
 
         foreach (var milestone in _globalMilestones)
@@ -270,14 +322,9 @@ public class ProjectTemplate : BaseEntity
         }
     }
 
-    /// <summary>
-    /// Internal recursive worker method executing structural path verification down the dependency chains.
-    /// </summary>
     private bool DetectCycleDfs(Guid currentId, Dictionary<Guid, bool> states)
     {
-        // Push onto the active evaluation recursion stack
         states[currentId] = true;
-
         var currentMilestone = _globalMilestones.First(m => m.Id == currentId);
 
         foreach (var dependency in currentMilestone.InboundDependencies)
@@ -286,12 +333,11 @@ public class ProjectTemplate : BaseEntity
             {
                 if (inStack)
                 {
-                    return true; // Cycle detected: We ran into a node currently being processed up our stack!
+                    return true;
                 }
             }
             else
             {
-                // Unvisited node found: follow its dependencies deeper into the graph
                 if (DetectCycleDfs(dependency.PredecessorId, states))
                 {
                     return true;
@@ -299,14 +345,16 @@ public class ProjectTemplate : BaseEntity
             }
         }
 
-        // Remove from current trace stack and mark as completely safe / evaluated
         states[currentId] = false;
         return false;
     }
 
+    // ==========================================
+    // LIFECYCLE WORKFLOWS & WORK INVARIANTS
+    // ==========================================
+
     /// <summary>
-    /// Updates the core textual specifications of the template. Accessible by providers during drafting/reworking, 
-    /// or by reviewers during active evaluation.
+    /// Updates the core textual specifications of the template.
     /// </summary>
     public void UpdateDetails(string newTitle, string newDescription)
     {
@@ -331,12 +379,32 @@ public class ProjectTemplate : BaseEntity
 
     /// <summary>
     /// Submits the drafted or revised project blueprint into the faculty review pool.
+    /// Enforces rigorous validation check balances across operational WBS and grading weight configurations.
     /// </summary>
     public void SubmitForReview()
     {
         if (Status != ProjectTemplateStatus.Draft && Status != ProjectTemplateStatus.ChangesRequested)
         {
             throw new InvalidTemplateStatusException(Status, nameof(SubmitForReview));
+        }
+
+        // Hard Domain Guard Gate Invariant Checklist
+        if (_globalMilestones.Sum(m => m.WbsWeight) != 100)
+        {
+            throw new InvalidTemplateDetailsException("The cumulative WBS operational weights across all milestones must total exactly 100%.");
+        }
+
+        if (_globalMilestones.Sum(m => m.GradingWeight) != 100)
+        {
+            throw new InvalidTemplateDetailsException("The cumulative academic grading weights across all milestones must total exactly 100%.");
+        }
+
+        foreach (var milestone in _globalMilestones)
+        {
+            if (milestone.GlobalTasks.Sum(t => t.Weight) != 100)
+            {
+                throw new InvalidTemplateDetailsException($"The cumulative operational task weights inside milestone '{milestone.Title}' must total exactly 100%.");
+            }
         }
 
         Status = ProjectTemplateStatus.PendingReview;
@@ -346,7 +414,7 @@ public class ProjectTemplate : BaseEntity
     }
 
     /// <summary>
-    /// Direct Action: Approves the blueprint as-is, closing feedback loops and making it visible to the student platform.
+    /// Approves the blueprint as-is, closing feedback loops and making it visible to the student platform.
     /// </summary>
     public void Approve()
     {
@@ -358,12 +426,11 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.Approved;
         ReviewerFeedback = null;
 
-        // Append terminal approval event to sync with student matching matrices and external contexts
         AddDomainEvent(new ProjectTemplateApprovedEvent(Id, ProviderId));
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop: Sends the template back to the provider requesting modifications.
+    /// Sends the template back to the provider requesting modifications.
     /// </summary>
     public void RequestChanges(string feedback)
     {
@@ -380,13 +447,11 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.ChangesRequested;
         ReviewerFeedback = feedback.Trim();
 
-        // Append state modification request event containing the precise auditor feedback payload
         AddDomainEvent(new ProjectTemplateChangesRequestedEvent(Id, ProviderId, ReviewerFeedback));
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop: Allows a reviewer to refine the text parameters directly 
-    /// while pushing the blueprint into a confirmation hold for the provider's explicit sign-off.
+    /// Allows a reviewer to refine the text parameters directly while pushing the blueprint into confirmation holds.
     /// </summary>
     public void ProposeReviewerChanges(string adjustedTitle, string adjustedDescription)
     {
@@ -395,20 +460,16 @@ public class ProjectTemplate : BaseEntity
             throw new InvalidTemplateStatusException(Status, nameof(ProposeReviewerChanges));
         }
 
-        // Apply edits directly to the entity state using internal methods
         UpdateDetails(adjustedTitle, adjustedDescription);
 
-        // Shift next-action dependency over to the provider
         Status = ProjectTemplateStatus.PendingProviderAcceptance;
         ReviewerFeedback = "Reviewer has modified details. Awaiting provider confirmation.";
 
-        // Append hand-off event to notify the corporate provider that modifications require their confirmation
         AddDomainEvent(new ProjectTemplateReviewerChangesProposedEvent(Id, ProviderId));
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop Sign-Off: Executed by the Provider to accept the reviewer's 
-    /// proposed alterations, instantly certifying the template into active service.
+    /// Executed by the Provider to accept the reviewer's proposed alterations, certifying it live.
     /// </summary>
     public void ProviderAcceptProposedChanges()
     {
@@ -420,13 +481,11 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.Approved;
         ReviewerFeedback = null;
 
-        // Append terminal approval event since provider validation elevates this blueprint directly to live service
         AddDomainEvent(new ProjectTemplateApprovedEvent(Id, ProviderId));
     }
 
     /// <summary>
-    /// Collaborative Iteration Loop Sign-Off: Executed by the Provider to reject the reviewer's 
-    /// proposed alterations, reverting the template back to a Draft layout for manual adjustments.
+    /// Executed by the Provider to reject the reviewer's proposed alterations, reverting it to a draft layout.
     /// </summary>
     public void ProviderRejectProposedChanges()
     {
@@ -438,12 +497,11 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.Draft;
         ReviewerFeedback = "Provider declined reviewer alterations. Reverted back to draft layout.";
 
-        // Append reversion event to track collaborative iteration conflicts or alert administrative staff
         AddDomainEvent(new ProjectTemplateReviewerChangesRejectedEvent(Id, ProviderId));
     }
 
     /// <summary>
-    /// Final Action: Permanently denies the submission, locking it from subsequent corrections or resubmissions.
+    /// Permanently denies the submission, locking it from subsequent adjustments.
     /// </summary>
     public void RejectPermanently(string reason)
     {
@@ -460,9 +518,12 @@ public class ProjectTemplate : BaseEntity
         Status = ProjectTemplateStatus.Rejected;
         ReviewerFeedback = reason.Trim();
 
-        // Append terminal rejection event documenting strict administrative refusal
         AddDomainEvent(new ProjectTemplateRejectedPermanentlyEvent(Id, ProviderId, ReviewerFeedback));
     }
+
+    // ==========================================
+    // SKILLS MAPPING METHODS
+    // ==========================================
 
     /// <summary>
     /// Maps a required tracking skill competency to this template matrix.
@@ -476,7 +537,7 @@ public class ProjectTemplate : BaseEntity
 
         if (_projectTemplateSkills.Any(pts => pts.SkillId == skillId))
         {
-            return; // Skill mapping already established
+            return;
         }
 
         if (_projectTemplateSkills.Count >= 10)
@@ -499,24 +560,20 @@ public class ProjectTemplate : BaseEntity
         }
     }
 
+    // ==========================================
+    // PROTOTYPE FACTORY PATTERN METHOD
+    // ==========================================
+
     /// <summary>
     /// Factory Method (Prototype Pattern): Instantiates a brand new, isolated live project workspace 
     /// aggregate root for a student based on this approved template's current point-in-time state snapshot.
-    /// Uses double-dispatch to safely construct the internal milestone graph within the domain assembly boundary.
     /// </summary>
-    /// <param name="studentId">The unique tracking identifier of the student initiating the project.</param>
-    /// <param name="createdAt">The deterministic timestamp marking workspace initialization.</param>
-    /// <param name="milestoneFactory">The domain factory service responsible for re-mapping graph identifier topologies.</param>
-    /// <param name="initialRequestedProfessorId">Optional supervisor ID if requesting mentoring at startup.</param>
-    /// <returns>A fully hydrated, structurally complete <see cref="ProjectInstance"/> aggregate root ready for persistence.</returns>
-    /// <exception cref="InvalidTemplateStatusException">Thrown if an attempt is made to instantiate a template that is not Approved.</exception>
     public ProjectInstance Instantiate(
         Guid studentId,
         DateTime createdAt,
         LocalMilestoneFactory milestoneFactory,
         Guid? initialRequestedProfessorId = null)
     {
-        // Guard Invariant: Students can only spin up workspaces from fully verified and approved blueprints
         if (Status != ProjectTemplateStatus.Approved)
         {
             throw new InvalidTemplateStatusException(Status, nameof(Instantiate));
@@ -532,15 +589,12 @@ public class ProjectTemplate : BaseEntity
             throw new ArgumentNullException(nameof(milestoneFactory), "The local milestone snapshot factory service is required.");
         }
 
-        // Determine the initial lifecycle track based on whether a professor was chosen at startup
         var initialStatus = initialRequestedProfessorId.HasValue
             ? ProjectInstanceStatus.AwaitingSupervision
             : ProjectInstanceStatus.Active;
 
-        // Isolate technical skill IDs from the template join collection to copy into the snapshot
         var skillIdsSnapshot = _projectTemplateSkills.Select(pts => pts.SkillId);
 
-        // 1. Manufacture the new aggregate root shell instance
         var projectInstance = new ProjectInstance(
             studentId,
             Id,
@@ -553,16 +607,12 @@ public class ProjectTemplate : BaseEntity
             skillIdsSnapshot
         );
 
-        // 2. Map the entirely detached execution milestone collections across fresh identifier spaces.
-        // Because this code executes within the Domain project assembly, we can safely invoke the internal methods.
         var localMilestonesSnapshot = milestoneFactory.CreateLocalMilestonesSnapshot(
             projectInstance.Id,
             this._globalMilestones);
 
-        // 3. Populate the generated milestone collection into the new aggregate root boundary safely
         projectInstance.SeedClonedMilestones(localMilestonesSnapshot);
 
-        // Return the fully complete, structurally consistent aggregate root
         return projectInstance;
     }
 }

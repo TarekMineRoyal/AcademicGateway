@@ -10,12 +10,13 @@ namespace AcademicGateway.Domain.ProjectInstances;
 
 /// <summary>
 /// Represents an isolated, active runtime milestone managed inside a student's project workspace instance.
-/// Holds scheduling timelines, state changes, polymorphic submission strings, comments, and evaluation metrics.
+/// Act as a container for nested runtime tasks and tracks individual scheduling timelines and conversation logs.
 /// </summary>
 public class LocalMilestone : BaseEntity
 {
     private readonly List<LocalMilestoneDependency> _inboundDependencies = new();
     private readonly List<MilestoneComment> _comments = new();
+    private readonly List<LocalTask> _localTasks = new();
 
     /// <summary>
     /// Gets the unique tracking identifier for this runtime milestone instance.
@@ -43,49 +44,29 @@ public class LocalMilestone : BaseEntity
     public decimal ExpectedEffortInHours { get; private set; }
 
     /// <summary>
-    /// Gets the format category constraint mapped for student submission handling.
+    /// Gets the operational work/progress weight of this milestone out of 100% total project effort.
     /// </summary>
-    public DeliverableType RequiredDeliverableType { get; private set; }
+    public decimal WbsWeight { get; internal set; }
 
     /// <summary>
-    /// Gets the current state within the individual task execution state machine.
+    /// Gets the academic grading weight of this milestone out of 100% total project score.
+    /// </summary>
+    public decimal GradingWeight { get; internal set; }
+
+    /// <summary>
+    /// Gets the current state within the individual milestone execution state machine.
     /// </summary>
     public LocalMilestoneStatus Status { get; internal set; }
 
     /// <summary>
-    /// Gets the student-assigned start date for this execution leg. Nullable until scheduled per Rule 3.
+    /// Gets the student-assigned start date for this execution leg. Nullable until scheduled.
     /// </summary>
     public DateTime? ScheduledStartDate { get; internal set; }
 
     /// <summary>
-    /// Gets the student-assigned deadline target for this execution leg. Nullable until scheduled per Rule 3.
+    /// Gets the student-assigned deadline target for this execution leg. Nullable until scheduled.
     /// </summary>
     public DateTime? ScheduledEndDate { get; internal set; }
-
-    /// <summary>
-    /// Gets the polymorphic raw submission content payload text (e.g. URL string, text summary, file token locator).
-    /// </summary>
-    public string? SubmissionPayload { get; internal set; }
-
-    /// <summary>
-    /// Gets the exact tracking timestamp when the student completed the deliverable push.
-    /// </summary>
-    public DateTime? SubmittedAt { get; private set; }
-
-    /// <summary>
-    /// Gets the final numerical score value awarded during professor evaluation.
-    /// </summary>
-    public decimal? Grade { get; private set; }
-
-    /// <summary>
-    /// Gets the formal evaluation audit feedback commentary logged by the grading mentor.
-    /// </summary>
-    public string? EvaluationFeedback { get; private set; }
-
-    /// <summary>
-    /// Gets the timestamp tracking when evaluation calculations were certified.
-    /// </summary>
-    public DateTime? GradedAt { get; private set; }
 
     /// <summary>
     /// Exposes incoming dependency boundaries as an encapsulated read-only sequence structure.
@@ -98,6 +79,16 @@ public class LocalMilestone : BaseEntity
     public IReadOnlyCollection<MilestoneComment> Comments => _comments.AsReadOnly();
 
     /// <summary>
+    /// Exposes the child runtime tasks as a read-only collection to preserve domain encapsulation.
+    /// </summary>
+    public IReadOnlyCollection<LocalTask> LocalTasks => _localTasks.AsReadOnly();
+
+    /// <summary>
+    /// Evaluates whether the nested task percentage weights form a complete 100% distribution.
+    /// </summary>
+    public bool IsWbsBalanced => _localTasks.Sum(t => t.Weight) == 100m;
+
+    /// <summary>
     /// Parameterless constructor required by EF Core for persistence materialization loops.
     /// </summary>
     private LocalMilestone()
@@ -107,21 +98,29 @@ public class LocalMilestone : BaseEntity
     }
 
     /// <summary>
-    /// Factory-scoped instantiation constructor designed to generate an isolated execution milestone.
+    /// Factory-scoped instantiation constructor designed to generate an isolated execution milestone container.
     /// </summary>
+    /// <param name="projectInstanceId">The unique identifier of the parent project workspace root.</param>
+    /// <param name="titleSnapshot">The static descriptive blueprint headline copy.</param>
+    /// <param name="descriptionSnapshot">The static descriptive blueprint instruction context copy.</param>
+    /// <param name="expectedEffortInHours">The estimated work tracking duration in hours.</param>
+    /// <param name="wbsWeight">The operational progress weight percentage assigned to this milestone track.</param>
+    /// <param name="gradingWeight">The academic grade evaluation weight percentage assigned to this milestone track.</param>
     public LocalMilestone(
         Guid projectInstanceId,
         string titleSnapshot,
         string descriptionSnapshot,
         decimal expectedEffortInHours,
-        DeliverableType requiredDeliverableType)
+        decimal wbsWeight,
+        decimal gradingWeight)
     {
         Id = Guid.NewGuid();
         ProjectInstanceId = projectInstanceId;
         TitleSnapshot = titleSnapshot.Trim();
         DescriptionSnapshot = descriptionSnapshot.Trim();
         ExpectedEffortInHours = expectedEffortInHours;
-        RequiredDeliverableType = requiredDeliverableType;
+        WbsWeight = wbsWeight;
+        GradingWeight = gradingWeight;
         Status = LocalMilestoneStatus.NotStarted;
     }
 
@@ -139,87 +138,74 @@ public class LocalMilestone : BaseEntity
     }
 
     /// <summary>
-    /// Processes a student deliverable submission, validating formatting rules against polymorphic constraints.
+    /// Seeds the deep-cloned runtime task instances into this milestone container during snapshot manufacturing.
     /// </summary>
-    internal void SubmitDeliverable(string payload, DateTime utcNow)
+    internal void SeedClonedTasks(IEnumerable<LocalTask> tasks)
     {
-        if (Status == LocalMilestoneStatus.Graded)
+        _localTasks.AddRange(tasks);
+        UpdateStatusFromTasks();
+    }
+
+    // =========================================================================
+    // DDD ENCAPSULATION ROUTERS (DELEGATING TO CHILD TASKS)
+    // =========================================================================
+
+    /// <summary>
+    /// Locates a targeted nested task item and routes the student deliverable submission payload down to it.
+    /// </summary>
+    internal void SubmitTaskDeliverable(Guid taskId, string payload, DateTime utcNow)
+    {
+        var task = _localTasks.FirstOrDefault(t => t.Id == taskId);
+        if (task == null)
         {
-            throw new InvalidOperationException($"Submission Denied: Milestone '{TitleSnapshot}' has already been graded and closed out.");
+            throw new KeyNotFoundException($"Local Task with ID '{taskId}' was not found within this milestone context.");
         }
 
-        if (string.IsNullOrWhiteSpace(payload))
-        {
-            throw new InvalidOperationException("Submission Denied: The deliverable payload data cannot be empty or whitespace.");
-        }
-
-        var cleanedPayload = payload.Trim();
-
-        switch (RequiredDeliverableType)
-        {
-            case DeliverableType.Url:
-                if (!cleanedPayload.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
-                    !cleanedPayload.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
-                {
-                    throw new InvalidOperationException(
-                        $"Submission Format Error: Milestone '{TitleSnapshot}' requires a valid web repository link destination " +
-                        $"(must begin with 'http://' or 'https://'). Provided: '{cleanedPayload}'");
-                }
-                break;
-
-            case DeliverableType.File:
-                if (cleanedPayload.Length < 5)
-                {
-                    throw new InvalidOperationException("Submission Format Error: The file storage identifier payload appears invalid or corrupted.");
-                }
-                break;
-
-            case DeliverableType.Text:
-                if (cleanedPayload.Length > 4000)
-                {
-                    throw new InvalidOperationException("Submission Format Error: Text entry summary exceeds maximum length limit of 4000 characters.");
-                }
-                break;
-
-            case DeliverableType.None:
-            default:
-                break;
-        }
-
-        SubmissionPayload = cleanedPayload;
-        SubmittedAt = utcNow;
-        Status = LocalMilestoneStatus.Submitted;
+        task.SubmitDeliverable(payload, utcNow);
+        UpdateStatusFromTasks();
     }
 
     /// <summary>
-    /// Registers an academic evaluation score and commentary from an authorized supervisor,
-    /// dynamically executing validation logic against the injected domain grading strategy.
+    /// Locates a targeted nested task item and routes the evaluation score and critique data down to it.
     /// </summary>
-    internal void EvaluateSubmission(decimal grade, string? feedback, IGradingStrategy gradingStrategy, DateTime utcNow)
+    internal void EvaluateTaskSubmission(Guid taskId, decimal grade, string? feedback, IGradingStrategy gradingStrategy, DateTime utcNow)
     {
-        if (gradingStrategy == null)
+        var task = _localTasks.FirstOrDefault(t => t.Id == taskId);
+        if (task == null)
         {
-            throw new ArgumentNullException(nameof(gradingStrategy), "An evaluation execution requires a valid grading strategy instance.");
+            throw new KeyNotFoundException($"Local Task with ID '{taskId}' was not found within this milestone context.");
         }
 
-        if (Status != LocalMilestoneStatus.Submitted)
+        task.EvaluateSubmission(grade, feedback, gradingStrategy, utcNow);
+        UpdateStatusFromTasks();
+    }
+
+    /// <summary>
+    /// Automatically calculates and updates the state machine of this milestone based on the collective states of its nested tasks.
+    /// </summary>
+    internal void UpdateStatusFromTasks()
+    {
+        if (!_localTasks.Any())
         {
-            throw new InvalidOperationException(
-                $"Evaluation Denied: Milestone '{TitleSnapshot}' is currently '{Status}'. " +
-                "An item must be explicitly marked as 'Submitted' before grading operations can be processed.");
+            return;
         }
 
-        if (!gradingStrategy.IsValidMilestoneGrade(grade))
+        if (_localTasks.All(t => t.Status == LocalTaskStatus.Graded))
         {
-            throw new InvalidOperationException(
-                $"Grading Strategy Invariant Violation: The proposed score value '{grade}' is mathematically " +
-                $"invalid for the target evaluation layout: '{gradingStrategy.StrategyName}'.");
+            Status = LocalMilestoneStatus.Graded;
         }
-
-        Grade = grade;
-        EvaluationFeedback = string.IsNullOrWhiteSpace(feedback) ? null : feedback.Trim();
-        GradedAt = utcNow;
-        Status = LocalMilestoneStatus.Graded;
+        else if (_localTasks.All(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded))
+        {
+            Status = LocalMilestoneStatus.Submitted;
+        }
+        else if (_localTasks.Any(t => t.Status == LocalTaskStatus.Submitted || t.Status == LocalTaskStatus.Graded) || ScheduledStartDate.HasValue)
+        {
+            Status = LocalMilestoneStatus.InProgress;
+        }
+        else
+        {
+            Status = LocalMilestoneStatus.NotStarted;
+        }
     }
 
     // =========================================================================
@@ -229,13 +215,8 @@ public class LocalMilestone : BaseEntity
     /// <summary>
     /// Appends a new immutable collaboration commentary entry log directly onto this milestone tracking lane.
     /// </summary>
-    /// <param name="authorId">The unique account identifier code linking back to the posting platform user.</param>
-    /// <param name="authorIdentitySnapshot">The string description defining the functional role authority of the poster.</param>
-    /// <param name="content">The raw message textual copy containing details, questions, or clarification instructions.</param>
-    /// <param name="utcNow">The current synchronized system timestamp execution coordinate.</param>
     internal void AddComment(Guid authorId, string authorIdentitySnapshot, string content, DateTime utcNow)
     {
-        // Instantiation encapsulates and executes character length and empty-space checking guards automatically
         var comment = new MilestoneComment(this.Id, authorId, authorIdentitySnapshot, content, utcNow);
         _comments.Add(comment);
     }

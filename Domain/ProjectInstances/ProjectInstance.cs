@@ -115,6 +115,43 @@ public class ProjectInstance : BaseEntity
     public IReadOnlyCollection<LocalMilestone> LocalMilestones => _localMilestones.AsReadOnly();
 
     /// <summary>
+    /// Evaluates whether the workspace WBS structures (milestones sum to 100% and internal tasks within all milestones sum to 100%) are structurally healthy.
+    /// </summary>
+    public bool IsWbsBalanced => _localMilestones.Sum(m => m.WbsWeight) == 100m && _localMilestones.All(m => m.IsWbsBalanced);
+
+    /// <summary>
+    /// Computes the macro-level rolled-up progress metric for the workspace. Returns null if structural integrity checks are unbalanced.
+    /// </summary>
+    public decimal? CompletionPercentage
+    {
+        get
+        {
+            if (!IsWbsBalanced)
+            {
+                return null;
+            }
+
+            decimal accumulatedProgress = 0m;
+            foreach (var milestone in _localMilestones)
+            {
+                decimal milestoneTaskCompletionSum = 0m;
+                foreach (var task in milestone.LocalTasks)
+                {
+                    if (task.Status == LocalTaskStatus.Submitted || task.Status == LocalTaskStatus.Graded)
+                    {
+                        milestoneTaskCompletionSum += task.Weight;
+                    }
+                }
+
+                // Append the fraction of this milestone's completion into the absolute project scope allocation metric
+                accumulatedProgress += (milestone.WbsWeight * (milestoneTaskCompletionSum / 100m));
+            }
+
+            return accumulatedProgress;
+        }
+    }
+
+    /// <summary>
     /// EF Core constructor requirement. Prevents bypass of standard domain constraints during persistence hydration.
     /// </summary>
     private ProjectInstance()
@@ -219,17 +256,14 @@ public class ProjectInstance : BaseEntity
             throw;
         }
 
-        if (targetMilestone.Status == LocalMilestoneStatus.NotStarted)
-        {
-            targetMilestone.Status = LocalMilestoneStatus.InProgress;
-        }
+        targetMilestone.UpdateStatusFromTasks();
     }
 
     /// <summary>
-    /// Orchestrates a student deliverable submission for an internal milestone, routing the payload 
-    /// down to the specific entity node while keeping child collections encapsulated.
+    /// Orchestrates a student deliverable submission for an internal nested task, routing the payload 
+    /// down through the specific milestone entity node while keeping child collections encapsulated.
     /// </summary>
-    public void SubmitMilestoneDeliverable(Guid milestoneId, string submissionPayload, DateTime utcNow)
+    public void SubmitTaskDeliverable(Guid milestoneId, Guid taskId, string submissionPayload, DateTime utcNow)
     {
         if (Status == ProjectInstanceStatus.Concluded || Status == ProjectInstanceStatus.Canceled)
         {
@@ -242,7 +276,7 @@ public class ProjectInstance : BaseEntity
             throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context.");
         }
 
-        targetMilestone.SubmitDeliverable(submissionPayload, utcNow);
+        targetMilestone.SubmitTaskDeliverable(taskId, submissionPayload, utcNow);
     }
 
     // =========================================================================
@@ -274,10 +308,11 @@ public class ProjectInstance : BaseEntity
     // =========================================================================
 
     /// <summary>
-    /// Orchestrates the evaluation transaction loop for a target milestone submission.
+    /// Orchestrates the evaluation transaction loop for a target nested task submission.
     /// Accommodates optional professor tracks by allowing students to self-certify/evaluate if no supervisor is bound.
     /// </summary>
     /// <param name="milestoneId">The unique tracking identifier of the target child milestone node.</param>
+    /// <param name="taskId">The unique tracking identifier of the target child task node.</param>
     /// <param name="grade">The numerical score value awarded to the deliverable push.</param>
     /// <param name="feedback">Optional critique commentaries logged by the evaluator.</param>
     /// <param name="gradingStrategy">The concrete domain strategy algorithm governing evaluation rules.</param>
@@ -285,8 +320,9 @@ public class ProjectInstance : BaseEntity
     /// <param name="executingUserId">The tracking identifier of the user processing the evaluation check.</param>
     /// <exception cref="InvalidProjectInstanceTransitionException">Thrown if identity checks or execution states fail constraints.</exception>
     /// <exception cref="KeyNotFoundException">Thrown if the target milestone cannot be resolved.</exception>
-    public void EvaluateMilestoneSubmission(
+    public void EvaluateTaskSubmission(
         Guid milestoneId,
+        Guid taskId,
         decimal grade,
         string? feedback,
         IGradingStrategy gradingStrategy,
@@ -295,18 +331,16 @@ public class ProjectInstance : BaseEntity
     {
         if (Status != ProjectInstanceStatus.Active)
         {
-            throw new InvalidProjectInstanceTransitionException($"Evaluation Denied: Milestone scores can only be assigned to active running instances. Current status: '{Status}'.");
+            throw new InvalidProjectInstanceTransitionException($"Evaluation Denied: Task scores can only be assigned to active running instances. Current status: '{Status}'.");
         }
 
-        // Updated Decentralized Guard: If an academic supervisor is attached, they retain absolute grading authority.
-        // If no supervisor is assigned, the owner student is granted self-evaluation rights over their track parameters.
         if (SupervisorId.HasValue && SupervisorId.Value != executingUserId)
         {
             throw new InvalidProjectInstanceTransitionException("Access Denied: Only the assigned academic supervisor possesses authority to grade submissions on this project workspace.");
         }
         if (!SupervisorId.HasValue && StudentId != executingUserId)
         {
-            throw new InvalidProjectInstanceTransitionException("Access Denied: In a solo un-supervised track, only the owner student can process milestone evaluations.");
+            throw new InvalidProjectInstanceTransitionException("Access Denied: In a solo un-supervised track, only the owner student can process task evaluations.");
         }
 
         var targetMilestone = _localMilestones.FirstOrDefault(m => m.Id == milestoneId);
@@ -315,7 +349,7 @@ public class ProjectInstance : BaseEntity
             throw new KeyNotFoundException($"Local Milestone with ID '{milestoneId}' was not found inside this project instance context boundary.");
         }
 
-        targetMilestone.EvaluateSubmission(grade, feedback, gradingStrategy, utcNow);
+        targetMilestone.EvaluateTaskSubmission(taskId, grade, feedback, gradingStrategy, utcNow);
     }
 
     /// <summary>
@@ -334,7 +368,6 @@ public class ProjectInstance : BaseEntity
                 $"Finalization Denied: Project grade scoring can only occur on workspaces marked as 'Concluded'. Current status: '{Status}'.");
         }
 
-        // Corrected Authority Guard: Access is granted if the executor matches the owner student OR the assigned supervisor.
         bool isAuthorized = executingUserId == StudentId || (SupervisorId.HasValue && SupervisorId.Value == executingUserId);
         if (!isAuthorized)
         {
@@ -424,7 +457,7 @@ public class ProjectInstance : BaseEntity
     }
 
     /// <summary>
-    /// Processes a professor's evaluation review for a outstanding pending supervision request.
+    /// Processes a professor's evaluation review for an outstanding pending supervision request.
     /// </summary>
     public void ReviewSupervisionRequest(Guid requestId, bool accept, string? rejectionReason, DateTime reviewedAt)
     {
