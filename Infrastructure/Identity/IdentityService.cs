@@ -121,6 +121,9 @@ public class IdentityService(
             signingCredentials: creds
         );
 
+        // Clear the default outbound mapping to ensure claims like "role" remain flat JSON keys
+        System.IdentityModel.Tokens.Jwt.JwtSecurityTokenHandler.DefaultOutboundClaimTypeMap.Clear();
+
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
