@@ -15,6 +15,7 @@ using Microsoft.OpenApi.Models;
 using System.Text;
 using AcademicGateway.Infrastructure.Persistence.Context;
 using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -64,7 +65,13 @@ builder.Services.AddMediatR(cfg => {
 // ==========================================
 // 4. API & Swagger Configuration
 // ==========================================
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+    });
+
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {
