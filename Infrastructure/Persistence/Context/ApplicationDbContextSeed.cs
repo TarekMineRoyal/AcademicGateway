@@ -255,7 +255,7 @@ public static class ApplicationDbContextSeed
             await context.SaveChangesAsync();
         }
 
-        // 13. Seed 2 Baseline Project Templates & 1 Live Running Instance Workspace Track
+        // 13. Seed Baseline Project Templates & 1 Live Running Instance Workspace Track
         if (!await context.ProjectTemplates.AnyAsync())
         {
             var seededSkills = await context.Skills.ToListAsync();
@@ -350,7 +350,131 @@ public static class ApplicationDbContextSeed
 
             await context.ProjectTemplates.AddAsync(analyticsTemplate);
 
-            // Commit both templates to the database
+            // =========================================================================
+            // --- Template 3: Advanced Core Infrastructure Orchestration (Complicated DAG Layout) ---
+            // =========================================================================
+            var infraTemplate = new ProjectTemplate(
+                title: "Enterprise Multi-Region Infrastructure Layer Orchestration",
+                description: "Design, build, and evaluate a resilient multi-region core infrastructure platform comprising secure VPC topologies, automated state matrix databases, load-balanced compute node fleets, GitOps deployment automation, and telemetry tracing pipelines.",
+                providerId: defaultProviderUser.Id,
+                createdAt: DateTime.UtcNow.AddDays(-1)
+            );
+
+            if (seededSkills.Any())
+            {
+                infraTemplate.AddSkill(seededSkills.First(s => s.Name.Contains("Docker")).Id);
+                infraTemplate.AddSkill(seededSkills.First(s => s.Name.Contains("PostgreSQL")).Id);
+            }
+
+            // Milestone 1 (Independent) -> WBS: 15.00%, Grading: 10.00%
+            infraTemplate.AddMilestone(
+                title: "Infrastructure Base Network & Security Provisioning",
+                description: "Establish base cloud networks, IAM boundary access rules, and secure multi-region cross-connections.",
+                expectedEffortInHours: 20.0m,
+                wbsWeight: 15.00m,
+                gradingWeight: 10.00m
+            );
+            var infraM1 = infraTemplate.GlobalMilestones.First(m => m.Title == "Infrastructure Base Network & Security Provisioning");
+            infraTemplate.AddGlobalTaskToMilestone(infraM1.Id, "VPC & Subnet Topologies Setup", "Configure multi-region virtual private spaces and network segments.", 50.00m, DeliverableType.Url);
+            infraTemplate.AddGlobalTaskToMilestone(infraM1.Id, "IAM Access Control Rules Definition", "Formulate security roles, resource permissions, and boundary access levels.", 50.00m, DeliverableType.File);
+
+            // Milestone 2 (Independent) -> WBS: 15.00%, Grading: 10.00%
+            infraTemplate.AddMilestone(
+                title: "Distributed Shared Storage & State Matrix Definition",
+                description: "Deploy multi-region persistent data stores, cluster replication topologies, and lifecycle synchronization patterns.",
+                expectedEffortInHours: 25.0m,
+                wbsWeight: 15.00m,
+                gradingWeight: 10.00m
+            );
+            var infraM2 = infraTemplate.GlobalMilestones.First(m => m.Title == "Distributed Shared Storage & State Matrix Definition");
+            infraTemplate.AddGlobalTaskToMilestone(infraM2.Id, "Database Cluster Replication Setup", "Provision high-availability distributed engines across diverse geographic zones.", 50.00m, DeliverableType.Url);
+            infraTemplate.AddGlobalTaskToMilestone(infraM2.Id, "State Snapshot & Integrity Verification", "Build operational metrics to capture backup storage pipeline resilience.", 50.00m, DeliverableType.Text);
+
+            // Milestone 3 (Depends on M1 SS) -> WBS: 10.00%, Grading: 10.00%
+            infraTemplate.AddMilestone(
+                title: "Container Fleet Clusters Provisioning",
+                description: "Initialize target platform orchestration nodes and optimize control plane topologies to handle scalable work items.",
+                expectedEffortInHours: 30.0m,
+                wbsWeight: 10.00m,
+                gradingWeight: 10.00m
+            );
+            var infraM3 = infraTemplate.GlobalMilestones.First(m => m.Title == "Container Fleet Clusters Provisioning");
+            infraTemplate.AddGlobalTaskToMilestone(infraM3.Id, "Compute Control Plane Configuration", "Instantiate and align highly resilient orchestration engine managers.", 50.00m, DeliverableType.Url);
+            infraTemplate.AddGlobalTaskToMilestone(infraM3.Id, "Dynamic Scaling Policy Scripts", "Establish baseline boundaries to balance workload execution nodes seamlessly.", 50.00m, DeliverableType.File);
+
+            // Milestone 4 (Depends on M1 FS, M3 FS) -> WBS: 20.00%, Grading: 25.00%
+            infraTemplate.AddMilestone(
+                title: "Routing Traffic Proxies & Gateway Configuration",
+                description: "Configure layer-7 application load balancers, public edge protection mechanisms, and routing configurations.",
+                expectedEffortInHours: 35.0m,
+                wbsWeight: 20.00m,
+                gradingWeight: 25.00m
+            );
+            var infraM4 = infraTemplate.GlobalMilestones.First(m => m.Title == "Routing Traffic Proxies & Gateway Configuration");
+            infraTemplate.AddGlobalTaskToMilestone(infraM4.Id, "Ingress Controller Implementation", "Expose secure transit boundaries and forward rules down to internal host channels.", 50.00m, DeliverableType.Url);
+            infraTemplate.AddGlobalTaskToMilestone(infraM4.Id, "Edge Firewall Security Hardening", "Bind TLS certificates and configure request throttling definitions.", 50.00m, DeliverableType.File);
+
+            // Milestone 5 (Depends on M2 SS, M3 SS) -> WBS: 15.00%, Grading: 15.00%
+            infraTemplate.AddMilestone(
+                title: "CI/CD GitOps Continuous Deployment Pipeline",
+                description: "Link repository webhooks to continuous automated verification systems and release delivery hooks.",
+                expectedEffortInHours: 40.0m,
+                wbsWeight: 15.00m,
+                gradingWeight: 15.00m
+            );
+            var infraM5 = infraTemplate.GlobalMilestones.First(m => m.Title == "CI/CD GitOps Continuous Deployment Pipeline");
+            infraTemplate.AddGlobalTaskToMilestone(infraM5.Id, "GitOps Orchestration Engine Design", "Construct declarative pipeline configurations to automate environment synchronization.", 50.00m, DeliverableType.File);
+            infraTemplate.AddGlobalTaskToMilestone(infraM5.Id, "Automated Environment Promotion Mapping", "Integrate automated health check validation triggers post deployment releases.", 50.00m, DeliverableType.Url);
+
+            // Milestone 6 (Depends on M5 FS) -> WBS: 12.00%, Grading: 15.00%
+            infraTemplate.AddMilestone(
+                title: "Central Logging & Monitoring Observability Matrix",
+                description: "Deploy log aggregate aggregators and collectors to capture telemetry patterns and surface dashboards.",
+                expectedEffortInHours: 20.0m,
+                wbsWeight: 12.00m,
+                gradingWeight: 15.00m
+            );
+            var infraM6 = infraTemplate.GlobalMilestones.First(m => m.Title == "Central Logging & Monitoring Observability Matrix");
+            infraTemplate.AddGlobalTaskToMilestone(infraM6.Id, "Telemetry Agent Instrumentation", "Embed performance tracking daemons onto active fleet clusters.", 50.00m, DeliverableType.Url);
+            infraTemplate.AddGlobalTaskToMilestone(infraM6.Id, "Alert Notification Routing Configurations", "Formulate system breach alerts and link channels to administration queues.", 50.00m, DeliverableType.Text);
+
+            // Milestone 7 (Depends on M5 FS) -> WBS: 13.00%, Grading: 15.00%
+            infraTemplate.AddMilestone(
+                title: "Disaster Recovery Testing & Governance Report",
+                description: "Conduct active network disruption chaos assessments, compute recovery metrics, and summarize standard runs.",
+                expectedEffortInHours: 25.0m,
+                wbsWeight: 13.00m,
+                gradingWeight: 15.00m
+            );
+            var infraM7 = infraTemplate.GlobalMilestones.First(m => m.Title == "Disaster Recovery Testing & Governance Report");
+            infraTemplate.AddGlobalTaskToMilestone(infraM7.Id, "Chaos Engineering Failure Simulation", "Execute live cluster partition scenarios to evaluate structural storage recovery metrics.", 50.00m, DeliverableType.File);
+            infraTemplate.AddGlobalTaskToMilestone(infraM7.Id, "Architectural Thesis Performance Summary", "Compile a complete performance summary documenting network recovery metrics.", 50.00m, DeliverableType.File);
+
+            // Establish Explicit Scheduling Graph Nodes Relationships
+            // M3 depends on M1 start to start
+            infraTemplate.AddMilestoneDependency(infraM3.Id, infraM1.Id, DependencyType.StartToStart);
+
+            // M4 depends on M1 and M3 end to start (FinishToStart)
+            infraTemplate.AddMilestoneDependency(infraM4.Id, infraM1.Id, DependencyType.FinishToStart);
+            infraTemplate.AddMilestoneDependency(infraM4.Id, infraM3.Id, DependencyType.FinishToStart);
+
+            // M5 depends on M2 and M3 start to start
+            infraTemplate.AddMilestoneDependency(infraM5.Id, infraM2.Id, DependencyType.StartToStart);
+            infraTemplate.AddMilestoneDependency(infraM5.Id, infraM3.Id, DependencyType.StartToStart);
+
+            // M6 depends on M5 end to start (FinishToStart)
+            infraTemplate.AddMilestoneDependency(infraM6.Id, infraM5.Id, DependencyType.FinishToStart);
+
+            // M7 depends on M5 end to start (FinishToStart)
+            infraTemplate.AddMilestoneDependency(infraM7.Id, infraM5.Id, DependencyType.FinishToStart);
+
+            // Submit and Approve through Domain State Transition Pool
+            infraTemplate.SubmitForReview();
+            infraTemplate.Approve();
+
+            await context.ProjectTemplates.AddAsync(infraTemplate);
+
+            // Commit all templates seamlessly to the database track
             await context.SaveChangesAsync();
 
             // =========================================================================
