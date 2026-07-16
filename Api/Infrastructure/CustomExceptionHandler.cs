@@ -9,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -70,9 +71,12 @@ public class CustomExceptionHandler(
         switch (exception)
         {
             case ValidationException validationException:
+                // Normalizes property keys to standard camelCase to match our global API serialization policy contract
                 problemDetails.Extensions["errors"] = validationException.Errors
                     .GroupBy(e => e.PropertyName, e => e.ErrorMessage)
-                    .ToDictionary(g => g.Key, g => g.ToArray());
+                    .ToDictionary(
+                        g => string.IsNullOrEmpty(g.Key) ? string.Empty : JsonNamingPolicy.CamelCase.ConvertName(g.Key),
+                        g => g.ToArray());
                 break;
 
             case DomainException domainException:
