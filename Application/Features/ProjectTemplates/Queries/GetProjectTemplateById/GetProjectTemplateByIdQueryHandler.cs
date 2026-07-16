@@ -44,6 +44,7 @@ public class GetProjectTemplateByIdQueryHandler(
                 ProviderId = t.ProviderId,
 
                 // Map out the skill prerequisite join collection
+                // Positional mapping automatically binds pts.SkillId to TemplateSkillDto.Id
                 RequiredSkills = t.ProjectTemplateSkills.Select(pts => new TemplateSkillDto(
                     pts.SkillId,
                     pts.Skill != null ? pts.Skill.Name : "Unknown Skill"

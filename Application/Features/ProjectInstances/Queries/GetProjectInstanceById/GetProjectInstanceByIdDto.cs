@@ -89,4 +89,4 @@ public record ProjectInstanceDetailDto
 /// <summary>
 /// Sub-DTO tracking technical capability mappings for an active project workspace instance.
 /// </summary>
-public record InstanceSkillDto(Guid SkillId, string Name);
+public record InstanceSkillDto(Guid Id, string Name);

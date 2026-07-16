@@ -55,7 +55,7 @@ public record ProjectTemplateDetailDto
 /// <summary>
 /// Sub-DTO mapping out an explicitly associated technical capability requirement.
 /// </summary>
-public record TemplateSkillDto(Guid SkillId, string Name);
+public record TemplateSkillDto(Guid Id, string Name);
 
 /// <summary>
 /// Sub-DTO carrying structural node metadata for an abstract milestone stage configured on the template blueprint.

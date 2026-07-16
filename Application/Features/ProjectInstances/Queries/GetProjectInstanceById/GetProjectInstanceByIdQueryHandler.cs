@@ -61,6 +61,7 @@ public class GetProjectInstanceByIdQueryHandler(
 
                 // Correlate the skill tracking keys directly against the master Skills context block
                 // to pull down strings without depending on a non-existent navigation property.
+                // Positional instantiation automatically maps ss.SkillId to InstanceSkillDto.Id
                 SnapshotSkills = pi.SnapshotSkills.Select(ss => new InstanceSkillDto(
                     ss.SkillId,
                     context.Skills
