@@ -64,8 +64,16 @@ public class CustomExceptionHandler(
         {
             Status = statusCode,
             Title = title,
-            Detail = exception.Message
+            Detail = exception switch
+            {
+                // Intercept and sanitize database/ORM state context leaks 
+                InvalidOperationException => "The requested operation could not be completed due to a server state conflict.",
+                _ => exception.Message
+            }
         };
+
+        // Establish a predictable baseline contract format inside the Extensions dictionary by providing an empty fallback shape for errors
+        problemDetails.Extensions["errors"] = new Dictionary<string, string[]>();
 
         // Append explicit payload structural metadata details depending on exception type contexts
         switch (exception)
