@@ -90,14 +90,38 @@ builder.Services.AddSwaggerGen(c =>
             return tagsAttr.Tags.ToArray();
         }
 
-        // 2. Fallback: Parse the first path segment after 'api/' (e.g., api/project-instances -> "Project Instances")
+        // 2. Fallback: Parse the first path segment after 'api/' while dynamically skipping version tokens (e.g., api/v1/project-instances -> "Project Instances")
         var route = api.RelativePath;
         if (route != null && route.StartsWith("api/", StringComparison.OrdinalIgnoreCase))
         {
-            var segments = route.Split('/');
-            if (segments.Length > 1)
+            var segments = route.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            string? domainSegment = null;
+            bool foundApiPrefix = false;
+
+            foreach (var segment in segments)
             {
-                var groupName = segments[1].Replace("-", " ");
+                if (!foundApiPrefix)
+                {
+                    if (string.Equals(segment, "api", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foundApiPrefix = true;
+                    }
+                    continue;
+                }
+
+                // Check if the current segment looks like a version token (e.g., v1, v2, etc.)
+                if (segment.StartsWith("v", StringComparison.OrdinalIgnoreCase) && segment.Length > 1 && int.TryParse(segment.AsSpan(1), out _))
+                {
+                    continue; // Skip version indicators
+                }
+
+                domainSegment = segment;
+                break;
+            }
+
+            if (!string.IsNullOrEmpty(domainSegment))
+            {
+                var groupName = domainSegment.Replace("-", " ");
                 return new[] { System.Globalization.CultureInfo.CurrentCulture.TextInfo.ToTitleCase(groupName) };
             }
         }
