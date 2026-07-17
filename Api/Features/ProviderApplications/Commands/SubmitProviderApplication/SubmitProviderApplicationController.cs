@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProviderApplications.Commands.SubmitProviderApplication;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -30,9 +31,9 @@ public class SubmitProviderApplicationController(
     /// Submits a provider onboarding verification request and starts a new compliance evaluation cycle.
     /// </summary>
     /// <param name="request">The payload containing corporate background details and secure documentation link references.</param>
-    /// <returns>A 201 Created response carrying the primary tracking identifier of the initialized compliance application record.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the primary tracking identifier of the initialized compliance application record.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> SubmitApplication([FromBody] SubmitApplicationRequest request)
@@ -53,7 +54,7 @@ public class SubmitProviderApplicationController(
 
         var applicationId = await mediator.Send(command);
 
-        // Stream back a standardized 201 Created resource collection footprint mapping payload
-        return Created(string.Empty, new { Id = applicationId });
+        // Stream back a standardized strongly-typed resource tracking response
+        return Created(string.Empty, new ResourceCreatedResponse(applicationId));
     }
 }

@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateProjectTemplate;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -31,9 +32,9 @@ public class CreateProjectTemplateController(
     /// Initializes a brand new reusable project template snapshot blueprint draft.
     /// </summary>
     /// <param name="request">The incoming title details, descriptor scopes, and baseline skill selection array.</param>
-    /// <returns>A 201 Created response carrying the primary tracking identity key of the initialized blueprint aggregate.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique tracking identifier of the initialized blueprint aggregate.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Create([FromBody] CreateTemplateRequest request)
@@ -55,7 +56,7 @@ public class CreateProjectTemplateController(
 
         var templateId = await mediator.Send(command);
 
-        // Stream back a standardized 201 Created resource collection footprint mapping payload
-        return Created(string.Empty, new { Id = templateId });
+        // Stream back a standardized strongly-typed resource tracking response
+        return Created(string.Empty, new ResourceCreatedResponse(templateId));
     }
 }

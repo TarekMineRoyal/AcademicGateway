@@ -15,6 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Commands.UpdateGlobalMil
 /// </summary>
 [ApiController]
 [Authorize(Roles = "Provider")]
+[Route("api/project-templates/{projectTemplateId:guid}/milestones")]
 public class UpdateGlobalMilestoneController(IMediator mediator) : ControllerBase
 {
     /// <summary>
@@ -25,7 +26,7 @@ public class UpdateGlobalMilestoneController(IMediator mediator) : ControllerBas
     /// <param name="request">The request body envelope carrying rewritten textual specification inputs and updated metrics.</param>
     /// <param name="cancellationToken">A system-managed abort token signaling network transaction lifecycle cancellation changes.</param>
     /// <returns>A 204 NoContent status response code upon a successful state mutation transaction execution boundary.</returns>
-    [HttpPut("api/project-templates/{projectTemplateId:guid}/milestones/{milestoneId:guid}")]
+    [HttpPut("{milestoneId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

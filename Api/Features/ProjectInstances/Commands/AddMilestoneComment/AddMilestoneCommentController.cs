@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.AddMilestoneComment;
 using Application.Features.ProjectInstances.Commands.AddMilestoneComment;
 using MediatR;
@@ -35,9 +36,9 @@ public class AddMilestoneCommentController(
     /// <param name="projectInstanceId">The tracking identifier key parsing out the active target project instance aggregate layer.</param>
     /// <param name="localMilestoneId">The specific localization node key identifying the runtime phase boundary being commented on.</param>
     /// <param name="request">The request body payload wrapping the text content configuration parameters.</param>
-    /// <returns>A 201 Created tracking response carrying the primary lookup identifier allocated for the milestone comment.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique tracking identifier allocated for the milestone comment.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -68,7 +69,7 @@ public class AddMilestoneCommentController(
         // Dispatch via MediatR bus down into the application processing boundary pipelines
         var commentId = await mediator.Send(command);
 
-        // Stream back standard RESTful 201 resource footprint containing the tracking allocation key
-        return Created(string.Empty, new { Id = commentId });
+        // Stream back standard strongly-typed response tracking resource creation footprint mapping payload
+        return Created(string.Empty, new ResourceCreatedResponse(commentId));
     }
 }

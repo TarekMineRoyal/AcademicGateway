@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Features.TechSupportProposals.Commands.ProposeTechSupport;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Features.TechSupportProposals.Commands.ProposeTechSupport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -30,9 +31,9 @@ public class ProposeTechSupportController(ISender mediator) : ControllerBase
     /// <param name="projectInstanceId">The unique tracking identifier of the student project instance workspace captured from the route segment.</param>
     /// <param name="request">The technical support account identity token and the mandatory contextual introductory message payload.</param>
     /// <param name="cancellationToken">The system thread execution cancellation monitor hook.</param>
-    /// <returns>A 201 Created response carrying the primary tracking key of the newly generated mentorship proposal.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique lookup ID of the newly generated mentorship proposal.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -52,7 +53,7 @@ public class ProposeTechSupportController(ISender mediator) : ControllerBase
 
         var proposalId = await mediator.Send(command, cancellationToken);
 
-        // Return a standard 201 Created resource status tracking response
-        return Created(string.Empty, new { Id = proposalId });
+        // Return a strongly-typed contract indicating successful resource creation
+        return Created(string.Empty, new ResourceCreatedResponse(proposalId));
     }
 }

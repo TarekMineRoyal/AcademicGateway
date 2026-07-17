@@ -5,6 +5,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +15,7 @@ namespace AcademicGateway.Application.Features.ProjectInstances.Commands.AddMile
 /// Orchestrates the application logic for appending a cross-role conversation comment onto a milestone lane.
 /// Fetches the target workspace aggregate root, routes parameters safely, and persists the conversation row securely.
 /// </summary>
-public class AddMilestoneCommentCommandHandler : IRequestHandler<AddMilestoneCommentCommand, Unit>
+public class AddMilestoneCommentCommandHandler : IRequestHandler<AddMilestoneCommentCommand, Guid>
 {
     private readonly IApplicationDbContext _context;
     private readonly IDateTimeProvider _dateTimeProvider;
@@ -41,9 +42,9 @@ public class AddMilestoneCommentCommandHandler : IRequestHandler<AddMilestoneCom
     /// </summary>
     /// <param name="request">The incoming command model carrying the author token, message copy, and location coordinates.</param>
     /// <param name="cancellationToken">The asynchronous operation cancellation tracking token.</param>
-    /// <returns>A MediatR completion compliance unit instance.</returns>
+    /// <returns>The newly generated unique tracking identifier Guid of the posted milestone comment.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session authentication fails, resources don't exist, or tenancy fails validation.</exception>
-    public async Task<Unit> Handle(AddMilestoneCommentCommand request, CancellationToken cancellationToken)
+    public async Task<Guid> Handle(AddMilestoneCommentCommand request, CancellationToken cancellationToken)
     {
         // Enforce active security session validation early before executing database logic
         if (!_currentUserService.IsAuthenticated)
@@ -82,6 +83,20 @@ public class AddMilestoneCommentCommandHandler : IRequestHandler<AddMilestoneCom
         // Commit the new conversation entry records down to persistent storage fields atomically
         await _context.SaveChangesAsync(cancellationToken);
 
-        return Unit.Value;
+        // Locate the target milestone checkpoint container node within the tracked aggregate scope
+        var targetMilestone = projectInstance.LocalMilestones
+            .FirstOrDefault(m => m.Id == request.LocalMilestoneId);
+
+        // Avoid unsafe collection traversal assumptions by safely locating the newly logged comment entry
+        // that matches the author and parameters submitted during this exact transaction cycle context
+        var newlyCreatedComment = targetMilestone?.Comments?
+            .LastOrDefault(c => c.AuthorId == request.AuthorId && c.Content == request.Content);
+
+        if (newlyCreatedComment == null)
+        {
+            throw new InvalidOperationException("An unexpected processing error occurred while materializing the milestone comment tracking record.");
+        }
+
+        return newlyCreatedComment.Id;
     }
 }

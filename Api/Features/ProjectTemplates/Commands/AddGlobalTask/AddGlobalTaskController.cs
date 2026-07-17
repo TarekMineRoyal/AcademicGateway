@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalTask;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalTask;
 using AcademicGateway.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -38,9 +39,9 @@ public class AddGlobalTaskController(ISender mediator) : ControllerBase
     /// <param name="projectTemplateId">The tracking identifier key identifying the targeted parent aggregate blueprint layout root.</param>
     /// <param name="globalMilestoneId">The tracking identifier code of the specific milestone phase container receiving the new task.</param>
     /// <param name="request">The request body model holding data constraints and deliverable expectations for the new task blueprint.</param>
-    /// <returns>A 201 Created response delivering the unique database tracking tracking code of the generated task.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique lookup ID of the generated task.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -64,7 +65,7 @@ public class AddGlobalTaskController(ISender mediator) : ControllerBase
         // Dispatch downstream into the application service pipeline boundary layer via MediatR bus
         var taskId = await mediator.Send(command);
 
-        // Stream back standard RESTful 201 footprint containing the newly allocated task tracking primary key
-        return Created(string.Empty, new { Id = taskId });
+        // Stream back standard RESTful 201 footprint containing the strongly-typed resource creation payload
+        return Created(string.Empty, new ResourceCreatedResponse(taskId));
     }
 }

@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -38,9 +39,9 @@ public class CreateTechSupportAccountController(
     /// Provisions a new technical support account securely tied to the authenticated corporate provider.
     /// </summary>
     /// <param name="request">The structural payload containing credentials, corporate identity, and support tier details.</param>
-    /// <returns>A 201 Created response carrying the primary tracking identifier generated for the support account.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique lookup identifier generated for the support account.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -65,7 +66,7 @@ public class CreateTechSupportAccountController(
         // Dispatch via MediatR bus to trigger the application and domain tier workflows
         var techAccountId = await mediator.Send(command);
 
-        // Stream back a standardized 201 Created resource footprint carrying the domain tracking ID
-        return Created(string.Empty, new { Id = techAccountId });
+        // Stream back a standardized strongly-typed response tracking resource creation
+        return Created(string.Empty, new ResourceCreatedResponse(techAccountId));
     }
 }

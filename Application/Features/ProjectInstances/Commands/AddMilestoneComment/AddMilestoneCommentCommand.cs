@@ -7,7 +7,7 @@ namespace Application.Features.ProjectInstances.Commands.AddMilestoneComment;
 /// CQRS Command invoked by any authorized participant (Student, Professor, or Tech Support Account) 
 /// to append a collaboration comment onto a specific milestone execution lane.
 /// </summary>
-public record AddMilestoneCommentCommand : IRequest<Unit>
+public record AddMilestoneCommentCommand : IRequest<Guid>
 {
     /// <summary>
     /// Gets the unique tracking identifier of the parent ProjectInstance aggregate root workspace.

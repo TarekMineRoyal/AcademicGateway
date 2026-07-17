@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalMilestone;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -41,9 +42,9 @@ public class AddGlobalMilestoneController(
     /// </summary>
     /// <param name="projectTemplateId">The tracking identifier key parsing out the targeted parent aggregate layout root.</param>
     /// <param name="request">The structural payload defining the metadata, effort, and independent weight distributions.</param>
-    /// <returns>A 201 Created collection response delivering the primary tracking key of the created milestone.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique tracking identifier allocated for the milestone.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
@@ -72,7 +73,7 @@ public class AddGlobalMilestoneController(
         // Dispatch downstream into the application service pipeline boundary layer via MediatR bus
         var milestoneId = await mediator.Send(command);
 
-        // Stream back standard RESTful 201 footprint wrapping the resource layout allocation key
-        return Created(string.Empty, new { Id = milestoneId });
+        // Stream back standard strongly-typed response tracking resource creation footprint mapping payload
+        return Created(string.Empty, new ResourceCreatedResponse(milestoneId));
     }
 }

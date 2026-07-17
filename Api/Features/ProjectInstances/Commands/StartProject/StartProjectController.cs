@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -30,9 +31,9 @@ public class StartProjectController(ISender mediator, ICurrentUserService curren
     /// </summary>
     /// <param name="request">The incoming template identification and optional supervisor assignment selection details.</param>
     /// <param name="cancellationToken">The system thread execution cancellation monitor hook.</param>
-    /// <returns>A 201 Created response carrying the primary tracking identifier of the newly instantiated workspace.</returns>
+    /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique tracking identifier of the newly instantiated workspace.</returns>
     [HttpPost]
-    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Start([FromBody] StartProjectRequest request, CancellationToken cancellationToken)
@@ -53,11 +54,7 @@ public class StartProjectController(ISender mediator, ICurrentUserService curren
 
         var projectInstanceId = await mediator.Send(command, cancellationToken);
 
-        // Stream back a standardized RESTful success tracking footprint payload
-        return StatusCode(StatusCodes.Status201Created, new
-        {
-            ProjectInstanceId = projectInstanceId,
-            Message = "Project workspace initialized successfully from the template blueprint."
-        });
+        // Stream back a standardized strongly-typed resource tracking response, clearing legacy anonymous keys
+        return Created(string.Empty, new ResourceCreatedResponse(projectInstanceId));
     }
 }

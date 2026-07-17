@@ -15,6 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Commands.DeleteGlobalMil
 /// </summary>
 [ApiController]
 [Authorize(Roles = "Provider")]
+[Route("api/project-templates/{projectTemplateId:guid}/milestones")]
 public class DeleteGlobalMilestoneController(IMediator mediator) : ControllerBase
 {
     /// <summary>
@@ -24,7 +25,7 @@ public class DeleteGlobalMilestoneController(IMediator mediator) : ControllerBas
     /// <param name="milestoneId">The tracking identifier code of the specific milestone blueprint node to delete.</param>
     /// <param name="cancellationToken">A system-managed abort token signaling network transaction lifecycle cancellation changes.</param>
     /// <returns>A 204 NoContent status response code upon a successful state mutation transaction execution boundary.</returns>
-    [HttpDelete("api/project-templates/{projectTemplateId:guid}/milestones/{milestoneId:guid}")]
+    [HttpDelete("{milestoneId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]

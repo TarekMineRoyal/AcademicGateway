@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProviderApplications.Commands.ResubmitProviderApplication;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -30,9 +31,9 @@ public class ResubmitProviderApplicationController(
     /// Modifies and resubmits a previously rejected provider onboarding verification request, initializing a new compliance evaluation cycle.
     /// </summary>
     /// <param name="request">The payload containing updated corporate background details and secure documentation link references.</param>
-    /// <returns>A 200 OK response carrying the primary tracking identifier of the resubmitted compliance application record.</returns>
+    /// <returns>A 200 OK response carrying a strongly-typed contract containing the unique tracking ID of the resubmitted application record.</returns>
     [HttpPut("resubmit")]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(ResourceCreatedResponse))]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ResubmitApplication([FromBody] ResubmitApplicationRequest request)
@@ -54,7 +55,7 @@ public class ResubmitProviderApplicationController(
 
         var applicationId = await mediator.Send(command);
 
-        // Stream back a standardized 200 OK confirmation payload tracking footprint
-        return Ok(new { Id = applicationId });
+        // Stream back a standardized strongly-typed confirmation payload tracking resource footprint
+        return Ok(new ResourceCreatedResponse(applicationId));
     }
 }
