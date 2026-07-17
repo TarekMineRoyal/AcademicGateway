@@ -33,7 +33,7 @@ public static class ApplicationDbContextSeed
         ApplicationDbContext context)
     {
         // 1. Seed System Roles utilizing Explicit Guid configuration types
-        string[] roles = { "Administrator", "Reviewer", "Student", "Provider", "Professor" };
+        string[] roles = { "Administrator", "Reviewer", "Student", "Provider", "Professor", "TechSupport" };
 
         foreach (var roleName in roles)
         {
@@ -511,6 +511,71 @@ public static class ApplicationDbContextSeed
                 await context.ProjectInstances.AddAsync(projectInstance);
                 await context.SaveChangesAsync();
             }
+        }
+
+        // =========================================================================
+        // --- 15: Seed Verified Provider & Technical Support Account for Testing ---
+        // =========================================================================
+        var verifiedProviderEmail = "verified-partner@cloudsystems.internal";
+        var verifiedProviderUser = await userManager.FindByEmailAsync(verifiedProviderEmail);
+
+        if (verifiedProviderUser == null)
+        {
+            verifiedProviderUser = new ApplicationUser
+            {
+                UserName = verifiedProviderEmail,
+                Email = verifiedProviderEmail,
+                EmailConfirmed = true
+            };
+            await userManager.CreateAsync(verifiedProviderUser, "VerifiedPartner123!");
+            await userManager.AddToRoleAsync(verifiedProviderUser, "Provider");
+        }
+
+        if (!await context.Providers.AnyAsync(p => p.Id == verifiedProviderUser.Id))
+        {
+            var verifiedProviderProfile = new Provider(
+                id: verifiedProviderUser.Id,
+                companyName: "Cloud Systems Architectures"
+            );
+            verifiedProviderProfile.UpdateProfileDetails(
+                description: "Verified infrastructure firm specializing in hyper-scale cluster engineering guidance.",
+                websiteUrl: "https://cloudsystems.internal"
+            );
+
+            // Explicitly bypass the review funnel for this development sandbox test partner
+            verifiedProviderProfile.VerifyProfile();
+
+            await context.Providers.AddAsync(verifiedProviderProfile);
+            await context.SaveChangesAsync();
+        }
+
+        // Now seed a corresponding Tech Support user under their organization boundary
+        var techSupportEmail = "mentor.alan@cloudsystems.internal";
+        var techSupportUser = await userManager.FindByEmailAsync(techSupportEmail);
+
+        if (techSupportUser == null)
+        {
+            techSupportUser = new ApplicationUser
+            {
+                UserName = techSupportEmail,
+                Email = techSupportEmail,
+                EmailConfirmed = true
+            };
+            await userManager.CreateAsync(techSupportUser, "SecureTechSupport123!");
+            await userManager.AddToRoleAsync(techSupportUser, "TechSupport");
+        }
+
+        if (!await context.TechSupportAccounts.AnyAsync(ts => ts.Id == techSupportUser.Id))
+        {
+            var techSupportAccount = new TechSupportAccount(
+                id: techSupportUser.Id,
+                providerId: verifiedProviderUser.Id,
+                staffNumber: "CS-G9-011",
+                supportTier: "Tier 3 Systems Architect"
+            );
+
+            await context.TechSupportAccounts.AddAsync(techSupportAccount);
+            await context.SaveChangesAsync();
         }
     }
 }
