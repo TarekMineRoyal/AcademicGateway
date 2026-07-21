@@ -49,6 +49,7 @@ public class GetProfessorProfileQueryHandler(
                 FullName = p.FullName,
                 Department = p.Department,
                 Rank = p.Rank,
+                AboutMe = p.AboutMe,
                 MaxSupervisionCapacity = p.MaxSupervisionCapacity,
                 CurrentProjectCount = p.CurrentProjectCount,
                 IsAcceptingProjects = p.CurrentProjectCount < p.MaxSupervisionCapacity

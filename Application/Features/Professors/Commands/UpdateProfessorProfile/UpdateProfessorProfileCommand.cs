@@ -16,6 +16,11 @@ public record UpdateProfessorProfileCommand : IRequest
     public string FullName { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the updated summary/biography text used by the vector matchmaking engine for recommendations.
+    /// </summary>
+    public string? AboutMe { get; init; }
+
+    /// <summary>
     /// Gets the updated target academic department division designation text (e.g., "Computer Science").
     /// </summary>
     public string Department { get; init; } = string.Empty;

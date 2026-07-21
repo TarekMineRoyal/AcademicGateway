@@ -50,6 +50,11 @@ public class RegisterProfessorCommandHandler(
             maxSupervisionCapacity: request.MaxSupervisionCapacity
         );
 
+        if (!string.IsNullOrWhiteSpace(request.AboutMe))
+        {
+            professorProfile.UpdateAboutMe(request.AboutMe);
+        }
+
         // 3. Attach entity boundary snapshot directly to tracking sets
         dbContext.Professors.Add(professorProfile);
 

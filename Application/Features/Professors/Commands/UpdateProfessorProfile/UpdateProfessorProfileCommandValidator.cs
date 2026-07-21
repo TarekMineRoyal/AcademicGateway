@@ -29,6 +29,9 @@ public class UpdateProfessorProfileCommandValidator : AbstractValidator<UpdatePr
             .NotEmpty().WithMessage("Faculty positional rank status details cannot be empty or whitespace.")
             .MaximumLength(50).WithMessage("Faculty positional rank status description cannot exceed 50 characters.");
 
+        RuleFor(x => x.AboutMe)
+            .MaximumLength(2000).WithMessage("About me biography text cannot exceed 2000 characters.");
+
         // Capacity Ceiling Boundary Rules
         RuleFor(x => x.MaxSupervisionCapacity)
             .GreaterThan(0).WithMessage("Altered maximum supervisor project capacity limit bounds must exceed zero.");

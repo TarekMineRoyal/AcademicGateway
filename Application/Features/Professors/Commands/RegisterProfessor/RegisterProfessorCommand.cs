@@ -43,4 +43,9 @@ public record RegisterProfessorCommand : IRequest<Guid>
     /// Gets the maximum ceiling boundary number of student projects this professor can supervise simultaneously.
     /// </summary>
     public int MaxSupervisionCapacity { get; init; }
+
+    /// <summary>
+    /// Gets the optional biography or summary text relied upon by the matchmaking engine.
+    /// </summary>
+    public string? AboutMe { get; init; }
 }

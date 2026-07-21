@@ -50,6 +50,7 @@ public class UpdateProfessorProfileCommandHandler(
         // 4. Mutate core primitive attributes and mentoring capacity parameters via formal domain methods
         professor.UpdateFacultyDetails(request.FullName, request.Department, request.Rank);
         professor.UpdateSupervisionCapacity(request.MaxSupervisionCapacity);
+        professor.UpdateAboutMe(request.AboutMe);
 
         // 5. Synchronize Research Interest Alignments (DDD Differential Synchronization Pattern)
         var targetInterests = request.ResearchInterestIds ?? Array.Empty<Guid>();

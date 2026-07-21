@@ -29,6 +29,11 @@ public record ProfessorProfileDto
     public string Rank { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional summary or biography narrative used for AI vector matchmaking and project recommendations.
+    /// </summary>
+    public string? AboutMe { get; init; }
+
+    /// <summary>
     /// Gets the maximum ceiling boundary number of student projects this professor can supervise concurrently.
     /// </summary>
     public int MaxSupervisionCapacity { get; init; }

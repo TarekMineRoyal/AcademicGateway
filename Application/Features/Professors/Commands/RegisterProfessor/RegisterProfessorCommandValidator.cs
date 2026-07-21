@@ -33,5 +33,8 @@ public class RegisterProfessorCommandValidator : AbstractValidator<RegisterProfe
 
         RuleFor(x => x.MaxSupervisionCapacity)
             .GreaterThan(0).WithMessage("Initial maximum supervisor project capacity limit bounds must exceed zero.");
+
+        RuleFor(x => x.AboutMe)
+            .MaximumLength(2000).WithMessage("About me description cannot exceed 2000 characters.");
     }
 }
