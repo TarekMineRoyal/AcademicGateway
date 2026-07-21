@@ -33,6 +33,10 @@ public class StudentConfiguration : IEntityTypeConfiguration<Student>
             .IsRequired()
             .HasMaxLength(200);
 
+        builder.Property(x => x.AboutMe)
+            .IsRequired(false)
+            .HasMaxLength(2000);
+
         // Configured correctly as an optional property matching the nullable int? domain descriptor
         builder.Property(x => x.GraduationYear)
             .IsRequired(false);

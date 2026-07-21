@@ -38,6 +38,10 @@ public class ProfessorConfiguration : IEntityTypeConfiguration<Professor>
             .IsRequired()
             .HasMaxLength(100);
 
+        builder.Property(x => x.AboutMe)
+            .IsRequired(false)
+            .HasMaxLength(2000);
+
         builder.Property(x => x.MaxSupervisionCapacity)
             .IsRequired();
 
