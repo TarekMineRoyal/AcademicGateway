@@ -25,6 +25,11 @@ public class Professor : BaseEntity
     public string FullName { get; private set; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional biographical summary text for the professor profile.
+    /// </summary>
+    public string? AboutMe { get; private set; }
+
+    /// <summary>
     /// Gets the target academic department division designation text (e.g., "Computer Science").
     /// </summary>
     public string Department { get; private set; } = string.Empty;
@@ -104,6 +109,7 @@ public class Professor : BaseEntity
         Rank = rank.Trim();
         MaxSupervisionCapacity = maxSupervisionCapacity;
         CurrentProjectCount = 0;
+        AboutMe = null;
     }
 
     /// <summary>
@@ -133,6 +139,15 @@ public class Professor : BaseEntity
         FullName = fullName.Trim();
         Department = department.Trim();
         Rank = rank.Trim();
+    }
+
+    /// <summary>
+    /// Updates the biographical summary text for this professor profile.
+    /// </summary>
+    /// <param name="aboutMe">The new biographical summary text, or null.</param>
+    public void UpdateAboutMe(string? aboutMe)
+    {
+        AboutMe = aboutMe;
     }
 
     /// <summary>

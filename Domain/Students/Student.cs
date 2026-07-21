@@ -28,6 +28,11 @@ public class Student : BaseEntity
     public string FullName { get; private set; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional summary or biography text relied on by the matchmaking engine.
+    /// </summary>
+    public string? AboutMe { get; private set; }
+
+    /// <summary>
     /// Gets the optional targeted graduation completion calendar year logged by the student.
     /// </summary>
     public int? GraduationYear { get; private set; }
@@ -60,9 +65,10 @@ public class Student : BaseEntity
     /// <param name="id">The unique Identity key linking back to user authentication credentials.</param>
     /// <param name="fullName">The full legal identity name tracking string.</param>
     /// <param name="graduationYear">The expected completion target year parameters.</param>
+    /// <param name="aboutMe">Optional summary or biography text field for vector matchmaking.</param>
     /// <exception cref="InvalidStudentDetailsException">Thrown if identity string formatting rules fail invariants.</exception>
     /// <exception cref="InvalidGraduationYearException">Thrown if chronological dates fall beneath system baselines.</exception>
-    public Student(Guid id, string fullName, int? graduationYear = null)
+    public Student(Guid id, string fullName, int? graduationYear = null, string? aboutMe = null)
     {
         if (id == Guid.Empty)
         {
@@ -72,6 +78,7 @@ public class Student : BaseEntity
         Id = id;
         UpdateFullName(fullName);
         UpdateGraduationYear(graduationYear);
+        UpdateAboutMe(aboutMe);
     }
 
     /// <summary>
@@ -87,6 +94,15 @@ public class Student : BaseEntity
         }
 
         FullName = newFullName.Trim();
+    }
+
+    /// <summary>
+    /// Updates the summary or biography text field associated with this student.
+    /// </summary>
+    /// <param name="aboutMe">The updated summary string value or null.</param>
+    public void UpdateAboutMe(string? aboutMe)
+    {
+        AboutMe = aboutMe;
     }
 
     /// <summary>

@@ -79,6 +79,8 @@ public class StartProjectCommandHandler : IRequestHandler<StartProjectCommand, G
             .Include(t => t.ProjectTemplateSkills)
             .Include(t => t.GlobalMilestones)
                 .ThenInclude(m => m.InboundDependencies)
+            .Include(t => t.GlobalMilestones)
+                .ThenInclude(m => m.GlobalTasks)
             .FirstOrDefaultAsync(t => t.Id == request.TemplateId, cancellationToken);
 
         // Validate template presence boundaries uniformly to protect against resource scanning behaviors
