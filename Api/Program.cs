@@ -193,8 +193,9 @@ if (!app.Environment.IsEnvironment("Testing"))
 
             var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
             var roleManager = services.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
+            var configuration = services.GetRequiredService<IConfiguration>();
 
-            await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context);
+            await ApplicationDbContextSeed.SeedDefaultUserAndDataAsync(userManager, roleManager, context, configuration);
         }
         catch (Exception ex)
         {
