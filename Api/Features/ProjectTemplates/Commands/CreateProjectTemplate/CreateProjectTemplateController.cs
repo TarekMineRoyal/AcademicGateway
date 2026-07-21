@@ -14,7 +14,12 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Commands.CreateProjectTe
 /// <summary>
 /// API Request payload schema for initializing a new reusable project blueprint template draft.
 /// </summary>
-public record CreateTemplateRequest(string Title, string Description, List<Guid> SkillIds);
+public record CreateTemplateRequest(
+    string Title,
+    string Description,
+    List<Guid> SkillIds,
+    Guid? MajorId = null,
+    Guid? SpecialtyId = null);
 
 /// <summary>
 /// Single Action Controller endpoint allowing authenticated corporate industry providers 
@@ -31,7 +36,7 @@ public class CreateProjectTemplateController(
     /// <summary>
     /// Initializes a brand new reusable project template snapshot blueprint draft.
     /// </summary>
-    /// <param name="request">The incoming title details, descriptor scopes, and baseline skill selection array.</param>
+    /// <param name="request">The incoming title details, descriptor scopes, baseline skill selection array, and optional academic alignment filters.</param>
     /// <returns>A 201 Created response carrying a strongly-typed contract containing the unique tracking identifier of the initialized blueprint aggregate.</returns>
     [HttpPost]
     [ProducesResponseType(StatusCodes.Status201Created, Type = typeof(ResourceCreatedResponse))]
@@ -51,7 +56,9 @@ public class CreateProjectTemplateController(
             ProviderId = currentUserService.UserId.Value,
             Title = request.Title,
             Description = request.Description,
-            SkillIds = request.SkillIds
+            SkillIds = request.SkillIds,
+            MajorId = request.MajorId,
+            SpecialtyId = request.SpecialtyId
         };
 
         var templateId = await mediator.Send(command);
