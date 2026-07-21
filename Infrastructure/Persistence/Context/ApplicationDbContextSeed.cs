@@ -183,6 +183,8 @@ public static class ApplicationDbContextSeed
                 maxSupervisionCapacity: 5
             );
 
+            professorProfile.UpdateAboutMe("Passionate about distributed systems, theoretical computer science, and advising innovative capstone projects.");
+
             await context.Professors.AddAsync(professorProfile);
             await context.SaveChangesAsync();
         }
@@ -212,6 +214,8 @@ public static class ApplicationDbContextSeed
                 fullName: "Jane Doe",
                 graduationYear: 2027
             );
+
+            studentProfile.UpdateAboutMe("Final-year Computer Science student specializing in Software Engineering, interested in backend C# development and cloud architecture.");
 
             // A. Query a seeded Major along with its Specialties using eager loading (.Include)
             var computerScienceMajor = await context.Majors
