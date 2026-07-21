@@ -264,6 +264,15 @@ public static class ApplicationDbContextSeed
         {
             var seededSkills = await context.Skills.ToListAsync();
 
+            // Retrieve academic alignment references for seeding project templates
+            var computerScienceMajor = await context.Majors
+                .Include(m => m.Specialties)
+                .FirstOrDefaultAsync(m => m.Name == "Computer Science");
+
+            Guid? sampleMajorId = computerScienceMajor?.Id;
+            Guid? sampleSpecialtyId = computerScienceMajor?.Specialties
+                .FirstOrDefault(s => s.Name == "Software Engineering")?.Id;
+
             // =========================================================================
             // --- Template 1: Cloud Migration ---
             // =========================================================================
@@ -271,6 +280,8 @@ public static class ApplicationDbContextSeed
                 title: "Distributed E-Commerce Cloud Infrastructure Migration",
                 description: "Design and implement a fully automated microservices deployment pipeline using Docker and PostgreSQL backend clusters.",
                 providerId: defaultProviderUser.Id,
+                majorId: sampleMajorId,
+                specialtyId: sampleSpecialtyId,
                 createdAt: DateTime.UtcNow.AddDays(-5)
             );
 
@@ -316,6 +327,8 @@ public static class ApplicationDbContextSeed
                 title: "Enterprise Predictive Analytics Dashboard Engine",
                 description: "Develop an end-to-end predictive analytics data pipeline using Python ML modeling, served via an interactive React TypeScript tracking interface.",
                 providerId: defaultProviderUser.Id,
+                majorId: sampleMajorId,
+                specialtyId: sampleSpecialtyId,
                 createdAt: DateTime.UtcNow.AddDays(-3)
             );
 
@@ -361,6 +374,8 @@ public static class ApplicationDbContextSeed
                 title: "Enterprise Multi-Region Infrastructure Layer Orchestration",
                 description: "Design, build, and evaluate a resilient multi-region core infrastructure platform comprising secure VPC topologies, automated state matrix databases, load-balanced compute node fleets, GitOps deployment automation, and telemetry tracing pipelines.",
                 providerId: defaultProviderUser.Id,
+                majorId: sampleMajorId,
+                specialtyId: sampleSpecialtyId,
                 createdAt: DateTime.UtcNow.AddDays(-1)
             );
 

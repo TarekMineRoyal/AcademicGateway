@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Domain.ProjectTemplates;
+﻿using AcademicGateway.Domain.Curriculum;
+using AcademicGateway.Domain.ProjectTemplates;
 using AcademicGateway.Domain.ProjectTemplates.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -43,6 +44,24 @@ public class ProjectTemplateConfiguration : IEntityTypeConfiguration<ProjectTemp
         /// </summary>
         builder.Property(x => x.CreatedAt)
             .IsRequired();
+
+        // Optional academic alignment properties
+        builder.Property(x => x.MajorId)
+            .IsRequired(false);
+
+        builder.Property(x => x.SpecialtyId)
+            .IsRequired(false);
+
+        // Optional relationships to Curriculum domain entities (SetNull on delete)
+        builder.HasOne<Major>()
+            .WithMany()
+            .HasForeignKey(x => x.MajorId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.HasOne<Specialty>()
+            .WithMany()
+            .HasForeignKey(x => x.SpecialtyId)
+            .OnDelete(DeleteBehavior.SetNull);
 
         // Relationship back to the Provider aggregate root
         builder.HasOne(x => x.Provider)
