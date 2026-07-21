@@ -1,23 +1,20 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.ProjectTemplates.Events;
 using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Events;
 
 /// <summary>
-/// Logs iteration data or flags administrative monitors when a partner declines a reviewer's optimization layouts.
+/// Logs iteration data when a partner declines a reviewer's optimization layouts and reverts to draft.
+/// Purges the template from the AI Matchmaking Engine index.
 /// </summary>
-public class ProjectTemplateReviewerChangesRejectedEventHandler(ILogger<ProjectTemplateReviewerChangesRejectedEventHandler> logger)
+public class ProjectTemplateReviewerChangesRejectedEventHandler(
+    IAiMatchmakingClient aiClient,
+    ILogger<ProjectTemplateReviewerChangesRejectedEventHandler> logger)
     : IDomainEventHandler<ProjectTemplateReviewerChangesRejectedEvent>
 {
-    /// <summary>
-    /// Evaluates structural iteration conflicts and preserves tracking continuity parameters.
-    /// </summary>
-    /// <param name="domainEvent">The contextual validation disagreement occurrence metadata wrapper.</param>
-    /// <param name="cancellationToken">A token to monitor cross-network system cancellations requests.</param>
-    /// <returns>A completed asynchronous execution task.</returns>
     public async Task HandleAsync(ProjectTemplateReviewerChangesRejectedEvent domainEvent, CancellationToken cancellationToken)
     {
         logger.LogWarning(
@@ -25,7 +22,6 @@ public class ProjectTemplateReviewerChangesRejectedEventHandler(ILogger<ProjectT
             domainEvent.ProviderId,
             domainEvent.TemplateId);
 
-        // System Analysis Side Effect: Record conflict metrics or update pipeline performance indicators
-        await Task.CompletedTask;
+        await aiClient.DeleteProjectAsync(domainEvent.TemplateId, cancellationToken);
     }
 }

@@ -1,23 +1,20 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.ProjectTemplates.Events;
 using Microsoft.Extensions.Logging;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Events;
 
 /// <summary>
 /// Directs feedback dispatch protocols when a reviewer shifts a blueprint layout into modification cycles.
+/// Dispatches a delete purge to the AI Matchmaking Engine to ensure unapproved revisions remain unindexed.
 /// </summary>
-public class ProjectTemplateChangesRequestedEventHandler(ILogger<ProjectTemplateChangesRequestedEventHandler> logger)
+public class ProjectTemplateChangesRequestedEventHandler(
+    IAiMatchmakingClient aiClient,
+    ILogger<ProjectTemplateChangesRequestedEventHandler> logger)
     : IDomainEventHandler<ProjectTemplateChangesRequestedEvent>
 {
-    /// <summary>
-    /// Routes constructive modification criteria back onto corporate provider interaction vectors.
-    /// </summary>
-    /// <param name="domainEvent">The event information housing specific auditor corrections.</param>
-    /// <param name="cancellationToken">A token to track and process runtime cancellations requests.</param>
-    /// <returns>An asynchronous tracking task representing the alert execution routing.</returns>
     public async Task HandleAsync(ProjectTemplateChangesRequestedEvent domainEvent, CancellationToken cancellationToken)
     {
         logger.LogInformation(
@@ -25,7 +22,6 @@ public class ProjectTemplateChangesRequestedEventHandler(ILogger<ProjectTemplate
             domainEvent.TemplateId,
             domainEvent.ProviderId);
 
-        // Operational Side Effect: Deliver specific modification logs ('domainEvent.Feedback') back onto the partner workspace
-        await Task.CompletedTask;
+        await aiClient.DeleteProjectAsync(domainEvent.TemplateId, cancellationToken);
     }
 }
