@@ -1,13 +1,15 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using System;
+using System.Net.Http;
+using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Infrastructure.Identity;
+using AcademicGateway.Infrastructure.Persistence.Context;
 using AcademicGateway.Infrastructure.Persistence.Interceptors;
 using AcademicGateway.Infrastructure.Services;
-using AcademicGateway.Infrastructure.Persistence.Context;
+using AcademicGateway.Infrastructure.Services.AiMatchmaking;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
 
 namespace AcademicGateway.Infrastructure;
 
@@ -58,6 +60,18 @@ public static class DependencyInjection
         services.AddScoped<ICurrentUserService, CurrentUserService>(); // Resolves the User context per request
         services.AddTransient<IIdentityService, IdentityService>();
         services.AddSingleton<IDateTimeProvider, DateTimeProvider>();
+
+        // 7. Register AI Matchmaking Typed HTTP Client
+        services.AddHttpClient<IAiMatchmakingClient, AiMatchmakingHttpClient>(client =>
+        {
+            var baseUrl = configuration["AiEngine:BaseUrl"]
+                ?? throw new InvalidOperationException("AI Engine BaseUrl configuration 'AiEngine:BaseUrl' was not found.");
+
+            var timeoutInSeconds = configuration.GetValue<int?>("AiEngine:TimeoutInSeconds") ?? 10;
+
+            client.BaseAddress = new Uri(baseUrl);
+            client.Timeout = TimeSpan.FromSeconds(timeoutInSeconds);
+        });
 
         return services;
     }
