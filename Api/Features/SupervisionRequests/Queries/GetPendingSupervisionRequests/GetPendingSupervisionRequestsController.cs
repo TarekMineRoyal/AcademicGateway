@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.SupervisionRequests.Queries.GetPendingSupervisionRequests;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.SupervisionRequests.Queries.GetPendingSup
 /// </summary>
 [ApiController]
 [Tags("Supervision Requests")]
-[Authorize(Roles = "Professor")]
+[Authorize(Roles = Roles.Professor)]
 [Route("api/supervision-requests/pending/{professorId:guid}")]
 public class GetPendingSupervisionRequestsController(ISender mediator) : ControllerBase
 {

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddMilestoneDependency;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -27,7 +28,7 @@ public record AddMilestoneDependencyRequest(
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Enforce that only verified corporate owners can configure blueprint graph constraints
+[Authorize(Roles = Roles.Provider)] // Enforce that only verified corporate owners can configure blueprint graph constraints
 [Route("api/project-templates/{projectTemplateId:guid}/dependencies")]
 public class AddMilestoneDependencyController(
     ISender mediator,

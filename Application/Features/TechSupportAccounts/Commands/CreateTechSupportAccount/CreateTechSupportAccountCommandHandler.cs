@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Providers;
 using AcademicGateway.Domain.Providers.Exceptions;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -53,7 +54,7 @@ public class CreateTechSupportAccountCommandHandler(
             request.Email,     // userName
             request.Email,     // email
             request.Password,
-            "TechSupport"); // password
+            Roles.TechSupport); // password
 
         if (!succeeded)
         {

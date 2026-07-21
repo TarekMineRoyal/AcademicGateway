@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Students.Commands.UpdateStudentProfile;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -25,7 +26,7 @@ public record UpdateStudentProfileRequest(
 /// </summary>
 [ApiController]
 [Tags("Students")]
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [Route("api/students")]
 public class UpdateStudentProfileController(ISender mediator) : ControllerBase
 {

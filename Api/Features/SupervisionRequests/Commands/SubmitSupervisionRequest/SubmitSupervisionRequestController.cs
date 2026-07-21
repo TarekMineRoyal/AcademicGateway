@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.SupervisionRequests.Commands.SubmitSupervisionRequest;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,7 @@ public record SubmitSupervisionRequestRequest(Guid ProfessorId, string PitchText
 /// Single Action Controller endpoint allowing authenticated student workspace owners to submit a formal 
 /// supervision tracking invitation request to an academic professor.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Supervision Requests")]
 [Route("api/project-instances/{projectInstanceId:guid}/supervision-requests")]

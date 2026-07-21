@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Queries.GetProjectsByActor;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetProjectsByAct
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student,Professor,Provider")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor},{Roles.Provider}")]
 [Route("api/project-instances/actor/{actorId:guid}")]
 public class GetProjectsByActorController(ISender mediator) : ControllerBase
 {

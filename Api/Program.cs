@@ -16,6 +16,7 @@ using System.Text;
 using AcademicGateway.Infrastructure.Persistence.Context;
 using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -147,6 +148,9 @@ builder.Services.AddSwaggerGen(c =>
             Array.Empty<string>()
         }
     });
+
+    // Prevents Schema ID conflicts by using full class names (with namespaces)
+    c.CustomSchemaIds(type => type.FullName?.Replace("+", "."));
 });
 
 // ==========================================

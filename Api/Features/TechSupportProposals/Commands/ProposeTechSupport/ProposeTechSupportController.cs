@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.TechSupportProposals.Commands.ProposeTechSupport;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -19,7 +20,7 @@ public record ProposeTechSupportRequest(Guid TechSupportAccountId, string Messag
 /// Single Action Controller endpoint allowing authenticated corporate industry providers to assign or propose 
 /// a specific technical support profile account to mentor a running student project workspace runner.
 /// </summary>
-[Authorize(Roles = "Provider")] // Enforce role safety boundaries to protect corporate support assignment channels
+[Authorize(Roles = Roles.Provider)] // Enforce role safety boundaries to protect corporate support assignment channels
 [ApiController]
 [Tags("Tech Support Proposals")]
 [Route("api/project-instances/{projectInstanceId:guid}/tech-support-proposals")]

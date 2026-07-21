@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProviderApplications.Queries.GetPendingProviderApplications;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace AcademicGateway.Api.Features.ProviderApplications.Queries.GetPendingPr
 /// Exposes administrative endpoints for managing and auditing provider onboarding application queues.
 /// </summary>
 [ApiController]
-[Authorize(Roles = "Reviewer")]
+[Authorize(Roles = Roles.Reviewer)]
 [Route("api/provider-applications/pending")]
 public class GetPendingProviderApplicationsController(ISender mediator) : ControllerBase
 {

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Providers.Enums;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -38,7 +39,7 @@ public class GetPendingProviderApplicationsQueryHandler(
 
         // 2. Fast-Path Authorization Guard: Leverage the newly optimized in-memory claim verification.
         // This instantly eliminates database lookup overhead, ensuring O(1) complexity performance.
-        if (!currentUserService.IsInRole("Reviewer"))
+        if (!currentUserService.IsInRole(Roles.Reviewer))
         {
             throw new UnauthorizedAccessException("Access Denied: You do not possess the required administrative privileges to view the registration queue.");
         }

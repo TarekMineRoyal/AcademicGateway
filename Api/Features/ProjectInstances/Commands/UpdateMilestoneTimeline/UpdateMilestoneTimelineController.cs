@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.UpdateMilestoneTimeline;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -21,7 +22,7 @@ public record UpdateMilestoneTimelineRequest(DateTime ScheduledStartDate, DateTi
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student,Professor")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor}")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/timeline")]
 public class UpdateMilestoneTimelineController(ISender mediator) : ControllerBase
 {

@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.SubmitTaskDeliverable;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +21,7 @@ public record SubmitTaskDeliverableRequest(string SubmissionPayload);
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student")] // Restricted exclusively to student profiles executing their workspace tasks
+[Authorize(Roles = Roles.Student)] // Restricted exclusively to student profiles executing their workspace tasks
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/tasks/{localTaskId:guid}/submissions")]
 public class SubmitTaskDeliverableController(ISender mediator) : ControllerBase
 {

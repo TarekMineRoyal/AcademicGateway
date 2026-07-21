@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.ProviderApplications.Commands.ReviewProviderApplication;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -20,7 +21,7 @@ public record ReviewApplicationRequest(bool IsApproved, string? RejectionReason)
 /// </summary>
 [ApiController]
 [Tags("Provider Applications")]
-[Authorize(Roles = "Reviewer")] // Enforce compliance security constraint boundaries
+[Authorize(Roles = Roles.Reviewer)] // Enforce compliance security constraint boundaries
 [Route("api/provider-applications/{applicationId:guid}/review")]
 public class ReviewProviderApplicationController(
     ISender mediator,

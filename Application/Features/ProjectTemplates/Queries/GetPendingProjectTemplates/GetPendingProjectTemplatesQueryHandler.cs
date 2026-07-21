@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.ProjectTemplates.Enums;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -38,7 +39,7 @@ public class GetPendingProjectTemplatesQueryHandler(
 
         // 2. Fast-Path Authorization Guard: Leverage the optimized in-memory claim verification.
         // Ensures O(1) complexity performance by utilizing the user's active token context instead of hitting the database layer.
-        if (!currentUserService.IsInRole("Reviewer"))
+        if (!currentUserService.IsInRole(Roles.Reviewer))
         {
             throw new UnauthorizedAccessException("Access Denied: You do not possess the required administrative privileges to view the blueprint clearance queue.");
         }

@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Providers.Commands.UpdateProviderProfile;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -20,7 +21,7 @@ public record UpdateProviderProfileRequest(
 /// </summary>
 [ApiController]
 [Tags("Providers")]
-[Authorize(Roles = "Provider")]
+[Authorize(Roles = Roles.Provider)]
 [Route("api/providers")]
 public class UpdateProviderProfileController(ISender mediator) : ControllerBase
 {

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.FinalizeProject;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.FinalizeProject
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Professor")]
+[Authorize(Roles = Roles.Professor)]
 [Route("api/project-instances/{projectInstanceId:guid}/finalize")]
 public class FinalizeProjectController(
     ISender mediator,

@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Admin.Commands.ExecuteAiBackfill;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +23,7 @@ public record ExecuteAiBackfillRequest(
 /// </summary>
 [ApiController]
 [Tags("Admin")]
-[Authorize(Roles = "Admin")]
+[Authorize(Roles = Roles.Admin)]
 [Route("api/v1/admin/ai-sync")]
 public class AiSyncController(ISender mediator) : ControllerBase
 {

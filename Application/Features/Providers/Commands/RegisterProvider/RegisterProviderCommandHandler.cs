@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Providers;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using System;
 using System.Threading;
@@ -30,7 +31,7 @@ public class RegisterProviderCommandHandler(
             request.Username,
             request.Email,
             request.Password,
-            "Provider");
+            Roles.Provider);
 
         if (!succeeded)
         {

@@ -2,6 +2,7 @@
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.AddMilestoneComment;
 using Application.Features.ProjectInstances.Commands.AddMilestoneComment;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ public record AddMilestoneCommentRequest(string Content);
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student,Professor,TechSupport")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor},{Roles.TechSupport}")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/comments")]
 public class AddMilestoneCommentController(
     ISender mediator,

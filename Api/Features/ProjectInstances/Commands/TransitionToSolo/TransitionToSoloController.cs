@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.TransitionToSolo;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +14,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.TransitionToSol
 /// Single Action Controller endpoint allowing authenticated student workspace owners to break out of 
 /// the academic matchmaking loop and transition their project workspace into an un-supervised solo track.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/transition-to-solo")]

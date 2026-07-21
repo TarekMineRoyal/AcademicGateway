@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.ResubmitProjectTemplate;
 using MediatR;
@@ -22,7 +23,7 @@ public record ResubmitTemplateRequest(string Title, string Description, List<Gui
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Enforce compliance security context constraints
+[Authorize(Roles = Roles.Provider)] // Enforce compliance security context constraints
 [Route("api/project-templates")]
 public class ResubmitProjectTemplateController(
     ISender mediator,

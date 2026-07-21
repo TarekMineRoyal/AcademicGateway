@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Api.Common.Models;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalTask;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Domain.Common.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -29,7 +30,7 @@ public record AddGlobalTaskRequest(
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Restrict configuration updates exclusively to industry organization clients
+[Authorize(Roles = Roles.Provider)] // Restrict configuration updates exclusively to industry organization clients
 [Route("api/project-templates/{projectTemplateId:guid}/milestones/{globalMilestoneId:guid}/tasks")]
 public class AddGlobalTaskController(ISender mediator) : ControllerBase
 {

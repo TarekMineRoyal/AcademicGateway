@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Professors;
 using AcademicGateway.Domain.Professors.Exceptions;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using System;
 using System.Threading;
@@ -33,7 +34,7 @@ public class RegisterProfessorCommandHandler(
             request.Username,
             request.Email,
             request.Password,
-            "Professor");
+            Roles.Professor);
 
         if (!succeeded)
         {

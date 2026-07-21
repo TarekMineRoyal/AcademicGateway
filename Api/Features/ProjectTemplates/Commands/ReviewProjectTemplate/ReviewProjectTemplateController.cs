@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -19,7 +20,7 @@ public record ReviewTemplateRequest(bool IsApproved, string? RejectionReason);
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Reviewer")] // Enforce that only users holding the Reviewer security role can access this endpoint
+[Authorize(Roles = Roles.Reviewer)] // Enforce that only users holding the Reviewer security role can access this endpoint
 [Route("api/project-templates/{templateId:guid}/review")]
 public class ReviewProjectTemplateController(ISender mediator) : ControllerBase
 {

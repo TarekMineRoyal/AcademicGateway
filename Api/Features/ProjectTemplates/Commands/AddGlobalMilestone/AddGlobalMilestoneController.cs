@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Api.Common.Models;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.AddGlobalMilestone;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -31,7 +32,7 @@ public record AddGlobalMilestoneRequest(
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Restrict modification capability exclusively to industry organization clients
+[Authorize(Roles = Roles.Provider)] // Restrict modification capability exclusively to industry organization clients
 [Route("api/project-templates/{projectTemplateId:guid}/milestones")]
 public class AddGlobalMilestoneController(
     ISender mediator,

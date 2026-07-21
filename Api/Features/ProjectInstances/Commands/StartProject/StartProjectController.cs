@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.StartProject;
 using MediatR;
@@ -20,7 +21,7 @@ public record StartProjectRequest(Guid TemplateId, Guid? ProfessorId);
 /// Single Action Controller endpoint allowing authenticated students to spin up a live operational workspace copy 
 /// from an approved project template blueprint using the Prototype Pattern.
 /// </summary>
-[Authorize(Roles = "Student")] // Restrict gateway mapping entry strictly to Student roles
+[Authorize(Roles = Roles.Student)] // Restrict gateway mapping entry strictly to Student roles
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances")]

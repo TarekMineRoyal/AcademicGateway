@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.ConcludeProject;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +14,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Commands.ConcludeProject
 /// Single Action Controller endpoint allowing authenticated student workspace owners to cleanly 
 /// close down and successfully wrap up a finished project instance.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/conclude")]

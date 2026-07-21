@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.Students;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using System;
 using System.Collections.Generic;
@@ -31,7 +32,7 @@ public class RegisterStudentCommandHandler(
             request.Username,
             request.Email,
             request.Password,
-            "Student");
+            Roles.Student);
 
         if (!succeeded)
         {

@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.DeleteMilestoneDependency;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ public record DeleteMilestoneDependencyRequest(
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Enforce that only verified corporate owners can configure blueprint graph constraints
+[Authorize(Roles = Roles.Provider)] // Enforce that only verified corporate owners can configure blueprint graph constraints
 [Route("api/project-templates/{projectTemplateId:guid}/dependencies")]
 public class DeleteMilestoneDependencyController(
     ISender mediator,

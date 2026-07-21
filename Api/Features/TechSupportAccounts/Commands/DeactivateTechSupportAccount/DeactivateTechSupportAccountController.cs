@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.TechSupportAccounts.Commands.DeactivateTechSupportAccount;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +14,7 @@ namespace AcademicGateway.Api.Features.TechSupportAccounts.Commands.DeactivateTe
 /// </summary>
 [ApiController]
 [Tags("Tech Support Accounts")]
-[Authorize(Roles = "Provider")]
+[Authorize(Roles = Roles.Provider)]
 [Route("api/providers/tech-support")]
 public class DeactivateTechSupportAccountController(ISender mediator) : ControllerBase
 {

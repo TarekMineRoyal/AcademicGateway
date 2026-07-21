@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Students.Queries.GetStudentProfile;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -11,7 +12,7 @@ namespace AcademicGateway.Api.Features.Students.Queries.GetStudentProfile;
 /// <summary>
 /// Endpoint for retrieving the authenticated student profile.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Students")]
 [Route("api/students/profile")]

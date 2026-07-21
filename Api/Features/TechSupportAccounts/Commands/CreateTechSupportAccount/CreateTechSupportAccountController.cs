@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Api.Common.Models;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.TechSupportAccounts.Commands.CreateTechSupportAccount;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -29,7 +30,7 @@ public record CreateTechSupportRequest(
 /// </summary>
 [ApiController]
 [Tags("Tech Support Accounts")]
-[Authorize(Roles = "Provider")] // Enforce that only verified corporate accounts can allocate support resources
+[Authorize(Roles = Roles.Provider)] // Enforce that only verified corporate accounts can allocate support resources
 [Route("api/tech-support-accounts")]
 public class CreateTechSupportAccountController(
     ISender mediator,

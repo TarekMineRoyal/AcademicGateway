@@ -7,6 +7,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Common.Models.AiSearch;
 using AcademicGateway.Application.Common.Models.AiSync;
@@ -37,22 +38,22 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
 
     public async Task SyncStudentAsync(StudentSyncModel student, CancellationToken cancellationToken = default)
     {
-        await PostAsync("api/v1/sync/student", student, "Student", student.Student.Id, cancellationToken);
+        await PostAsync("api/v1/sync/student", student, Roles.Student, student.Student.Id, cancellationToken);
     }
 
     public async Task DeleteStudentAsync(Guid studentId, CancellationToken cancellationToken = default)
     {
-        await DeleteAsync($"api/v1/sync/student/{studentId}", "Student", studentId, cancellationToken);
+        await DeleteAsync($"api/v1/sync/student/{studentId}", Roles.Student, studentId, cancellationToken);
     }
 
     public async Task SyncProfessorAsync(ProfessorSyncModel professor, CancellationToken cancellationToken = default)
     {
-        await PostAsync("api/v1/sync/professor", professor, "Professor", professor.Professor.Id, cancellationToken);
+        await PostAsync("api/v1/sync/professor", professor, Roles.Professor, professor.Professor.Id, cancellationToken);
     }
 
     public async Task DeleteProfessorAsync(Guid professorId, CancellationToken cancellationToken = default)
     {
-        await DeleteAsync($"api/v1/sync/professor/{professorId}", "Professor", professorId, cancellationToken);
+        await DeleteAsync($"api/v1/sync/professor/{professorId}", Roles.Professor, professorId, cancellationToken);
     }
 
     public async Task SyncProjectAsync(ProjectSyncModel project, CancellationToken cancellationToken = default)
@@ -78,13 +79,13 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
     public async Task BulkSyncStudentsAsync(IEnumerable<StudentSyncModel> students, CancellationToken cancellationToken = default)
     {
         var command = new BulkSyncStudentCommand { Items = students.ToList() };
-        await BulkPostAsync("api/v1/sync/bulk/student", command, "Student", command.Items.Count, cancellationToken);
+        await BulkPostAsync("api/v1/sync/bulk/student", command, Roles.Student, command.Items.Count, cancellationToken);
     }
 
     public async Task BulkSyncProfessorsAsync(IEnumerable<ProfessorSyncModel> professors, CancellationToken cancellationToken = default)
     {
         var command = new BulkSyncProfessorCommand { Items = professors.ToList() };
-        await BulkPostAsync("api/v1/sync/bulk/professor", command, "Professor", command.Items.Count, cancellationToken);
+        await BulkPostAsync("api/v1/sync/bulk/professor", command, Roles.Professor, command.Items.Count, cancellationToken);
     }
 
     public async Task BulkSyncProjectsAsync(IEnumerable<ProjectSyncModel> projects, CancellationToken cancellationToken = default)

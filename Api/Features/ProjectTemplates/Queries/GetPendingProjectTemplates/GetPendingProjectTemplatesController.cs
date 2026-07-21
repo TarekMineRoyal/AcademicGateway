@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetPendingProjectTemplates;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Queries.GetPendingProjec
 /// Exposes administrative endpoints for managing and auditing industry project blueprint clearance queues.
 /// </summary>
 [ApiController]
-[Authorize(Roles = "Reviewer")]
+[Authorize(Roles = Roles.Reviewer)]
 [Route("api/project-templates/pending")]
 public class GetPendingProjectTemplatesController(ISender mediator) : ControllerBase
 {

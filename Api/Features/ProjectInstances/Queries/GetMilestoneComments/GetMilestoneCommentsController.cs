@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Queries.GetMilestoneComments;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetMilestoneComm
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student,Professor,TechSupport")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor},{Roles.TechSupport}")]
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/comments")]
 public class GetMilestoneCommentsController(ISender mediator) : ControllerBase
 {

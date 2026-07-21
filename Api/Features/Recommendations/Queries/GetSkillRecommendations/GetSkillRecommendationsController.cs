@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.Recommendations.Queries.GetSkillRecommendationsForStudent;
 using AcademicGateway.Application.Features.Skills.Queries.GetSkills;
 using MediatR;
@@ -14,7 +15,7 @@ namespace AcademicGateway.Api.Features.Recommendations.Queries.GetSkillRecommend
 /// </summary>
 [ApiController]
 [Tags("Recommendations")]
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [Route("api/v1/recommendations/skills")]
 public class GetSkillRecommendationsController(ISender mediator) : ControllerBase
 {

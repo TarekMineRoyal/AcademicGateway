@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectInstances.Commands.EvaluateTask;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -22,7 +23,7 @@ public record EvaluateTaskRequest(decimal Grade, string? Feedback);
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Professor")] // Enforce that only authorized faculty supervisors can execute evaluation actions
+[Authorize(Roles = Roles.Professor)] // Enforce that only authorized faculty supervisors can execute evaluation actions
 [Route("api/project-instances/{projectInstanceId:guid}/milestones/{localMilestoneId:guid}/tasks/{localTaskId:guid}/evaluation")]
 public class EvaluateTaskController(
     ISender mediator,

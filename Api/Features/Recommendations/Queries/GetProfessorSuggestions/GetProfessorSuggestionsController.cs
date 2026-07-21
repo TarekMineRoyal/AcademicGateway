@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.Professors.Queries.SearchProfessors;
 using AcademicGateway.Application.Features.Recommendations.Queries.GetProfessorSuggestionsForProject;
 using MediatR;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.Recommendations.Queries.GetProfessorSugge
 /// </summary>
 [ApiController]
 [Tags("Recommendations")]
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [Route("api/v1/recommendations/professors")]
 public class GetProfessorSuggestionsController(ISender mediator) : ControllerBase
 {

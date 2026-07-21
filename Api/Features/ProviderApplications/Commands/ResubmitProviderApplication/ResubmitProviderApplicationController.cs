@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Api.Common.Models;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProviderApplications.Commands.ResubmitProviderApplication;
 using MediatR;
@@ -21,7 +22,7 @@ public record ResubmitApplicationRequest(string CompanyDetails, string Verificat
 /// </summary>
 [ApiController]
 [Tags("Provider Applications")]
-[Authorize(Roles = "Provider")] // Enforce compliance security context constraints
+[Authorize(Roles = Roles.Provider)] // Enforce compliance security context constraints
 [Route("api/provider-applications")]
 public class ResubmitProviderApplicationController(
     ISender mediator,

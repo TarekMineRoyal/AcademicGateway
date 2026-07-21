@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Infrastructure.Identity;
 using AcademicGateway.Infrastructure.Persistence.Context;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Domain.Curriculum;
 using AcademicGateway.Domain.Skills;
 using AcademicGateway.Domain.Reviewers;
@@ -33,7 +34,7 @@ public static class ApplicationDbContextSeed
         ApplicationDbContext context)
     {
         // 1. Seed System Roles utilizing Explicit Guid configuration types
-        string[] roles = { "Administrator", "Reviewer", "Student", "Provider", "Professor", "TechSupport" };
+        string[] roles = { "Administrator", Roles.Reviewer, Roles.Student, Roles.Provider, Roles.Professor, Roles.TechSupport };
 
         foreach (var roleName in roles)
         {
@@ -57,7 +58,7 @@ public static class ApplicationDbContextSeed
             };
 
             await userManager.CreateAsync(defaultReviewerUser, "GatewayReviewer123!");
-            await userManager.AddToRoleAsync(defaultReviewerUser, "Reviewer");
+            await userManager.AddToRoleAsync(defaultReviewerUser, Roles.Reviewer);
         }
 
         // 3. Seed Default Reviewer Domain Profile Entity
@@ -86,7 +87,7 @@ public static class ApplicationDbContextSeed
             };
 
             await userManager.CreateAsync(defaultProviderUser, "CorporatePartner123!");
-            await userManager.AddToRoleAsync(defaultProviderUser, "Provider");
+            await userManager.AddToRoleAsync(defaultProviderUser, Roles.Provider);
         }
 
         // 5. Seed Default Unverified Provider Domain Profile Entity
@@ -169,7 +170,7 @@ public static class ApplicationDbContextSeed
             };
 
             await userManager.CreateAsync(defaultProfessorUser, "GatewayProfessor123!");
-            await userManager.AddToRoleAsync(defaultProfessorUser, "Professor");
+            await userManager.AddToRoleAsync(defaultProfessorUser, Roles.Professor);
         }
 
         // 10. Seed Default Professor Domain Profile Entity
@@ -203,7 +204,7 @@ public static class ApplicationDbContextSeed
             };
 
             await userManager.CreateAsync(defaultStudentUser, "GatewayStudent123!");
-            await userManager.AddToRoleAsync(defaultStudentUser, "Student");
+            await userManager.AddToRoleAsync(defaultStudentUser, Roles.Student);
         }
 
         // 12. Seed Default Student Domain Profile Entity
@@ -547,7 +548,7 @@ public static class ApplicationDbContextSeed
                 EmailConfirmed = true
             };
             await userManager.CreateAsync(verifiedProviderUser, "VerifiedPartner123!");
-            await userManager.AddToRoleAsync(verifiedProviderUser, "Provider");
+            await userManager.AddToRoleAsync(verifiedProviderUser, Roles.Provider);
         }
 
         if (!await context.Providers.AnyAsync(p => p.Id == verifiedProviderUser.Id))
@@ -581,7 +582,7 @@ public static class ApplicationDbContextSeed
                 EmailConfirmed = true
             };
             await userManager.CreateAsync(techSupportUser, "SecureTechSupport123!");
-            await userManager.AddToRoleAsync(techSupportUser, "TechSupport");
+            await userManager.AddToRoleAsync(techSupportUser, Roles.TechSupport);
         }
 
         if (!await context.TechSupportAccounts.AnyAsync(ts => ts.Id == techSupportUser.Id))

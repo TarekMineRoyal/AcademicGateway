@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.TechSupportProposals.Commands.ReviewTechSupportProposal;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ public record ReviewTechSupportProposalRequest(bool Accept, string? RejectionRea
 /// Single Action Controller endpoint allowing the authenticated student owner of a project instance workspace 
 /// to accept or decline a corporate technical support mentor assignment request.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Tech Support Proposals")]
 [Route("api/project-instances/{projectInstanceId:guid}/tech-support-proposals/{techSupportProposalId:guid}/review")]

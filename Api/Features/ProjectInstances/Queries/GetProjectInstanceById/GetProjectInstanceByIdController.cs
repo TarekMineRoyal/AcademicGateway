@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Queries.GetProjectInstanceById;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectInstances.Queries.GetProjectInstan
 /// </summary>
 [ApiController]
 [Tags("Project Instances")]
-[Authorize(Roles = "Student,Professor,TechSupport")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor},{Roles.TechSupport}")]
 [Route("api/project-instances/{projectInstanceId:guid}")]
 public class GetProjectInstanceByIdController(ISender mediator) : ControllerBase
 {

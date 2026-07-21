@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Features.Providers.Queries.GetProviderProfile;
 using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -11,7 +12,7 @@ namespace AcademicGateway.Api.Features.Providers.Queries.GetProviderProfile;
 /// <summary>
 /// Endpoint for retrieving the authenticated provider profile.
 /// </summary>
-[Authorize(Roles = "Provider")]
+[Authorize(Roles = Roles.Provider)]
 [ApiController]
 [Tags("Providers")]
 [Route("api/providers/profile")]

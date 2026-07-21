@@ -1,5 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Domain.ProjectInstances.Enums;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -52,9 +53,9 @@ public class GetProjectsByActorQueryHandler(
         // 4. Inject polymorphic data filtering paths mapping strictly to the relational ownership definitions inside ProjectInstance
         databaseQuery = request.Role switch
         {
-            "Student" => databaseQuery.Where(pi => pi.StudentId == request.ActorId),
-            "Professor" => databaseQuery.Where(pi => pi.SupervisorId == request.ActorId),
-            "Provider" => databaseQuery.Where(pi => pi.ProviderId == request.ActorId),
+            Roles.Student => databaseQuery.Where(pi => pi.StudentId == request.ActorId),
+            Roles.Professor => databaseQuery.Where(pi => pi.SupervisorId == request.ActorId),
+            Roles.Provider => databaseQuery.Where(pi => pi.ProviderId == request.ActorId),
             _ => throw new InvalidOperationException("Invariant Violation: Validated dashboard execution route encountered an unmapped role mapping sequence.")
         };
 

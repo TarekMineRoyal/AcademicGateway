@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.DeleteGlobalMilestone;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -14,7 +15,7 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Commands.DeleteGlobalMil
 /// alongside its associated dependency connections from an under-construction project template graph.
 /// </summary>
 [ApiController]
-[Authorize(Roles = "Provider")]
+[Authorize(Roles = Roles.Provider)]
 [Route("api/project-templates/{projectTemplateId:guid}/milestones")]
 public class DeleteGlobalMilestoneController(IMediator mediator) : ControllerBase
 {

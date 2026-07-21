@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.TechSupportProposals.Queries.GetTechSupportProposals;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -15,7 +16,7 @@ namespace AcademicGateway.Api.Features.TechSupportProposals.Queries.GetTechSuppo
 /// </summary>
 [ApiController]
 [Tags("Tech Support Proposals")]
-[Authorize(Roles = "Student,Professor")]
+[Authorize(Roles = $"{Roles.Student},{Roles.Professor}")]
 [Route("api/project-instances/{projectInstanceId:guid}/tech-support-proposals")]
 public class GetTechSupportProposalsController(ISender mediator) : ControllerBase
 {

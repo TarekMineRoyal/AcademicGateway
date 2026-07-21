@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Professors.Commands.UpdateProfessorProfile;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -24,7 +25,7 @@ public record UpdateProfessorProfileRequest(
 /// </summary>
 [ApiController]
 [Tags("Professors")]
-[Authorize(Roles = "Professor")]
+[Authorize(Roles = Roles.Professor)]
 [Route("api/professors")]
 public class UpdateProfessorProfileController(ISender mediator) : ControllerBase
 {

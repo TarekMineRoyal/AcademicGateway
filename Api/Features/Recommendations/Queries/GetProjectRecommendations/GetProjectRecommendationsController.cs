@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
 using AcademicGateway.Application.Features.Recommendations.Queries.GetProjectRecommendationsForStudent;
 using MediatR;
@@ -14,7 +15,7 @@ namespace AcademicGateway.Api.Features.Recommendations.Queries.GetProjectRecomme
 /// </summary>
 [ApiController]
 [Tags("Recommendations")]
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [Route("api/v1/recommendations/projects")]
 public class GetProjectRecommendationsController(ISender mediator) : ControllerBase
 {

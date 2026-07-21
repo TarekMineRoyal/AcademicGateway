@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.CancelProject;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ public record CancelProjectRequest(string? Reason);
 /// Single Action Controller endpoint allowing authenticated student workspace owners to prematurely 
 /// abort, drop, or abandon an active running project instance workspace context boundary.
 /// </summary>
-[Authorize(Roles = "Student")]
+[Authorize(Roles = Roles.Student)]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/cancel")]

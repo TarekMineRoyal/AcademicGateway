@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.Professors.Queries.GetProfessorProfile;
+using AcademicGateway.Domain.Common.Constants;
 using AcademicGateway.Application.Common.Interfaces;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -10,7 +11,7 @@ namespace AcademicGateway.Api.Features.Professors.Queries.GetProfessorProfile;
 /// <summary>
 /// Endpoint for retrieving the authenticated professor profile.
 /// </summary>
-[Authorize(Roles = "Professor")]
+[Authorize(Roles = Roles.Professor)]
 [ApiController]
 [Tags("Professors")]
 [Route("api/professors/profile")]

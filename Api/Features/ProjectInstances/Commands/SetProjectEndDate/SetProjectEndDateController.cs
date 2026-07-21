@@ -1,4 +1,5 @@
 ﻿using AcademicGateway.Application.Features.ProjectInstances.Commands.SetProjectEndDate;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -18,7 +19,7 @@ public record SetProjectEndDateRequest(DateTime NewEndDate);
 /// Single Action Controller endpoint allowing authorized academic supervisors to adjust or extend 
 /// the official operational completion deadline calendar target for a running project workspace runner.
 /// </summary>
-[Authorize(Roles = "Professor")]
+[Authorize(Roles = Roles.Professor)]
 [ApiController]
 [Tags("Project Instances")]
 [Route("api/project-instances/{projectInstanceId:guid}/end-date")]

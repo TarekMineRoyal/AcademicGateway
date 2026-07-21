@@ -1,6 +1,7 @@
 ﻿using AcademicGateway.Api.Common.Models;
 using AcademicGateway.Application.Common.Interfaces;
 using AcademicGateway.Application.Features.ProjectTemplates.Commands.CreateProjectTemplate;
+using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
@@ -27,7 +28,7 @@ public record CreateTemplateRequest(
 /// </summary>
 [ApiController]
 [Tags("Project Templates")]
-[Authorize(Roles = "Provider")] // Enforce that a valid corporate provider security context exists
+[Authorize(Roles = Roles.Provider)] // Enforce that a valid corporate provider security context exists
 [Route("api/project-templates")]
 public class CreateProjectTemplateController(
     ISender mediator,
