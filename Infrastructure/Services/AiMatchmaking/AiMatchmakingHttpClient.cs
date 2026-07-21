@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -13,7 +15,7 @@ namespace AcademicGateway.Infrastructure.Services.AiMatchmaking;
 
 /// <summary>
 /// Infrastructure typed HTTP client for dispatching outbound real-time synchronization 
-/// event payloads to the AI Matchmaking Engine.
+/// event payloads and bulk backfill batches to the AI Matchmaking Engine.
 /// </summary>
 public class AiMatchmakingHttpClient : IAiMatchmakingClient
 {
@@ -72,6 +74,30 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
         await DeleteAsync($"api/v1/sync/skill/{skillId}", "Skill", skillId, cancellationToken);
     }
 
+    public async Task BulkSyncStudentsAsync(IEnumerable<StudentSyncModel> students, CancellationToken cancellationToken = default)
+    {
+        var command = new BulkSyncStudentCommand { Items = students.ToList() };
+        await BulkPostAsync("api/v1/sync/bulk/student", command, "Student", command.Items.Count, cancellationToken);
+    }
+
+    public async Task BulkSyncProfessorsAsync(IEnumerable<ProfessorSyncModel> professors, CancellationToken cancellationToken = default)
+    {
+        var command = new BulkSyncProfessorCommand { Items = professors.ToList() };
+        await BulkPostAsync("api/v1/sync/bulk/professor", command, "Professor", command.Items.Count, cancellationToken);
+    }
+
+    public async Task BulkSyncProjectsAsync(IEnumerable<ProjectSyncModel> projects, CancellationToken cancellationToken = default)
+    {
+        var command = new BulkSyncProjectCommand { Items = projects.ToList() };
+        await BulkPostAsync("api/v1/sync/bulk/project", command, "ProjectTemplate", command.Items.Count, cancellationToken);
+    }
+
+    public async Task BulkSyncSkillsAsync(IEnumerable<SkillSyncModel> skills, CancellationToken cancellationToken = default)
+    {
+        var command = new BulkSyncSkillCommand { Items = skills.ToList() };
+        await BulkPostAsync("api/v1/sync/bulk/skill", command, "Skill", command.Items.Count, cancellationToken);
+    }
+
     private async Task PostAsync<T>(
         string requestUri,
         T payload,
@@ -101,6 +127,38 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
                 "An error occurred while dispatching sync request for {EntityName} ({EntityId}) to AI Matchmaking Engine.",
                 entityName,
                 entityId);
+        }
+    }
+
+    private async Task BulkPostAsync<T>(
+        string requestUri,
+        T payload,
+        string entityName,
+        int itemCount,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(requestUri, payload, SerializerOptions, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "Failed to bulk sync {ItemCount} {EntityName} records to AI Matchmaking Engine. Status Code: {StatusCode}, Error: {Error}",
+                    itemCount,
+                    entityName,
+                    response.StatusCode,
+                    errorContent);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "An error occurred while dispatching bulk sync request for {ItemCount} {EntityName} records to AI Matchmaking Engine.",
+                itemCount,
+                entityName);
         }
     }
 
