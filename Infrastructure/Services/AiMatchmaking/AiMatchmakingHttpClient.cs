@@ -8,6 +8,7 @@ using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models.AiSearch;
 using AcademicGateway.Application.Common.Models.AiSync;
 using Microsoft.Extensions.Logging;
 
@@ -15,7 +16,7 @@ namespace AcademicGateway.Infrastructure.Services.AiMatchmaking;
 
 /// <summary>
 /// Infrastructure typed HTTP client for dispatching outbound real-time synchronization 
-/// event payloads and bulk backfill batches to the AI Matchmaking Engine.
+/// event payloads, bulk backfill batches, and vector search recommendation queries to the AI Matchmaking Engine.
 /// </summary>
 public class AiMatchmakingHttpClient : IAiMatchmakingClient
 {
@@ -98,6 +99,21 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
         await BulkPostAsync("api/v1/sync/bulk/skill", command, "Skill", command.Items.Count, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Guid>> GetProjectRecommendationsAsync(GetProjectRecommendationsQueryModel query, CancellationToken cancellationToken = default)
+    {
+        return await PostSearchAsync<GetProjectRecommendationsQueryModel, Guid>("api/v1/search/projects", query, "Project Recommendations", cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetProfessorSuggestionsAsync(GetProfessorSuggestionsQueryModel query, CancellationToken cancellationToken = default)
+    {
+        return await PostSearchAsync<GetProfessorSuggestionsQueryModel, Guid>("api/v1/search/professors", query, "Professor Suggestions", cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Guid>> GetSkillRecommendationsAsync(GetSkillRecommendationsQueryModel query, CancellationToken cancellationToken = default)
+    {
+        return await PostSearchAsync<GetSkillRecommendationsQueryModel, Guid>("api/v1/search/skills", query, "Skill Recommendations", cancellationToken);
+    }
+
     private async Task PostAsync<T>(
         string requestUri,
         T payload,
@@ -159,6 +175,42 @@ public class AiMatchmakingHttpClient : IAiMatchmakingClient
                 "An error occurred while dispatching bulk sync request for {ItemCount} {EntityName} records to AI Matchmaking Engine.",
                 itemCount,
                 entityName);
+        }
+    }
+
+    private async Task<IReadOnlyList<TResult>> PostSearchAsync<TQuery, TResult>(
+        string requestUri,
+        TQuery query,
+        string searchType,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync(requestUri, query, SerializerOptions, cancellationToken);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+                _logger.LogError(
+                    "AI Matchmaking Engine returned non-success status code for {SearchType}. Status Code: {StatusCode}, Error: {Error}",
+                    searchType,
+                    response.StatusCode,
+                    errorContent);
+
+                return Array.Empty<TResult>();
+            }
+
+            var results = await response.Content.ReadFromJsonAsync<List<TResult>>(SerializerOptions, cancellationToken);
+            return results ?? (IReadOnlyList<TResult>)Array.Empty<TResult>();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(
+                ex,
+                "An exception occurred while querying AI Matchmaking Engine for {SearchType}. Falling back to empty result set.",
+                searchType);
+
+            return Array.Empty<TResult>();
         }
     }
 
