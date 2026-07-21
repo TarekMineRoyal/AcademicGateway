@@ -13,7 +13,7 @@ namespace AcademicGateway.Application.Features.Recommendations.Queries.GetProfes
 
 /// <summary>
 /// Handles the execution of the <see cref="GetProfessorSuggestionsForProjectQuery"/> request.
-/// Resolves project context from an existing blueprint or raw parameters, requests AI faculty suggestions,
+/// Resolves project template context by ID, requests AI faculty suggestions,
 /// and hydrates professor search result DTOs while preserving rank position.
 /// </summary>
 public class GetProfessorSuggestionsForProjectQueryHandler(
@@ -23,67 +23,49 @@ public class GetProfessorSuggestionsForProjectQueryHandler(
     : IRequestHandler<GetProfessorSuggestionsForProjectQuery, IReadOnlyCollection<ProfessorSearchResultDto>>
 {
     /// <summary>
-    /// Processes the faculty advisor suggestion query for a project blueprint.
+    /// Processes the faculty advisor suggestion query for a project template.
     /// </summary>
-    /// <param name="request">The query containing project context or template identifier.</param>
+    /// <param name="request">The query containing target project template identifier and limit.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
     /// <returns>An immutable read-only collection of matching professor search records sorted by relevance rank.</returns>
     public async Task<IReadOnlyCollection<ProfessorSearchResultDto>> Handle(
         GetProfessorSuggestionsForProjectQuery request,
         CancellationToken cancellationToken)
     {
-        string title = request.Title ?? string.Empty;
-        string description = request.Description ?? string.Empty;
-        string? majorName = request.MajorName;
-        string? specialtyName = request.SpecialtyName;
-        List<string>? skillNames = request.SkillNames;
-
-        // 1. If TemplateId is provided, resolve project context from database
-        if (request.TemplateId.HasValue)
-        {
-            var template = await context.ProjectTemplates
-                .AsNoTracking()
-                .Where(t => t.Id == request.TemplateId.Value)
-                .Select(t => new
-                {
-                    t.Title,
-                    t.Description,
-                    MajorName = t.MajorId.HasValue
-                        ? context.Majors.Where(m => m.Id == t.MajorId.Value).Select(m => m.Name).FirstOrDefault()
-                        : null,
-                    SpecialtyName = t.SpecialtyId.HasValue
-                        ? context.Specialties.Where(s => s.Id == t.SpecialtyId.Value).Select(s => s.Name).FirstOrDefault()
-                        : null,
-                    SkillNames = t.ProjectTemplateSkills
-                        .Select(pts => pts.Skill != null ? pts.Skill.Name : string.Empty)
-                        .Where(n => !string.IsNullOrEmpty(n))
-                        .ToList()
-                })
-                .FirstOrDefaultAsync(cancellationToken);
-
-            if (template != null)
+        // 1. Resolve project template details from database
+        var template = await context.ProjectTemplates
+            .AsNoTracking()
+            .Where(t => t.Id == request.ProjectTemplateId)
+            .Select(t => new
             {
-                title = string.IsNullOrWhiteSpace(title) ? template.Title : title;
-                description = string.IsNullOrWhiteSpace(description) ? template.Description : description;
-                majorName ??= template.MajorName;
-                specialtyName ??= template.SpecialtyName;
-                skillNames ??= template.SkillNames;
-            }
-        }
+                t.Title,
+                t.Description,
+                MajorName = t.MajorId.HasValue
+                    ? context.Majors.Where(m => m.Id == t.MajorId.Value).Select(m => m.Name).FirstOrDefault()
+                    : null,
+                SpecialtyName = t.SpecialtyId.HasValue
+                    ? context.Specialties.Where(s => s.Id == t.SpecialtyId.Value).Select(s => s.Name).FirstOrDefault()
+                    : null,
+                SkillNames = t.ProjectTemplateSkills
+                    .Select(pts => pts.Skill != null ? pts.Skill.Name : string.Empty)
+                    .Where(n => !string.IsNullOrEmpty(n))
+                    .ToList()
+            })
+            .FirstOrDefaultAsync(cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(title) || string.IsNullOrWhiteSpace(description))
+        if (template == null || string.IsNullOrWhiteSpace(template.Title) || string.IsNullOrWhiteSpace(template.Description))
         {
             return Array.Empty<ProfessorSearchResultDto>();
         }
 
-        // 2. Build search query model
+        // 2. Build search query model for AI engine
         var queryModel = new GetProfessorSuggestionsQueryModel
         {
-            Title = title,
-            Description = description,
-            MajorName = majorName,
-            SpecialtyName = specialtyName,
-            SkillNames = skillNames,
+            Title = template.Title,
+            Description = template.Description,
+            MajorName = template.MajorName,
+            SpecialtyName = template.SpecialtyName,
+            SkillNames = template.SkillNames,
             Limit = request.Limit
         };
 
