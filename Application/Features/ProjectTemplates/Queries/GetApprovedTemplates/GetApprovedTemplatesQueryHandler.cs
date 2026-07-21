@@ -39,20 +39,32 @@ public class GetApprovedTemplatesQueryHandler(IApplicationDbContext context)
             query = query.Where(t => t.ProjectTemplateSkills.Any(pts => pts.SkillId == request.SkillId.Value));
         }
 
-        // 3. Project the filtered relational database query records directly into immutable DTO payloads
+        // 3. Project the filtered relational database query records directly into immutable DTO payloads.
+        // Subqueries against context.Majors and context.Specialties look up descriptive names without requiring entity navigation properties.
         return await query
             .Select(t => new ApprovedTemplateDto
             {
                 Id = t.Id,
                 ProviderId = t.ProviderId,
 
-                // Fixed: Substituted placeholder reference to wrap your real CompanyName property
+                // Substituted placeholder reference to wrap your real CompanyName property
                 ProviderCompanyName = t.Provider != null ? t.Provider.CompanyName : "Unknown Provider",
 
                 Title = t.Title,
                 Description = t.Description,
 
-                // Fixed: Aligned sub-collection selection with 'ProjectTemplateSkills' entity definition
+                MajorId = t.MajorId,
+                SpecialtyId = t.SpecialtyId,
+
+                MajorName = t.MajorId.HasValue
+                    ? context.Majors.Where(m => m.Id == t.MajorId.Value).Select(m => m.Name).FirstOrDefault()
+                    : null,
+
+                SpecialtyName = t.SpecialtyId.HasValue
+                    ? context.Specialties.Where(s => s.Id == t.SpecialtyId.Value).Select(s => s.Name).FirstOrDefault()
+                    : null,
+
+                // Aligned sub-collection selection with 'ProjectTemplateSkills' entity definition
                 Skills = t.ProjectTemplateSkills.Select(pts => new TemplateSkillDto
                 {
                     Id = pts.SkillId,

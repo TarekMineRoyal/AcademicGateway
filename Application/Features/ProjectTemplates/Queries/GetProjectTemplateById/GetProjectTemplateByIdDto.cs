@@ -37,6 +37,26 @@ public record ProjectTemplateDetailDto
     public Guid ProviderId { get; init; }
 
     /// <summary>
+    /// Gets the optional target academic major identifier restricting recommendation vector scans.
+    /// </summary>
+    public Guid? MajorId { get; init; }
+
+    /// <summary>
+    /// Gets the optional descriptive name of the target academic major.
+    /// </summary>
+    public string? MajorName { get; init; }
+
+    /// <summary>
+    /// Gets the optional target academic specialty identifier restricting recommendation vector scans.
+    /// </summary>
+    public Guid? SpecialtyId { get; init; }
+
+    /// <summary>
+    /// Gets the optional descriptive name of the target academic specialty.
+    /// </summary>
+    public string? SpecialtyName { get; init; }
+
+    /// <summary>
     /// Gets the collection of prerequisite technical skill footprints linked to this project template configuration.
     /// </summary>
     public List<TemplateSkillDto> RequiredSkills { get; init; } = [];

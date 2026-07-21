@@ -49,13 +49,15 @@ public class CreateProjectTemplateCommandHandler(
             throw new ProviderNotVerifiedException(request.ProviderId);
         }
 
-        // 5. Instantiate the ProjectTemplate domain entity using our updated constructor sequence (Title, Description, ProviderId, CreatedAt).
+        // 5. Instantiate the ProjectTemplate domain entity using our updated constructor sequence (Title, Description, ProviderId, CreatedAt, MajorId, SpecialtyId).
         // Passing a deterministic timestamp from our abstracted system clock ensures full test isolation and decouples the domain from side effects.
         var template = new ProjectTemplate(
             request.Title,
             request.Description,
             request.ProviderId,
-            dateTimeProvider.UtcNow);
+            dateTimeProvider.UtcNow,
+            request.MajorId,
+            request.SpecialtyId);
 
         // 6. Advance the template lifecycle out of initial draft status to match current workflow requirements
         template.SubmitForReview();

@@ -5,7 +5,7 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetAppro
 
 /// <summary>
 /// Data Transfer Object representing an approved, publicly available project template blueprint.
-/// Exposes partner information and required skill matrices to students searching for placements.
+/// Exposes partner information, required skill matrices, and optional academic alignments to students searching for placements.
 /// </summary>
 public record ApprovedTemplateDto
 {
@@ -33,6 +33,26 @@ public record ApprovedTemplateDto
     /// Gets the detailed text description outlining requirements, execution scopes, and deliverables.
     /// </summary>
     public string Description { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Gets the optional unique identifier targeting an academic major domain restriction.
+    /// </summary>
+    public Guid? MajorId { get; init; }
+
+    /// <summary>
+    /// Gets the optional unique identifier targeting an academic specialty domain restriction.
+    /// </summary>
+    public Guid? SpecialtyId { get; init; }
+
+    /// <summary>
+    /// Gets the optional descriptive name of the targeted academic major.
+    /// </summary>
+    public string? MajorName { get; init; }
+
+    /// <summary>
+    /// Gets the optional descriptive name of the targeted academic specialty.
+    /// </summary>
+    public string? SpecialtyName { get; init; }
 
     /// <summary>
     /// Gets the read-only collection of required skill competencies mapped as prerequisites for student placement matching.

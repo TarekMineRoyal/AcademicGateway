@@ -29,6 +29,26 @@ public record PendingProjectTemplateDto
     public string ProviderName { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional target major unique identifier associated with this template.
+    /// </summary>
+    public Guid? MajorId { get; init; }
+
+    /// <summary>
+    /// Gets the optional target major descriptive name associated with this template.
+    /// </summary>
+    public string? MajorName { get; init; }
+
+    /// <summary>
+    /// Gets the optional target specialty unique identifier associated with this template.
+    /// </summary>
+    public Guid? SpecialtyId { get; init; }
+
+    /// <summary>
+    /// Gets the optional target specialty descriptive name associated with this template.
+    /// </summary>
+    public string? SpecialtyName { get; init; }
+
+    /// <summary>
     /// Gets the chronological timestamp specifying exactly when the template was submitted for system clearance.
     /// </summary>
     public DateTime SubmittedAt { get; init; }

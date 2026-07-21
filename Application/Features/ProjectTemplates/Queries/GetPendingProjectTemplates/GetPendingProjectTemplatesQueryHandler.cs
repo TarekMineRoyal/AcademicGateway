@@ -43,23 +43,29 @@ public class GetPendingProjectTemplatesQueryHandler(
             throw new UnauthorizedAccessException("Access Denied: You do not possess the required administrative privileges to view the blueprint clearance queue.");
         }
 
-        // 3. Project database records directly into the lightweight read contract.
-        // Performance Optimization: Direct LINQ projections instruct EF Core to generate precise SQL statements,
-        // bypassing change-tracking buffers completely and avoiding over-fetching heavy nested collections.
-        return await context.ProjectTemplates
-            .AsNoTracking()
-            // Fixed: Updated to match 'PendingReview' to correctly reference the domain enum structural definition
-            .Where(t => t.Status == ProjectTemplateStatus.PendingReview)
-            .OrderBy(t => t.CreatedAt) // Oldest templates prioritized first in processing cycles (FIFO queue)
-            .Select(t => new PendingProjectTemplateDto
+        // 3. Project database records directly into the lightweight read contract using left outer joins
+        // for Major and Specialty to avoid missing navigation property errors (CS1061).
+        return await (
+            from t in context.ProjectTemplates.AsNoTracking()
+            where t.Status == ProjectTemplateStatus.PendingReview
+            join m in context.Majors on t.MajorId equals m.Id into majors
+            from m in majors.DefaultIfEmpty()
+            join s in context.Specialties on t.SpecialtyId equals s.Id into specialties
+            from s in specialties.DefaultIfEmpty()
+            orderby t.CreatedAt // Oldest templates prioritized first in processing cycles (FIFO queue)
+            select new PendingProjectTemplateDto
             {
                 Id = t.Id,
                 Title = t.Title,
                 Description = t.Description,
                 // Gracefully navigate the navigation layout anchor to expose provider ownership details safely
                 ProviderName = t.Provider != null ? t.Provider.CompanyName : "Independent Industry Author",
-                SubmittedAt = t.CreatedAt
-            })
-            .ToListAsync(cancellationToken);
+                SubmittedAt = t.CreatedAt,
+                MajorId = t.MajorId,
+                SpecialtyId = t.SpecialtyId,
+                MajorName = m != null ? m.Name : null,
+                SpecialtyName = s != null ? s.Name : null
+            }
+        ).ToListAsync(cancellationToken);
     }
 }

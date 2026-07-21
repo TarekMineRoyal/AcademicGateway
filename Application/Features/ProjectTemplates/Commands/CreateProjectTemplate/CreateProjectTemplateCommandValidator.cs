@@ -46,6 +46,26 @@ public class CreateProjectTemplateCommandValidator : AbstractValidator<CreatePro
             .NotEmpty().WithMessage("At least one required skill must be specified for the project template.")
             .Must(skills => skills != null && skills.Count <= 10).WithMessage("You cannot assign more than 10 required skills to a single template.")
             .MustAsync(SkillsMustExistInDatabase).WithMessage("One or more selected skills do not exist within the system directory.");
+
+        // Optional MajorId existence check
+        When(x => x.MajorId.HasValue, () =>
+        {
+            RuleFor(x => x.MajorId!.Value)
+                .NotEmpty().WithMessage("Major ID cannot be empty if specified.")
+                .MustAsync(MajorMustExistInDatabase).WithMessage("The selected major does not exist within the system directory.");
+        });
+
+        // Optional SpecialtyId check (requires MajorId presence and database validation)
+        When(x => x.SpecialtyId.HasValue, () =>
+        {
+            RuleFor(x => x.MajorId)
+                .NotNull().WithMessage("Major ID must be supplied when a Specialty ID is provided.")
+                .NotEmpty().WithMessage("Major ID must be supplied when a Specialty ID is provided.");
+
+            RuleFor(x => x.SpecialtyId!.Value)
+                .NotEmpty().WithMessage("Specialty ID cannot be empty if specified.")
+                .MustAsync(SpecialtyMustExistInDatabase).WithMessage("The selected specialty does not exist within the system directory.");
+        });
     }
 
     /// <summary>
@@ -68,5 +88,27 @@ public class CreateProjectTemplateCommandValidator : AbstractValidator<CreatePro
             .CountAsync(cancellationToken);
 
         return existingSkillCount == skillIds.Count;
+    }
+
+    /// <summary>
+    /// Asynchronously validates that the requested Major identifier corresponds to an existing database record.
+    /// </summary>
+    private async Task<bool> MajorMustExistInDatabase(
+        Guid majorId,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Majors
+            .AnyAsync(m => m.Id == majorId, cancellationToken);
+    }
+
+    /// <summary>
+    /// Asynchronously validates that the requested Specialty identifier corresponds to an existing database record.
+    /// </summary>
+    private async Task<bool> SpecialtyMustExistInDatabase(
+        Guid specialtyId,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Specialties
+            .AnyAsync(s => s.Id == specialtyId, cancellationToken);
     }
 }

@@ -42,6 +42,10 @@ public class GetProjectTemplateByIdQueryHandler(
                 Description = t.Description,
                 Status = t.Status,
                 ProviderId = t.ProviderId,
+                MajorId = t.MajorId,
+                SpecialtyId = t.SpecialtyId,
+                MajorName = t.MajorId != null ? context.Majors.Where(m => m.Id == t.MajorId).Select(m => m.Name).FirstOrDefault() : null,
+                SpecialtyName = t.SpecialtyId != null ? context.Specialties.Where(s => s.Id == t.SpecialtyId).Select(s => s.Name).FirstOrDefault() : null,
 
                 // Map out the skill prerequisite join collection
                 // Positional mapping automatically binds pts.SkillId to TemplateSkillDto.Id

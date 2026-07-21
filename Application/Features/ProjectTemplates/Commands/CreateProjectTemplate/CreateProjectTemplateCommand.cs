@@ -27,6 +27,16 @@ public record CreateProjectTemplateCommand : IRequest<Guid>
     public string Description { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional target major foreign key identifier used for filtering and semantic matchmaking.
+    /// </summary>
+    public Guid? MajorId { get; init; }
+
+    /// <summary>
+    /// Gets the optional target specialty foreign key identifier used for filtering and semantic matchmaking.
+    /// </summary>
+    public Guid? SpecialtyId { get; init; }
+
+    /// <summary>
     /// Gets the read-only sequence of global unique skill lookup identifiers requested as mandatory for student applications.
     /// </summary>
     public IReadOnlyCollection<Guid> SkillIds { get; init; } = Array.Empty<Guid>();
