@@ -21,7 +21,8 @@ public record RegisterStudentRequest(
     int? GraduationYear,
     IReadOnlyCollection<Guid> MajorIds,
     IReadOnlyCollection<Guid> SpecialtyIds,
-    IReadOnlyCollection<Guid> SkillIds);
+    IReadOnlyCollection<Guid> SkillIds,
+    string? AboutMe = null);
 
 /// <summary>
 /// Single Action Controller endpoint for registering new students.
@@ -52,7 +53,8 @@ public class RegisterStudentController(ISender mediator) : ControllerBase
             GraduationYear = request.GraduationYear,
             MajorIds = request.MajorIds,
             SpecialtyIds = request.SpecialtyIds,
-            SkillIds = request.SkillIds
+            SkillIds = request.SkillIds,
+            AboutMe = request.AboutMe
         };
 
         var studentId = await mediator.Send(command);

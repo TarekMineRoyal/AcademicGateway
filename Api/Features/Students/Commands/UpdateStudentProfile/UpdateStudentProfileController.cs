@@ -17,7 +17,8 @@ public record UpdateStudentProfileRequest(
     int? GraduationYear,
     IReadOnlyCollection<Guid> MajorIds,
     IReadOnlyCollection<Guid> SpecialtyIds,
-    IReadOnlyCollection<Guid> SkillIds);
+    IReadOnlyCollection<Guid> SkillIds,
+    string? AboutMe = null);
 
 /// <summary>
 /// Single Action Controller endpoint for managing active student profile lifecycles and maintenance operations.
@@ -47,7 +48,8 @@ public class UpdateStudentProfileController(ISender mediator) : ControllerBase
             GraduationYear = request.GraduationYear,
             MajorIds = request.MajorIds,
             SpecialtyIds = request.SpecialtyIds,
-            SkillIds = request.SkillIds
+            SkillIds = request.SkillIds,
+            AboutMe = request.AboutMe
         };
 
         await mediator.Send(command);

@@ -16,7 +16,8 @@ public record UpdateProfessorProfileRequest(
     string FullName,
     string Department,
     string Rank,
-    IReadOnlyCollection<Guid> ResearchInterestIds);
+    IReadOnlyCollection<Guid> ResearchInterestIds,
+    string? AboutMe);
 
 /// <summary>
 /// Endpoint for managing active faculty profile lifecycles and maintenance operations.
@@ -45,7 +46,8 @@ public class UpdateProfessorProfileController(ISender mediator) : ControllerBase
             FullName = request.FullName,
             Department = request.Department,
             Rank = request.Rank,
-            ResearchInterestIds = request.ResearchInterestIds
+            ResearchInterestIds = request.ResearchInterestIds,
+            AboutMe = request.AboutMe
         };
 
         await mediator.Send(command);

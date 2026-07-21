@@ -18,7 +18,8 @@ public record RegisterProfessorRequest(
     string FullName,
     string AcademicDepartment,
     string Rank,
-    int MaxSupervisionCapacity);
+    int MaxSupervisionCapacity,
+    string? AboutMe = null);
 
 /// <summary>
 /// Endpoint for registering new institutional faculty members.
@@ -48,7 +49,8 @@ public class RegisterProfessorController(ISender mediator) : ControllerBase
             FullName = request.FullName,
             AcademicDepartment = request.AcademicDepartment,
             Rank = request.Rank,
-            MaxSupervisionCapacity = request.MaxSupervisionCapacity
+            MaxSupervisionCapacity = request.MaxSupervisionCapacity,
+            AboutMe = request.AboutMe
         };
 
         var professorId = await mediator.Send(command);
