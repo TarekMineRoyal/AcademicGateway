@@ -20,6 +20,11 @@ public record StudentProfileDto
     public string FullName { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the optional biography or summary text provided by the student for vector matchmaking engine processing.
+    /// </summary>
+    public string? AboutMe { get; init; }
+
+    /// <summary>
     /// Gets the targeted graduation completion calendar year logged by the student.
     /// </summary>
     public int? GraduationYear { get; init; }

@@ -30,6 +30,9 @@ public class UpdateStudentProfileCommandValidator : AbstractValidator<UpdateStud
             .NotEmpty().WithMessage("Student profile display full name cannot be empty or whitespace.")
             .MaximumLength(150).WithMessage("Full name description details cannot exceed 150 characters.");
 
+        RuleFor(x => x.AboutMe)
+            .MaximumLength(2000).WithMessage("About Me biography details cannot exceed 2000 characters.");
+
         // Relational Validations - Core Selection Payload Limits
         RuleFor(x => x.MajorIds)
             .NotEmpty().WithMessage("You must select at least one core academic Major program.")

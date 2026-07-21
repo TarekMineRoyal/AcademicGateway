@@ -43,7 +43,8 @@ public class RegisterStudentCommandHandler(
         var studentProfile = new Student(
             id: userId,
             fullName: request.FullName,
-            graduationYear: request.GraduationYear
+            graduationYear: request.GraduationYear,
+            aboutMe: request.AboutMe
         );
 
         // 3. Attach academic programs via DDD behavioral methods

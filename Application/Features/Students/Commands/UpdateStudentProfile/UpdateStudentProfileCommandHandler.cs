@@ -52,6 +52,7 @@ public class UpdateStudentProfileCommandHandler(
         // 4. Mutate core primitive attributes via formal domain methods
         student.UpdateFullName(request.FullName);
         student.UpdateGraduationYear(request.GraduationYear);
+        student.UpdateAboutMe(request.AboutMe);
 
         // 5. Synchronize Academic Major Alignments (DDD Differential Synchronization Pattern)
         var targetMajors = request.MajorIds ?? Array.Empty<Guid>();

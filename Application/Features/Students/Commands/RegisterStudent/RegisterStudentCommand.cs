@@ -36,6 +36,11 @@ public record RegisterStudentCommand : IRequest<Guid>
     public int? GraduationYear { get; init; }
 
     /// <summary>
+    /// Gets the optional summary or biography text describing this student profile for vector matchmaking.
+    /// </summary>
+    public string? AboutMe { get; init; }
+
+    /// <summary>
     /// Gets the read-only collection of universal academic major tracking identifiers chosen by this student.
     /// </summary>
     public IReadOnlyCollection<Guid> MajorIds { get; init; } = Array.Empty<Guid>();

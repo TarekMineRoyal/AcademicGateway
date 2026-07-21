@@ -16,6 +16,11 @@ public record UpdateStudentProfileCommand : IRequest
     public string FullName { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the updated optional biography or self-description text summarizing the student.
+    /// </summary>
+    public string? AboutMe { get; init; }
+
+    /// <summary>
     /// Gets the updated optional target graduation completion calendar year logged by the student.
     /// </summary>
     public int? GraduationYear { get; init; }

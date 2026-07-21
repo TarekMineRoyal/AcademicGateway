@@ -47,6 +47,7 @@ public class GetStudentProfileQueryHandler(
             {
                 Id = s.Id,
                 FullName = s.FullName,
+                AboutMe = s.AboutMe,
                 GraduationYear = s.GraduationYear,
 
                 Majors = s.StudentMajors.Select(sm => new StudentMajorDto
