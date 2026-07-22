@@ -41,6 +41,7 @@ public static class ProviderSeeder
                 websiteUrl: "https://acme-innovations.internal"
             );
 
+            acmeProvider.ClearDomainEvents();
             await context.Providers.AddAsync(acmeProvider);
         }
 
@@ -54,6 +55,8 @@ public static class ProviderSeeder
             );
 
             acmeApp.SubmitForReview();
+
+            acmeApp.ClearDomainEvents();
             await context.ProviderApplications.AddAsync(acmeApp);
         }
 
@@ -74,6 +77,8 @@ public static class ProviderSeeder
             );
 
             cloudProvider.VerifyProfile(); // Mark profile as verified
+
+            cloudProvider.ClearDomainEvents();
             await context.Providers.AddAsync(cloudProvider);
         }
 
@@ -88,12 +93,12 @@ public static class ProviderSeeder
 
             cloudApp.SubmitForReview();
 
-            // Corrected: Passing required reviewerId and approval date arguments
             cloudApp.Approve(
                 reviewerId: reviewerId,
                 approvedAt: DateTime.UtcNow.AddDays(-28)
             );
 
+            cloudApp.ClearDomainEvents(); // Prevents event interceptor from throwing during userManager.CreateAsync
             await context.ProviderApplications.AddAsync(cloudApp);
         }
 
@@ -113,6 +118,7 @@ public static class ProviderSeeder
                 websiteUrl: "https://cybershield.internal"
             );
 
+            shieldProvider.ClearDomainEvents();
             await context.Providers.AddAsync(shieldProvider);
         }
 
@@ -127,13 +133,13 @@ public static class ProviderSeeder
 
             shieldApp.SubmitForReview();
 
-            // Corrected: Passing required reviewerId, rejection reason, and timestamp arguments
             shieldApp.Reject(
                 reviewerId: reviewerId,
                 reason: "Invalid corporate tax documentation provided.",
                 rejectedAt: DateTime.UtcNow.AddDays(-12)
             );
 
+            shieldApp.ClearDomainEvents();
             await context.ProviderApplications.AddAsync(shieldApp);
         }
 
@@ -153,6 +159,7 @@ public static class ProviderSeeder
                 websiteUrl: "https://apexgames.internal"
             );
 
+            apexProvider.ClearDomainEvents();
             await context.Providers.AddAsync(apexProvider);
         }
 
@@ -167,7 +174,6 @@ public static class ProviderSeeder
 
             apexApp.SubmitForReview();
 
-            // Corrected: Passing required reviewerId, rejection reason, and timestamp arguments
             apexApp.Reject(
                 reviewerId: reviewerId,
                 reason: "Initial submission lacked official corporate registration certificate.",
@@ -180,6 +186,7 @@ public static class ProviderSeeder
                 newVerificationDocumentsUrl: "https://storage.academicgateway.internal/onboarding/apexgames-v2-verified.pdf"
             );
 
+            apexApp.ClearDomainEvents();
             await context.ProviderApplications.AddAsync(apexApp);
         }
 

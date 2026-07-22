@@ -569,10 +569,11 @@ public static class ProjectTemplateSeeder
         archivedTemplate.SubmitForReview();
         archivedTemplate.Approve();
 
-        // Explicitly override status property for Archived state in EF Core tracker
-        context.Entry(archivedTemplate).Property(t => t.Status).CurrentValue = AcademicGateway.Domain.ProjectTemplates.Enums.ProjectTemplateStatus.Archived;
-
+        // 1. First attach to context so EF Core tracks the entity
         await context.ProjectTemplates.AddAsync(archivedTemplate);
+
+        // 2. Then override the Status property on the tracked entity
+        context.Entry(archivedTemplate).Property(t => t.Status).CurrentValue = AcademicGateway.Domain.ProjectTemplates.Enums.ProjectTemplateStatus.Archived;
 
         await context.SaveChangesAsync();
     }
