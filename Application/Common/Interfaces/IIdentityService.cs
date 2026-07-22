@@ -52,4 +52,11 @@ public interface IIdentityService
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Non-paginated search overload used internally by application domain services.
+    /// </summary>
+    Task<IReadOnlyCollection<Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+        string? searchTerm,
+        CancellationToken cancellationToken);
 }

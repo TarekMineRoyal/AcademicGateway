@@ -172,4 +172,35 @@ public class IdentityService(
 
         return await projectedQuery.ToPaginatedListAsync(pageNumber, pageSize, cancellationToken);
     }
+
+    /// <summary>
+    /// Asynchronously searches across professor security identity account records returning a full collection.
+    /// Used by internal domain recommendation services.
+    /// </summary>
+    public async Task<IReadOnlyCollection<Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+        string? searchTerm,
+        CancellationToken cancellationToken)
+    {
+        var query = from professor in dbContext.Professors
+                    join user in userManager.Users on professor.Id equals user.Id
+                    select new { professor, user };
+
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            var lowerSearchTerm = searchTerm.ToLower();
+            query = query.Where(x => x.professor.FullName.ToLower().Contains(lowerSearchTerm) ||
+                                     x.user.Email!.ToLower().Contains(lowerSearchTerm) ||
+                                     x.user.UserName!.ToLower().Contains(lowerSearchTerm));
+        }
+
+        return await query
+            .AsNoTracking()
+            .Select(x => new Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto
+            {
+                Id = x.professor.Id,
+                FullName = x.professor.FullName,
+                Email = x.user.Email!
+            })
+            .ToListAsync(cancellationToken);
+    }
 }
