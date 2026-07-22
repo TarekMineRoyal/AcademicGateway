@@ -1,4 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Domain.Common.Constants;
+using AcademicGateway.Domain.ProjectTemplates.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
@@ -25,13 +27,13 @@ public class GetProjectTemplateByIdQueryHandler(
     /// <returns>A detailed snapshot data transfer object of the template configuration, or null if not found.</returns>
     public async Task<ProjectTemplateDetailDto?> Handle(GetProjectTemplateByIdQuery request, CancellationToken cancellationToken)
     {
-        // Enforce active security session validation early before executing database logic
+        // 1. Enforce active security session validation early before executing database logic
         if (!currentUserService.IsAuthenticated)
         {
             throw new UnauthorizedAccessException("Access Denied: Authentication is mandatory to query template configurations.");
         }
 
-        // Query base: Deactivate object change-tracking for maximum read-side processing performance
+        // 2. Query base: Deactivate object change-tracking for maximum read-side processing performance
         var dto = await context.ProjectTemplates
             .AsNoTracking()
             .Where(t => t.Id == request.Id)
@@ -48,7 +50,6 @@ public class GetProjectTemplateByIdQueryHandler(
                 SpecialtyName = t.SpecialtyId != null ? context.Specialties.Where(s => s.Id == t.SpecialtyId).Select(s => s.Name).FirstOrDefault() : null,
 
                 // Map out the skill prerequisite join collection
-                // Positional mapping automatically binds pts.SkillId to TemplateSkillDto.Id
                 RequiredSkills = t.ProjectTemplateSkills.Select(pts => new TemplateSkillDto(
                     pts.SkillId,
                     pts.Skill != null ? pts.Skill.Name : "Unknown Skill"
@@ -83,21 +84,22 @@ public class GetProjectTemplateByIdQueryHandler(
             })
             .FirstOrDefaultAsync(cancellationToken);
 
-        // Validate presence boundaries and verify resource tenancy uniformly.
-        // Using a single unified error boundary protects against side-channel resource enumeration vectors.
-        // 1. Guard Invariant: Check if the resource even exists first
+        // 3. Resource existence guard: Return null so the controller handles a clean HTTP 404 Not Found response
         if (dto == null)
         {
-            throw new UnauthorizedAccessException("Access Denied: The requested project template was not found.");
+            return null;
         }
 
-        // 2. Evaluate Visibility Matrix:
-        // If it is NOT publicly approved, strictly enforce that only the authoring provider can see it.
-        // If it IS publicly approved, let students and other ecosystem actors read it.
+        // 4. Evaluate Visibility Matrix:
+        // Access is authorized if:
+        //   - User is the authoring provider (isOwner)
+        //   - Template is publicly approved (isPubliclyAvailable)
+        //   - User has administrative or reviewer privileges (isReviewer)
         bool isOwner = dto.ProviderId == currentUserService.UserId;
-        bool isPubliclyAvailable = dto.Status == AcademicGateway.Domain.ProjectTemplates.Enums.ProjectTemplateStatus.Approved;
+        bool isPubliclyAvailable = dto.Status == ProjectTemplateStatus.Approved;
+        bool isReviewer = currentUserService.IsInRole(Roles.Reviewer) || currentUserService.IsInRole(Roles.Admin);
 
-        if (!isOwner && !isPubliclyAvailable)
+        if (!isOwner && !isPubliclyAvailable && !isReviewer)
         {
             throw new UnauthorizedAccessException("Access Denied: You do not possess read authorization permissions for this template blueprint.");
         }
