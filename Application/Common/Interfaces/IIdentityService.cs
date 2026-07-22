@@ -59,4 +59,9 @@ public interface IIdentityService
     Task<IReadOnlyCollection<Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
         string? searchTerm,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asynchronously retrieves a dictionary mapping User IDs to their registered email addresses.
+    /// </summary>
+    Task<Dictionary<Guid, string>> GetUserEmailsAsync(IEnumerable<Guid> userIds, CancellationToken cancellationToken = default);
 }

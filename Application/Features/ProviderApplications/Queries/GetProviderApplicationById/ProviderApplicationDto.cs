@@ -25,6 +25,11 @@ public record ProviderApplicationDto
     public string CompanyName { get; init; } = string.Empty;
 
     /// <summary>
+    /// Gets the primary point of contact email address for communication regarding verification.
+    /// </summary>
+    public string ContactEmail { get; init; } = string.Empty;
+
+    /// <summary>
     /// Gets the full operational overview and academic/industry credentials submitted for review.
     /// </summary>
     public string CompanyDetails { get; init; } = string.Empty;

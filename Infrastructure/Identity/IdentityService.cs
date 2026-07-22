@@ -203,4 +203,27 @@ public class IdentityService(
             })
             .ToListAsync(cancellationToken);
     }
+
+    /// <summary>
+    /// Asynchronously retrieves a dictionary mapping User IDs to their registered email addresses.
+    /// </summary>
+    public async Task<Dictionary<Guid, string>> GetUserEmailsAsync(
+        IEnumerable<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        var idList = userIds.Distinct().ToList();
+
+        if (idList.Count == 0)
+        {
+            return [];
+        }
+
+        return await userManager.Users
+            .AsNoTracking()
+            .Where(u => idList.Contains(u.Id))
+            .ToDictionaryAsync(
+                u => u.Id,
+                u => u.Email ?? string.Empty,
+                cancellationToken);
+    }
 }
