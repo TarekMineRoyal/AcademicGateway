@@ -1,4 +1,5 @@
-﻿using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
+﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Features.ProjectTemplates.Commands.ReviewProjectTemplate;
 using AcademicGateway.Domain.Common.Constants;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
@@ -22,7 +23,9 @@ public record ReviewTemplateRequest(bool IsApproved, string? RejectionReason);
 [Tags("Project Templates")]
 [Authorize(Roles = Roles.Reviewer)] // Enforce that only users holding the Reviewer security role can access this endpoint
 [Route("api/project-templates/{templateId:guid}/review")]
-public class ReviewProjectTemplateController(ISender mediator) : ControllerBase
+public class ReviewProjectTemplateController(
+    ISender mediator,
+    ICurrentUserService currentUserService) : ControllerBase
 {
     /// <summary>
     /// Evaluates a submitted project template blueprint, recording an official approval or rejection decision status.
@@ -40,10 +43,11 @@ public class ReviewProjectTemplateController(ISender mediator) : ControllerBase
         [FromRoute] Guid templateId,
         [FromBody] ReviewTemplateRequest request)
     {
-        // Hydrate the CQRS application command object binding the route token and body elements cleanly
+        // Hydrate the CQRS application command object binding the route token, claims identity, and body elements cleanly
         var command = new ReviewProjectTemplateCommand
         {
             TemplateId = templateId,
+            ReviewerId = currentUserService.UserId ?? Guid.Empty,
             IsApproved = request.IsApproved,
             RejectionReason = request.RejectionReason
         };
