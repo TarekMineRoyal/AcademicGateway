@@ -1,8 +1,9 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Application.Common.Extensions;
+using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,16 +17,16 @@ namespace AcademicGateway.Application.Features.TechSupportProposals.Queries.GetT
 public class GetTechSupportProposalsQueryHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetTechSupportProposalsQuery, IReadOnlyCollection<TechSupportProposalDto>>
+    : IRequestHandler<GetTechSupportProposalsQuery, PaginatedResult<TechSupportProposalDto>>
 {
     /// <summary>
     /// Processes the corporate proposals lookup query, executing proactive multi-tenant ownership checking boundaries.
     /// </summary>
     /// <param name="request">The query container containing the target ProjectInstanceId identifier key.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
-    /// <returns>A read-only sequence containing safe projection representations of matched corporate offers.</returns>
+    /// <returns>A paginated result containing safe projection representations of matched corporate offers.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session validation or explicit aggregate ownership verification parameters fail boundaries.</exception>
-    public async Task<IReadOnlyCollection<TechSupportProposalDto>> Handle(
+    public async Task<PaginatedResult<TechSupportProposalDto>> Handle(
         GetTechSupportProposalsQuery request,
         CancellationToken cancellationToken)
     {
@@ -60,10 +61,11 @@ public class GetTechSupportProposalsQueryHandler(
             throw new UnauthorizedAccessException("Access Denied: The requested project workspace record was not found, or you do not possess read authorization permissions.");
         }
 
-        // 4. Project matched relational child records directly into the immutable data contracts.
-        return await context.TechSupportProposals
+        // 4. Project matched relational child records directly into the immutable data contracts with pagination.
+        var query = context.TechSupportProposals
             .AsNoTracking()
             .Where(p => p.ProjectInstanceId == request.ProjectInstanceId)
+            .OrderByDescending(p => p.CreatedAt)
             .Select(p => new TechSupportProposalDto
             {
                 Id = p.Id,
@@ -72,7 +74,8 @@ public class GetTechSupportProposalsQueryHandler(
                 Status = p.Status,
                 RejectionReason = p.RejectionReason,
                 CreatedAt = p.CreatedAt
-            })
-            .ToListAsync(cancellationToken);
+            });
+
+        return await query.ToPaginatedListAsync(request.PageNumber, request.PageSize, cancellationToken);
     }
 }

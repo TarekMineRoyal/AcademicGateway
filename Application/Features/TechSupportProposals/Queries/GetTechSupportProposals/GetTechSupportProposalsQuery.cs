@@ -1,6 +1,6 @@
-﻿using MediatR;
+﻿using AcademicGateway.Application.Common.Models;
+using MediatR;
 using System;
-using System.Collections.Generic;
 
 namespace AcademicGateway.Application.Features.TechSupportProposals.Queries.GetTechSupportProposals;
 
@@ -8,10 +8,8 @@ namespace AcademicGateway.Application.Features.TechSupportProposals.Queries.GetT
 /// CQRS query request contract targeting corporate industry mentorship proposals.
 /// Requests the active assistance offers tied to a specific project workspace instance.
 /// </summary>
-public class GetTechSupportProposalsQuery : IRequest<IReadOnlyCollection<TechSupportProposalDto>>
-{
-    /// <summary>
-    /// Gets or sets the live project workspace aggregate root's unique lookup identifier key.
-    /// </summary>
-    public Guid ProjectInstanceId { get; set; }
-}
+public record GetTechSupportProposalsQuery(
+    Guid ProjectInstanceId,
+    int PageNumber = 1,
+    int PageSize = 10
+) : IRequest<PaginatedResult<TechSupportProposalDto>>;

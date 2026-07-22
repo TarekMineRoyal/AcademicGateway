@@ -1,6 +1,6 @@
-﻿using MediatR;
+﻿using AcademicGateway.Application.Common.Models;
+using MediatR;
 using System;
-using System.Collections.Generic;
 
 namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
 
@@ -8,11 +8,11 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetAppro
 /// CQRS Query to retrieve a filtered collection of approved, publicly available project template blueprints.
 /// Commonly consumed by student matching platforms to discover verified placement options.
 /// </summary>
-public record GetApprovedTemplatesQuery : IRequest<IReadOnlyCollection<ApprovedTemplateDto>>
-{
-    /// <summary>
-    /// Gets an optional filtering criterion targeting a specific technical skill requirement lookup identifier.
-    /// When provided, restricts results strictly to project blueprints requiring this asset.
-    /// </summary>
-    public Guid? SkillId { get; init; }
-}
+/// <param name="SkillId">An optional filtering criterion targeting a specific technical skill requirement lookup identifier.</param>
+/// <param name="PageNumber">The 1-based index of the page to retrieve (default: 1).</param>
+/// <param name="PageSize">The maximum number of items to retrieve per page (default: 10).</param>
+public record GetApprovedTemplatesQuery(
+    Guid? SkillId = null,
+    int PageNumber = 1,
+    int PageSize = 10
+) : IRequest<PaginatedResult<ApprovedTemplateDto>>;

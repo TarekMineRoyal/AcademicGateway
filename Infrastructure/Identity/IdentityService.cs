@@ -1,4 +1,6 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Application.Common.Extensions;
+using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using AcademicGateway.Infrastructure.Persistence.Context;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -128,14 +130,18 @@ public class IdentityService(
     }
 
     /// <summary>
-    /// Asynchronously searches across professor security identity account records using a case-insensitive keyword phrase match.
+    /// Asynchronously searches across professor security identity account records using a case-insensitive keyword phrase match with pagination.
     /// Performs an optimal join projection between core domain aggregates and security database structures.
     /// </summary>
     /// <param name="searchTerm">The optional keyword phrase token used to evaluate matching boundary filters.</param>
+    /// <param name="pageNumber">The 1-based index of the page to retrieve.</param>
+    /// <param name="pageSize">The maximum number of items to retrieve per page.</param>
     /// <param name="cancellationToken">Propagates notification that network database operations should be canceled.</param>
-    /// <returns>An immutable read-only sequence containing matching lightweight presentational professor search records.</returns>
-    public async Task<IReadOnlyCollection<Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+    /// <returns>A paginated result containing matching lightweight presentational professor search records.</returns>
+    public async Task<PaginatedResult<Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
         string? searchTerm,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken)
     {
         // Establish an optimized relational join query between the profile boundaries and security records.
@@ -153,15 +159,17 @@ public class IdentityService(
                                      x.user.UserName!.ToLower().Contains(lowerSearchTerm));
         }
 
-        // Execute untracked relational projection to maximize throughput and minimize garbage collection allocation pressures
-        return await query
+        // Execute untracked relational projection and apply pagination
+        var projectedQuery = query
             .AsNoTracking()
+            .OrderBy(x => x.professor.FullName)
             .Select(x => new Application.Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto
             {
                 Id = x.professor.Id,
                 FullName = x.professor.FullName,
                 Email = x.user.Email!
-            })
-            .ToListAsync(cancellationToken);
+            });
+
+        return await projectedQuery.ToPaginatedListAsync(pageNumber, pageSize, cancellationToken);
     }
 }

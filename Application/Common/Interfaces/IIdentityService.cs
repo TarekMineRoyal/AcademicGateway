@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AcademicGateway.Application.Common.Models;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -38,13 +39,17 @@ public interface IIdentityService
     Task<string?> AuthenticateAsync(string email, string password);
 
     /// <summary>
-    /// Asynchronously searches across user security identity account records where the assigned role context is matching 'Professor'.
+    /// Asynchronously searches across user security identity account records where the assigned role context matches 'Professor'.
     /// Filters profiles case-insensitively using partial text validation across full name metrics, electronic mail records, or login handles.
     /// </summary>
     /// <param name="searchTerm">The optional keyword phrase token used to evaluate matching boundary filters.</param>
+    /// <param name="pageNumber">The 1-based index of the page to retrieve.</param>
+    /// <param name="pageSize">The maximum number of items to retrieve per page.</param>
     /// <param name="cancellationToken">Propagates notification that network database operations should be canceled.</param>
-    /// <returns>An immutable read-only sequence containing matching lightweight presentational professor search records.</returns>
-    Task<IReadOnlyCollection<Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
+    /// <returns>A paginated result containing matching lightweight presentational professor search records.</returns>
+    Task<PaginatedResult<Features.Professors.Queries.SearchProfessors.ProfessorSearchResultDto>> SearchProfessorsAsync(
         string? searchTerm,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken);
 }

@@ -1,9 +1,10 @@
-﻿using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
+﻿using AcademicGateway.Application.Common.Models;
+using AcademicGateway.Application.Features.ProjectTemplates.Queries.GetApprovedTemplates;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace AcademicGateway.Api.Features.ProjectTemplates.Queries.GetApprovedTemplates;
@@ -18,18 +19,21 @@ namespace AcademicGateway.Api.Features.ProjectTemplates.Queries.GetApprovedTempl
 public class GetApprovedTemplatesController(ISender mediator) : ControllerBase
 {
     /// <summary>
-    /// Retrieves a collection of approved, publicly available project template blueprints, optionally filtered by a specific skill.
+    /// Retrieves a paginated collection of approved, publicly available project template blueprints, optionally filtered by a specific skill.
     /// </summary>
-    /// <param name="skillId">The optional unique tracking identifier of a technical skill lookup constraint.</param>
-    /// <returns>A 200 OK response containing the collection of matching verified placement templates.</returns>
+    /// <param name="query">The query parameters including pagination parameters and optional skill lookup filter.</param>
+    /// <param name="cancellationToken">Propagates notification that network operations should be aborted.</param>
+    /// <returns>A 200 OK response containing the paginated collection of matching verified placement templates.</returns>
+    /// <response code="200">Returns the paginated sequence of approved placement templates successfully.</response>
+    /// <response code="401">Returned if the request header lacks valid session authentication context bearer tokens.</response>
     [HttpGet]
-    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(PaginatedResult<ApprovedTemplateDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public async Task<IActionResult> GetApproved([FromQuery] Guid? skillId)
+    public async Task<ActionResult<PaginatedResult<ApprovedTemplateDto>>> GetApproved(
+        [FromQuery] GetApprovedTemplatesQuery query,
+        CancellationToken cancellationToken = default)
     {
-        var query = new GetApprovedTemplatesQuery { SkillId = skillId };
-        var templates = await mediator.Send(query);
-
-        return Ok(templates);
+        var result = await mediator.Send(query, cancellationToken);
+        return Ok(result);
     }
 }

@@ -1,9 +1,10 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
+﻿using AcademicGateway.Application.Common.Extensions;
+using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using AcademicGateway.Domain.ProjectInstances.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,16 +18,16 @@ namespace AcademicGateway.Application.Features.SupervisionRequests.Queries.GetPe
 public class GetPendingSupervisionRequestsQueryHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetPendingSupervisionRequestsQuery, IReadOnlyCollection<PendingSupervisionRequestDto>>
+    : IRequestHandler<GetPendingSupervisionRequestsQuery, PaginatedResult<PendingSupervisionRequestDto>>
 {
     /// <summary>
     /// Processes the pending supervision invitations lookup query, applying strict multi-tenant context verification boundaries.
     /// </summary>
     /// <param name="request">The query container containing the target ProfessorId lookup key.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
-    /// <returns>A read-only sequence containing safe projection representations of matched pending invitations.</returns>
+    /// <returns>A paginated result containing safe projection representations of matched pending invitations.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session validation or explicit role checking parameters fail boundaries.</exception>
-    public async Task<IReadOnlyCollection<PendingSupervisionRequestDto>> Handle(
+    public async Task<PaginatedResult<PendingSupervisionRequestDto>> Handle(
         GetPendingSupervisionRequestsQuery request,
         CancellationToken cancellationToken)
     {
@@ -49,10 +50,8 @@ public class GetPendingSupervisionRequestsQueryHandler(
         // avoiding wasteful tracking cache or excessive eager loading overhead.
         var query = context.SupervisionRequests
             .AsNoTracking()
-            .Where(r => r.ProfessorId == request.ProfessorId && r.Status == SupervisionRequestStatus.Pending);
-
-        // Project matched relational tables directly into lean data transfer contracts
-        return await query
+            .Where(r => r.ProfessorId == request.ProfessorId && r.Status == SupervisionRequestStatus.Pending)
+            .OrderByDescending(r => r.CreatedAt)
             .Select(r => new PendingSupervisionRequestDto
             {
                 Id = r.Id,
@@ -64,7 +63,8 @@ public class GetPendingSupervisionRequestsQueryHandler(
 
                 PitchText = r.PitchText,
                 CreatedAt = r.CreatedAt
-            })
-            .ToListAsync(cancellationToken);
+            });
+
+        return await query.ToPaginatedListAsync(request.PageNumber, request.PageSize, cancellationToken);
     }
 }

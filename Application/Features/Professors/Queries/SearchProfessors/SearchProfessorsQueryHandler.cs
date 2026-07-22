@@ -1,6 +1,6 @@
 ﻿using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using MediatR;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,18 +11,22 @@ namespace AcademicGateway.Application.Features.Professors.Queries.SearchProfesso
 /// Leverages the identity subsystem to run cross-cutting string matching across user accounts and profile records.
 /// </summary>
 public class SearchProfessorsQueryHandler(IIdentityService identityService)
-    : IRequestHandler<SearchProfessorsQuery, IReadOnlyCollection<ProfessorSearchResultDto>>
+    : IRequestHandler<SearchProfessorsQuery, PaginatedResult<ProfessorSearchResultDto>>
 {
     /// <summary>
-    /// Processes the incoming search query by dispatching the search filtering rules to the identity service layer.
+    /// Processes the incoming search query by dispatching the search filtering and pagination rules to the identity service layer.
     /// </summary>
-    /// <param name="request">The incoming structural query envelope wrapping the search filtering constraints.</param>
+    /// <param name="request">The incoming structural query envelope wrapping the search filtering and pagination constraints.</param>
     /// <param name="cancellationToken">Propagates notification that network operations should be canceled.</param>
-    /// <returns>An immutable read-only sequence containing matching presentational professor search records.</returns>
-    public async Task<IReadOnlyCollection<ProfessorSearchResultDto>> Handle(
+    /// <returns>A paginated result containing matching presentational professor search records.</returns>
+    public async Task<PaginatedResult<ProfessorSearchResultDto>> Handle(
         SearchProfessorsQuery request,
         CancellationToken cancellationToken)
     {
-        return await identityService.SearchProfessorsAsync(request.SearchTerm, cancellationToken);
+        return await identityService.SearchProfessorsAsync(
+            request.SearchTerm,
+            request.PageNumber,
+            request.PageSize,
+            cancellationToken);
     }
 }

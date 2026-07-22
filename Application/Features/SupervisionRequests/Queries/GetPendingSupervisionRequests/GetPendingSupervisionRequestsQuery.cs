@@ -1,6 +1,6 @@
-﻿using MediatR;
+﻿using AcademicGateway.Application.Common.Models;
+using MediatR;
 using System;
-using System.Collections.Generic;
 
 namespace AcademicGateway.Application.Features.SupervisionRequests.Queries.GetPendingSupervisionRequests;
 
@@ -8,10 +8,11 @@ namespace AcademicGateway.Application.Features.SupervisionRequests.Queries.GetPe
 /// CQRS query request contract targeting outstanding academic supervision invitations.
 /// Requests a filtered collection of pending requests assigned to a specific faculty member.
 /// </summary>
-public class GetPendingSupervisionRequestsQuery : IRequest<IReadOnlyCollection<PendingSupervisionRequestDto>>
-{
-    /// <summary>
-    /// Gets or sets the target faculty member's unique lookup identifier key.
-    /// </summary>
-    public Guid ProfessorId { get; set; }
-}
+/// <param name="ProfessorId">The target faculty member's unique lookup identifier key.</param>
+/// <param name="PageNumber">The 1-based index of the page to retrieve (default: 1).</param>
+/// <param name="PageSize">The maximum number of items to retrieve per page (default: 10).</param>
+public record GetPendingSupervisionRequestsQuery(
+    Guid ProfessorId,
+    int PageNumber = 1,
+    int PageSize = 10
+) : IRequest<PaginatedResult<PendingSupervisionRequestDto>>;
