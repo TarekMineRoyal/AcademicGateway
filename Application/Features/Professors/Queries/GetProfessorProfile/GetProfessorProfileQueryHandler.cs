@@ -15,7 +15,8 @@ namespace AcademicGateway.Application.Features.Professors.Queries.GetProfessorPr
 /// </summary>
 public class GetProfessorProfileQueryHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IIdentityService identityService)
     : IRequestHandler<GetProfessorProfileQuery, ProfessorProfileDto>
 {
     /// <summary>
@@ -39,6 +40,10 @@ public class GetProfessorProfileQueryHandler(
             throw new UnauthorizedAccessException("Access Denied: The requested profile was not found, or you do not possess read authorization permissions.");
         }
 
+        // Fetch matching professor user identity details for email resolution
+        var identityProfessors = await identityService.SearchProfessorsAsync(null, cancellationToken);
+        var matchingIdentity = identityProfessors.FirstOrDefault(x => x.Id == request.ProfessorId);
+
         // Project the relational database tables directly into clean presentation contracts.
         var profile = await context.Professors
             .AsNoTracking()
@@ -47,9 +52,14 @@ public class GetProfessorProfileQueryHandler(
             {
                 Id = p.Id,
                 FullName = p.FullName,
+                Email = matchingIdentity != null ? matchingIdentity.Email : string.Empty,
                 Department = p.Department,
                 Rank = p.Rank,
                 AboutMe = p.AboutMe,
+                ResearchInterests = p.ResearchInterests
+                    .Select(ri => ri.ResearchInterest != null ? ri.ResearchInterest.Area : string.Empty)
+                    .Where(area => !string.IsNullOrWhiteSpace(area))
+                    .ToList(),
                 MaxSupervisionCapacity = p.MaxSupervisionCapacity,
                 CurrentProjectCount = p.CurrentProjectCount,
                 IsAcceptingProjects = p.CurrentProjectCount < p.MaxSupervisionCapacity

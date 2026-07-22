@@ -1,16 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace AcademicGateway.Application.Features.Professors.Queries.GetProfessorProfile;
+namespace AcademicGateway.Application.Features.Professors.Queries.GetPublicProfessorProfile;
 
 /// <summary>
-/// Data Transfer Object representing the comprehensive profile view of an institutional faculty member.
-/// Exposes rich domain properties, capacity boundaries, and current state metrics.
+/// Data Transfer Object representing the public profile view of an institutional faculty member.
+/// Decoupled from private/self profile endpoints for public lookups.
 /// </summary>
-public record ProfessorProfileDto
+public record GetPublicProfessorProfileQueryDto
 {
     /// <summary>
-    /// Gets the global unique entity identifier tracking this professor profile, mapping 1:1 to their identity credentials.
+    /// Gets the global unique entity identifier tracking this professor profile.
     /// </summary>
     public Guid Id { get; init; }
 
@@ -20,7 +20,7 @@ public record ProfessorProfileDto
     public string FullName { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the unique corporate or institutional contact electronic mail address mapped to the account.
+    /// Gets the corporate or institutional contact email address mapped to the account.
     /// </summary>
     public string Email { get; init; } = string.Empty;
 
@@ -35,7 +35,7 @@ public record ProfessorProfileDto
     public string Rank { get; init; } = string.Empty;
 
     /// <summary>
-    /// Gets the optional summary or biography narrative used for AI vector matchmaking and project recommendations.
+    /// Gets the optional summary or biography narrative.
     /// </summary>
     public string? AboutMe { get; init; }
 

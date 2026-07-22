@@ -77,9 +77,11 @@ public class GetProfessorSuggestionsForProjectQueryHandler(
             return Array.Empty<ProfessorSearchResultDto>();
         }
 
-        // 4. Hydrate matching professors from DB
+        // 4. Hydrate matching professors from DB including research interests
         var dbProfessors = await context.Professors
             .AsNoTracking()
+            .Include(p => p.ResearchInterests)
+                .ThenInclude(ri => ri.ResearchInterest)
             .Where(p => vectorIds.Contains(p.Id))
             .ToListAsync(cancellationToken);
 
@@ -98,7 +100,16 @@ public class GetProfessorSuggestionsForProjectQueryHandler(
             {
                 Id = p.Id,
                 FullName = p.FullName,
-                Email = emailLookup.TryGetValue(p.Id, out var email) ? email : string.Empty
+                Email = emailLookup.TryGetValue(p.Id, out var email) ? email : string.Empty,
+                Department = p.Department,
+                AboutMe = p.AboutMe,
+                ResearchInterests = p.ResearchInterests
+                    .Select(ri => ri.ResearchInterest != null ? ri.ResearchInterest.Area : string.Empty)
+                    .Where(area => !string.IsNullOrWhiteSpace(area))
+                    .ToList(),
+                CurrentProjectCount = p.CurrentProjectCount,
+                MaxSupervisionCapacity = p.MaxSupervisionCapacity,
+                IsAcceptingProjects = p.IsAcceptingProjects
             })
             .ToList();
     }
