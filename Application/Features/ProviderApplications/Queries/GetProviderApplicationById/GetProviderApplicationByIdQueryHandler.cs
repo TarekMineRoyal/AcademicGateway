@@ -15,16 +15,10 @@ namespace AcademicGateway.Application.Features.ProviderApplications.Queries.GetP
 /// </summary>
 public class GetProviderApplicationByIdQueryHandler(
     IApplicationDbContext context,
-    ICurrentUserService currentUserService)
+    ICurrentUserService currentUserService,
+    IIdentityService identityService) // Injected IdentityService
     : IRequestHandler<GetProviderApplicationByIdQuery, ProviderApplicationDto?>
 {
-    /// <summary>
-    /// Processes the provider application detail query by executing untracked relational projection queries.
-    /// </summary>
-    /// <param name="request">The incoming query containing the application ID.</param>
-    /// <param name="cancellationToken">Propagates notification that operational execution should be canceled.</param>
-    /// <returns>A <see cref="ProviderApplicationDto"/> containing detailed application information, or null if not found.</returns>
-    /// <exception cref="UnauthorizedAccessException">Thrown when session verification or role authorization boundaries fail.</exception>
     public async Task<ProviderApplicationDto?> Handle(
         GetProviderApplicationByIdQuery request,
         CancellationToken cancellationToken)
@@ -72,11 +66,15 @@ public class GetProviderApplicationByIdQueryHandler(
         bool isReviewer = currentUserService.IsInRole(Roles.Reviewer) || currentUserService.IsInRole(Roles.Admin);
         bool isOwner = dto.ProviderId == currentUserService.UserId;
 
-        if (!currentUserService.IsInRole(Roles.Reviewer))
+        if (!isReviewer && !isOwner)
         {
             throw new UnauthorizedAccessException("Access Denied: You do not possess the required reviewer privileges to access application details.");
         }
 
-        return dto;
+        // 4. Fetch the applicant's email from Identity and populate ContactEmail
+        var emailMap = await identityService.GetUserEmailsAsync([dto.ProviderId], cancellationToken);
+        var contactEmail = emailMap.TryGetValue(dto.ProviderId, out var email) ? email : string.Empty;
+
+        return dto with { ContactEmail = contactEmail };
     }
 }
