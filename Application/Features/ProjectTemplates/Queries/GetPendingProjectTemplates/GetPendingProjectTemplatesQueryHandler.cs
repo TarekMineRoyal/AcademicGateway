@@ -1,10 +1,11 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Domain.ProjectTemplates.Enums;
+﻿using AcademicGateway.Application.Common.Extensions;
+using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using AcademicGateway.Domain.Common.Constants;
+using AcademicGateway.Domain.ProjectTemplates.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,16 +19,16 @@ namespace AcademicGateway.Application.Features.ProjectTemplates.Queries.GetPendi
 public class GetPendingProjectTemplatesQueryHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetPendingProjectTemplatesQuery, IReadOnlyCollection<PendingProjectTemplateDto>>
+    : IRequestHandler<GetPendingProjectTemplatesQuery, PaginatedResult<PendingProjectTemplateDto>>
 {
     /// <summary>
     /// Processes the template clearance queue query by selecting submitted templates straight into lightweight presentation DTO records securely.
     /// </summary>
     /// <param name="request">The incoming CQRS read model request container.</param>
     /// <param name="cancellationToken">Propagates notification that database network execution routines should be canceled.</param>
-    /// <returns>A read-only collection containing immutable DTO representations of submitted project templates awaiting clearance.</returns>
+    /// <returns>A paginated result containing immutable DTO representations of submitted project templates awaiting clearance.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session validation or explicit role checking parameters fail boundaries.</exception>
-    public async Task<IReadOnlyCollection<PendingProjectTemplateDto>> Handle(
+    public async Task<PaginatedResult<PendingProjectTemplateDto>> Handle(
         GetPendingProjectTemplatesQuery request,
         CancellationToken cancellationToken)
     {
@@ -46,27 +47,27 @@ public class GetPendingProjectTemplatesQueryHandler(
 
         // 3. Project database records directly into the lightweight read contract using left outer joins
         // for Major and Specialty to avoid missing navigation property errors (CS1061).
-        return await (
-            from t in context.ProjectTemplates.AsNoTracking()
-            where t.Status == ProjectTemplateStatus.PendingReview
-            join m in context.Majors on t.MajorId equals m.Id into majors
-            from m in majors.DefaultIfEmpty()
-            join s in context.Specialties on t.SpecialtyId equals s.Id into specialties
-            from s in specialties.DefaultIfEmpty()
-            orderby t.CreatedAt // Oldest templates prioritized first in processing cycles (FIFO queue)
-            select new PendingProjectTemplateDto
-            {
-                Id = t.Id,
-                Title = t.Title,
-                Description = t.Description,
-                // Gracefully navigate the navigation layout anchor to expose provider ownership details safely
-                ProviderName = t.Provider != null ? t.Provider.CompanyName : "Independent Industry Author",
-                SubmittedAt = t.CreatedAt,
-                MajorId = t.MajorId,
-                SpecialtyId = t.SpecialtyId,
-                MajorName = m != null ? m.Name : null,
-                SpecialtyName = s != null ? s.Name : null
-            }
-        ).ToListAsync(cancellationToken);
+        var query = from t in context.ProjectTemplates.AsNoTracking()
+                    where t.Status == ProjectTemplateStatus.PendingReview
+                    join m in context.Majors on t.MajorId equals m.Id into majors
+                    from m in majors.DefaultIfEmpty()
+                    join s in context.Specialties on t.SpecialtyId equals s.Id into specialties
+                    from s in specialties.DefaultIfEmpty()
+                    orderby t.CreatedAt // Oldest templates prioritized first in processing cycles (FIFO queue)
+                    select new PendingProjectTemplateDto
+                    {
+                        Id = t.Id,
+                        Title = t.Title,
+                        Description = t.Description,
+                        // Gracefully navigate the navigation layout anchor to expose provider ownership details safely
+                        ProviderName = t.Provider != null ? t.Provider.CompanyName : "Independent Industry Author",
+                        SubmittedAt = t.CreatedAt,
+                        MajorId = t.MajorId,
+                        SpecialtyId = t.SpecialtyId,
+                        MajorName = m != null ? m.Name : null,
+                        SpecialtyName = s != null ? s.Name : null
+                    };
+
+        return await query.ToPaginatedListAsync(request.PageNumber, request.PageSize, cancellationToken);
     }
 }

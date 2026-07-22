@@ -1,10 +1,11 @@
-﻿using AcademicGateway.Application.Common.Interfaces;
-using AcademicGateway.Domain.Providers.Enums;
+﻿using AcademicGateway.Application.Common.Extensions;
+using AcademicGateway.Application.Common.Interfaces;
+using AcademicGateway.Application.Common.Models;
 using AcademicGateway.Domain.Common.Constants;
+using AcademicGateway.Domain.Providers.Enums;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,16 +19,16 @@ namespace AcademicGateway.Application.Features.ProviderApplications.Queries.GetP
 public class GetPendingProviderApplicationsQueryHandler(
     IApplicationDbContext context,
     ICurrentUserService currentUserService)
-    : IRequestHandler<GetPendingProviderApplicationsQuery, IReadOnlyCollection<PendingProviderApplicationDto>>
+    : IRequestHandler<GetPendingProviderApplicationsQuery, PaginatedResult<PendingProviderApplicationDto>>
 {
     /// <summary>
     /// Processes the verification queue query by selecting pending application data straight into lightweight presentation DTO records securely.
     /// </summary>
     /// <param name="request">The incoming CQRS read model request container.</param>
     /// <param name="cancellationToken">Propagates notification that database network execution routines should be canceled.</param>
-    /// <returns>A read-only collection containing immutable dto representations of unmatched pending provider application records.</returns>
+    /// <returns>A paginated result containing immutable DTO representations of unmatched pending provider application records.</returns>
     /// <exception cref="UnauthorizedAccessException">Uniformly thrown if session validation or explicit role checking parameters fail boundaries.</exception>
-    public async Task<IReadOnlyCollection<PendingProviderApplicationDto>> Handle(
+    public async Task<PaginatedResult<PendingProviderApplicationDto>> Handle(
         GetPendingProviderApplicationsQuery request,
         CancellationToken cancellationToken)
     {
@@ -59,6 +60,6 @@ public class GetPendingProviderApplicationsQueryHandler(
                 SubmittedAt = a.CreatedAt,
                 ContactEmail = "verification-pending@academicgateway.internal"
             })
-            .ToListAsync(cancellationToken);
+            .ToPaginatedListAsync(request.PageNumber, request.PageSize, cancellationToken);
     }
 }
