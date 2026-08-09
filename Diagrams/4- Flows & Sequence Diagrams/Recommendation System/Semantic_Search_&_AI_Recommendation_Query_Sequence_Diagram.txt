@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor User as User / Student / Professor
+    participant Main as Main Backend (ASP.NET CQRS)
+    participant AI as AI Microservice (FastAPI)
+    participant Nomic as Nomic Embedding Model
+    participant Lance as LanceDB Vector Store
+
+    User->>Main: Request Search / Recommendations
+    activate Main
+    Main->>AI: POST /api/v1/search/{projects|professors|skills}
+    activate AI
+    
+    AI->>Nomic: embed_query(search_context)
+    activate Nomic
+    Nomic-->>AI: Query Vector
+    deactivate Nomic
+    
+    AI->>Lance: find_nearest(vector, limit=10)
+    activate Lance
+    Lance-->>AI: Return Relevance-Ranked UUID List
+    deactivate Lance
+    
+    AI-->>Main: Return List<Guid>
+    deactivate AI
+    
+    Note over Main: Hydrate UUIDs with relational data
+    Main-->>User: Return Recommendation DTOs
+    deactivate Main

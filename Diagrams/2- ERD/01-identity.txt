@@ -1,0 +1,68 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    AspNetUsers ||--o{ AspNetUserRoles : "assigned"
+    AspNetRoles ||--o{ AspNetUserRoles : "defines"
+
+    AspNetUsers ||--o| Students : "has profile"
+    AspNetUsers ||--o| Professors : "has profile"
+    AspNetUsers ||--o| Providers : "has profile"
+    AspNetUsers ||--o| Reviewers : "has profile"
+    AspNetUsers ||--o| TechSupportAccounts : "has profile"
+
+    Providers ||--o{ TechSupportAccounts : "employs"
+
+    AspNetUsers {
+        uuid id PK
+        string email "nullable"
+        string user_name "nullable"
+        string password_hash "nullable"
+        boolean email_confirmed
+    }
+
+    AspNetRoles {
+        uuid id PK
+        string name "nullable"
+    }
+
+    AspNetUserRoles {
+        uuid user_id PK, FK
+        uuid role_id PK, FK
+    }
+
+    Students {
+        uuid id PK, FK
+        string full_name
+        string about_me "nullable"
+        int graduation_year "nullable"
+    }
+
+    Professors {
+        uuid id PK, FK
+        string full_name
+        string department
+        string rank
+        string about_me "nullable"
+        int max_supervision_capacity
+        int current_project_count
+    }
+
+    Providers {
+        uuid id PK, FK
+        string company_name
+        string company_description
+        string website_url
+        boolean is_verified
+    }
+
+    Reviewers {
+        uuid id PK, FK
+        string full_name
+    }
+
+    TechSupportAccounts {
+        uuid id PK, FK
+        uuid provider_id FK
+        string staff_number
+        string support_tier
+        boolean is_active
+    }

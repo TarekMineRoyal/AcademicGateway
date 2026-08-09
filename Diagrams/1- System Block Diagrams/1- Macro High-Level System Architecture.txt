@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph ClientDevice["User Device"]
+        Client["React SPA Client<br/><i>(Browser Environment)</i>"]
+    end
+
+    subgraph ServerEnvironment["Application Server Infrastructure"]
+        subgraph CoreBusinessTier["Core Business Tier"]
+            Backend["ASP.NET Core Backend API<br/><i>(CQRS Core Business Tier)</i>"]
+            RelationalDB[("PostgreSQL Database<br/><i>(EF Core / Npgsql)</i>")]
+        end
+
+        subgraph IntelligenceTier["Intelligence Tier"]
+            AIMicroservice["FastAPI AI Microservice<br/><i>(Vector & Recommendation Engine)</i>"]
+            LanceDB[("LanceDB Embedded File Store<br/><i>(Live vs *_sync Tables)</i>")]
+        end
+    end
+
+    %% Client to Backend Connection
+    Client <-->|"HTTPS / REST API<br/>(JWT Bearer Tokens)"| Backend
+
+    %% Backend to Database Connection
+    Backend <-->|"SQL Queries / Snake_Case<br/>(Npgsql / EF Core)"| RelationalDB
+
+    %% Inter-Service Connections (Backend <-> FastAPI)
+    Backend <-->|"HTTP REST Read Queries<br/>(/api/v1/search/*)"| AIMicroservice
+    Backend -->|"Incremental Event Sync<br/>(MediatR Event Handlers /api/v1/sync/*)"| AIMicroservice
+    Backend ==>|"Bulk Data Backfill Streams<br/>(250 Chunked Payloads /api/v1/bulk/*)"| AIMicroservice
+
+    %% AI Microservice to Embedded Vector Storage
+    AIMicroservice <-->|"Reads / Writes"| LanceDB
+    AIMicroservice -.->|"Executes Table Swap<br/>(lancedb_client.swap_tables())"| LanceDB
+
+    %% Styling
+    classDef clientStyle fill:#EBF5FB,stroke:#2980B9,stroke-width:2px,color:#1A5276;
+    classDef backendStyle fill:#F4F6F7,stroke:#34495E,stroke-width:2px,color:#2C3E50;
+    classDef aiStyle fill:#F5EEF8,stroke:#8E44AD,stroke-width:2px,color:#4A235A;
+    classDef dbStyle fill:#EAECEE,stroke:#7F8C8D,stroke-width:2px,color:#273746;
+
+    class Client clientStyle;
+    class Backend backendStyle;
+    class AIMicroservice aiStyle;
+    class RelationalDB,LanceDB dbStyle;

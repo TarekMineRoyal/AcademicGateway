@@ -1,0 +1,224 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% 1. CQRS & APPLICATION LAYER
+    %% ==========================================
+    class IRequest~TResult~ {
+        <<interface>>
+    }
+
+    class StartProjectCommand {
+        +Guid TemplateId
+        +Guid StudentId
+        +Guid? RequestedProfessorId
+    }
+
+    class IRequestHandler~TRequest, TResult~ {
+        <<interface>>
+        +Handle(TRequest request, CancellationToken ct) Task~TResult~
+    }
+
+    class StartProjectCommandHandler {
+        -IApplicationDbContext _context
+        -IDateTimeProvider _dateTimeProvider
+        -LocalMilestoneFactory _localMilestoneFactory
+        -ICurrentUserService _currentUserService
+        +Handle(StartProjectCommand request, CancellationToken ct) Task~Guid~
+    }
+
+    class IApplicationDbContext {
+        <<interface>>
+        +DbSet~ProjectTemplate~ ProjectTemplates
+        +DbSet~ProjectInstance~ ProjectInstances
+        +SaveChangesAsync(CancellationToken ct) Task~int~
+    }
+
+    IRequest~Guid~ <|.. StartProjectCommand
+    IRequestHandler~StartProjectCommand, Guid~ <|.. StartProjectCommandHandler
+    StartProjectCommandHandler --> IApplicationDbContext : persists via
+    StartProjectCommandHandler --> LocalMilestoneFactory : utilizes
+
+    %% ==========================================
+    %% 2. DOMAIN SERVICES & COMMON ENUMS
+    %% ==========================================
+    class LocalMilestoneFactory {
+        +CreateLocalMilestonesSnapshot(Guid projectInstanceId, IReadOnlyCollection~GlobalMilestone~ globalMilestones) IEnumerable~LocalMilestone~
+    }
+
+    class DependencyType {
+        <<enumeration>>
+        FinishToStart
+        StartToStart
+    }
+
+    class DeliverableType {
+        <<enumeration>>
+        None
+        Url
+        File
+        Text
+    }
+
+    %% ==========================================
+    %% 3. TEMPLATE AGGREGATE (BLUEPRINT)
+    %% ==========================================
+    class ProjectTemplateStatus {
+        <<enumeration>>
+        Draft
+        PendingReview
+        ChangesRequested
+        PendingProviderAcceptance
+        Approved
+        Rejected
+        Archived
+    }
+
+    class ProjectTemplate {
+        +Guid Id
+        +string Title
+        +string Description
+        +ProjectTemplateStatus Status
+        +Guid ProviderId
+        +Guid? MajorId
+        +Guid? SpecialtyId
+        +string? ReviewerFeedback
+        +DateTime CreatedAt
+        +IReadOnlyCollection~GlobalMilestone~ GlobalMilestones
+        +Instantiate(Guid studentId, DateTime createdAt, LocalMilestoneFactory milestoneFactory, Guid? initialRequestedProfessorId) ProjectInstance
+    }
+
+    class GlobalMilestone {
+        +Guid Id
+        +string Title
+        +string Description
+        +decimal ExpectedEffortInHours
+        +decimal WbsWeight
+        +decimal GradingWeight
+        +IReadOnlyCollection~GlobalTask~ GlobalTasks
+        +IReadOnlyCollection~MilestoneDependency~ InboundDependencies
+    }
+
+    class MilestoneDependency {
+        +Guid PredecessorId
+        +Guid SuccessorId
+        +DependencyType Type
+    }
+
+    class GlobalTask {
+        +Guid Id
+        +string Title
+        +string Description
+        +decimal Weight
+        +DeliverableType RequiredDeliverableType
+    }
+
+    ProjectTemplate --> ProjectTemplateStatus : governed by
+    ProjectTemplate "1" *-- "*" GlobalMilestone : contains
+    GlobalMilestone "1" *-- "*" GlobalTask : contains
+    GlobalMilestone "1" *-- "*" MilestoneDependency : contains inbound
+    MilestoneDependency --> DependencyType : governed by
+    GlobalTask --> DeliverableType : requires
+    ProjectTemplate ..> Major : aligns to optional major
+    ProjectTemplate ..> Specialty : aligns to optional specialty
+    ProjectTemplate ..> LocalMilestoneFactory : uses domain service
+    ProjectTemplate ..> ProjectInstance : instantiates
+
+    %% ==========================================
+    %% 4. INSTANCE AGGREGATE (RUNTIME)
+    %% ==========================================
+    class ProjectInstanceStatus {
+        <<enumeration>>
+        AwaitingSupervision
+        Active
+        Concluded
+        Canceled
+    }
+
+    class ProjectInstance {
+        +Guid Id
+        +Guid TemplateId
+        +Guid StudentId
+        +Guid? SupervisorId
+        +ProjectInstanceStatus Status
+        +IReadOnlyCollection~LocalMilestone~ LocalMilestones
+        +FinalizeProjectGrade(IGradingStrategy gradingStrategy, DateTime utcNow, Guid executingUserId)
+    }
+
+    class LocalMilestoneStatus {
+        <<enumeration>>
+        NotStarted
+        InProgress
+        Submitted
+        Graded
+    }
+
+    class LocalMilestone {
+        +Guid Id
+        +string TitleSnapshot
+        +string DescriptionSnapshot
+        +decimal ExpectedEffortInHours
+        +decimal WbsWeight
+        +decimal GradingWeight
+        +LocalMilestoneStatus Status
+        +DateTime? ScheduledStartDate
+        +DateTime? ScheduledEndDate
+        +IReadOnlyCollection~LocalTask~ LocalTasks
+        +IReadOnlyCollection~LocalMilestoneDependency~ InboundDependencies
+    }
+
+    class LocalMilestoneDependency {
+        +Guid PredecessorId
+        +Guid SuccessorId
+        +DependencyType Type
+    }
+
+    class LocalTaskStatus {
+        <<enumeration>>
+        NotStarted
+        Submitted
+        Graded
+    }
+
+    class LocalTask {
+        +Guid Id
+        +string TitleSnapshot
+        +string DescriptionSnapshot
+        +decimal Weight
+        +DeliverableType RequiredDeliverableType
+        +LocalTaskStatus Status
+        +string? SubmissionPayload
+        +decimal? Grade
+    }
+
+    ProjectInstance --> ProjectInstanceStatus : governed by
+    ProjectInstance "1" *-- "*" LocalMilestone : contains
+    LocalMilestone --> LocalMilestoneStatus : governed by
+    LocalMilestone "1" *-- "*" LocalTask : contains
+    LocalMilestone "1" *-- "*" LocalMilestoneDependency : contains inbound
+    LocalMilestoneDependency --> DependencyType : governed by
+    LocalTask --> LocalTaskStatus : governed by
+    LocalTask --> DeliverableType : requires
+
+    %% ==========================================
+    %% 5. STRATEGY PATTERN (GRADING ENGINE)
+    %% ==========================================
+    class IGradingStrategy {
+        <<interface>>
+        +string StrategyName
+        +IsValidMilestoneGrade(decimal grade) bool
+        +IsPassingMilestone(decimal grade) bool
+        +CalculateFinalProjectGrade(IReadOnlyCollection~LocalMilestone~ milestones) decimal
+    }
+
+    class PassFailGradingStrategy {
+        +CalculateFinalProjectGrade(IReadOnlyCollection~LocalMilestone~ milestones) decimal
+    }
+
+    class PercentageGradingStrategy {
+        +CalculateFinalProjectGrade(IReadOnlyCollection~LocalMilestone~ milestones) decimal
+    }
+
+    ProjectInstance ..> IGradingStrategy : evaluated by
+    IGradingStrategy <|.. PassFailGradingStrategy
+    IGradingStrategy <|.. PercentageGradingStrategy

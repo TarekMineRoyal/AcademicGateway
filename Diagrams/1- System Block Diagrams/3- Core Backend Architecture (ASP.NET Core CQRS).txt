@@ -1,0 +1,59 @@
+---
+config:
+  theme: base
+  flowchart:
+    curve: basis
+    nodeSpacing: 40
+    rankSpacing: 50
+  layout: fixed
+---
+flowchart TB
+    subgraph CoreBackend["ASP.NET Core Backend Architecture"]
+        
+        subgraph Layer1["1. Presentation Layer"]
+            API["REST Controllers<br/><i>(Auth, Projects, AiSyncController)</i>"]
+        end
+
+        subgraph Layer2["2. Application & CQRS Layer"]
+            MediatR["MediatR Mediator Pipeline"]
+            CmdHandler["Command Handlers<br/><i>(State Mutations)</i>"]
+            QueryHandler["Query Handlers<br/><i>(Read Models & Recommendations)</i>"]
+        end
+
+        subgraph Layer3["3. Domain & Business Logic Layer"]
+            DomainEntities["Domain Aggregate Roots<br/><i>(ProjectInstance & ProjectTemplate)</i>"]
+            GradingEngine["Grading Engine<br/><i>(Pass/Fail vs Continuous Percentage)</i>"]
+            Factory["LocalMilestoneFactory<br/><i>(Template Cloner)</i>"]
+        end
+
+        subgraph Layer4["4. Infrastructure & Event Sync Layer"]
+            EFCore["EF Core ApplicationDbContext<br/><i>(Unit of Work)</i>"]
+            Interceptor["DispatchDomainEventsInterceptor"]
+            DomainEvents["Domain Event Handlers<br/><i>(IDomainEventHandler)</i>"]
+            HttpClient["AiMatchmakingHttpClient<br/><i>(Typed Service)</i>"]
+        end
+    end
+
+    PostgreSQL[("PostgreSQL Database<br/><i>(Npgsql / snake_case)</i>")]
+    FastAPI["FastAPI AI Microservice<br/><i>(Vector & Recommendation Engine)</i>"]
+    API -->|"Send"| MediatR
+    MediatR --> CmdHandler
+    MediatR --> QueryHandler
+    CmdHandler --> DomainEntities
+    CmdHandler --> GradingEngine
+    CmdHandler --> Factory
+    CmdHandler -->|"Save State"| EFCore
+    CmdHandler -->|"Direct Bulk Stream (/api/v1/bulk/*)"| HttpClient
+    QueryHandler -->|"Standard Reads"| EFCore
+    QueryHandler -->|"Vector Search Reads (/api/v1/search/*)"| HttpClient
+    EFCore -->|"SaveChangesAsync"| Interceptor
+    Interceptor -->|"Dispatch Events"| DomainEvents
+    DomainEvents -->|"Incremental Event Sync (/api/v1/sync/*)"| HttpClient
+    EFCore <-->|"SQL / Npgsql"| PostgreSQL
+    HttpClient <-->|"HTTP REST"| FastAPI
+    classDef coreStyle fill:#F4F6F7,stroke:#34495E,stroke-width:2px,color:#2C3E50;
+    classDef dbStyle fill:#EAECEE,stroke:#7F8C8D,stroke-width:2px,color:#273746;
+    classDef aiStyle fill:#F5EEF8,stroke:#8E44AD,stroke-width:2px,color:#4A235A;
+    class CoreBackend,API,MediatR,CmdHandler,QueryHandler,DomainEvents,DomainEntities,GradingEngine,Factory,EFCore,Interceptor,HttpClient coreStyle;
+    class PostgreSQL dbStyle;
+    class FastAPI aiStyle;

@@ -1,0 +1,35 @@
+sequenceDiagram
+    actor User as User / Student / Professor / Reviewer
+    participant Main as Main Backend (ASP.NET CQRS)
+    participant MainDB as Main Relational DB
+    participant AI as AI Microservice (FastAPI)
+    participant Nomic as Nomic Embedding Model
+    participant Lance as LanceDB Vector Store
+
+    User->>Main: Mutate Profile / Approve Project Template
+    activate Main
+    Main->>MainDB: SavingChangesAsync()
+    activate MainDB
+    
+    Note over Main: DispatchDomainEventsInterceptor intercepts EF Core pipeline
+    Main->>AI: POST /api/v1/sync/{entity} (project, student, professor, skill)
+    activate AI
+    
+    Note over AI: Format payload into prose document
+    AI->>Nomic: embed_document(prose_document)
+    activate Nomic
+    Nomic-->>AI: Vector Embedding
+    deactivate Nomic
+    
+    AI->>Lance: merge_insert(on="id") [Upsert Record & Vector]
+    activate Lance
+    Lance-->>AI: Upsert Confirmed
+    deactivate Lance
+    
+    AI-->>Main: HTTP 200 OK (Sync Successful)
+    deactivate AI
+    
+    MainDB-->>Main: Transaction Committed
+    deactivate MainDB
+    Main-->>User: HTTP 200 OK (Mutation Successful)
+    deactivate Main

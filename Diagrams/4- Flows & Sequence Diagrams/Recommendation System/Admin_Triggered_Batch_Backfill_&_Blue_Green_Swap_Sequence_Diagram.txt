@@ -1,0 +1,53 @@
+sequenceDiagram
+    actor Admin as System Admin
+    participant Main as Main Backend (ASP.NET CQRS)
+    participant MainDB as Main Relational DB
+    participant AI as AI Microservice (FastAPI)
+    participant Nomic as Nomic Embedding Model
+    participant Lance as LanceDB Store (Staging & Live)
+
+    Admin->>Main: POST /api/v1/admin/ai-sync/backfill
+    activate Admin
+    activate Main
+
+    Note over Main, MainDB: Eager-load & enrich entities (Skills -> Professors -> Students -> Projects)
+    Main->>MainDB: Query entities & resolve names (Majors/Specialties/Skills)
+    activate MainDB
+    MainDB-->>Main: Return relational datasets
+    deactivate MainDB
+
+    loop For each chunked batch (default size: 250)
+        Main->>AI: POST /api/v1/sync/bulk/{entity}
+        activate AI
+        Note over AI: Queue BulkSyncCommandHandler in BackgroundTasks
+        AI-->>Main: HTTP 202 Accepted (Pipeline Queued)
+        deactivate AI
+    end
+
+    Main-->>Admin: HTTP 200 OK (BackfillSummaryResult)
+    deactivate Main
+    deactivate Admin
+
+    rect rgb(240, 248, 255)
+        Note over AI, Lance: Async Background Worker Execution (Per Entity Pipeline)
+        activate AI
+        AI->>Nomic: embed_documents_batch(prose_documents)
+        activate Nomic
+        Nomic-->>AI: Batch Vector Embeddings
+        deactivate Nomic
+
+        AI->>Lance: bulk_upsert() into staging table ({entity}_sync)
+        activate Lance
+        Lance-->>AI: Staging Upsert Confirmed
+        deactivate Lance
+
+        Note over AI, Lance: Blue/Green Promotion
+        AI->>Lance: lancedb_client.swap_tables(source="{entity}_sync", target="{entity}")
+        activate Lance
+        Note over Lance: Overwrite live table with Arrow dataset & drop staging table
+        Lance-->>AI: Swap Complete
+        deactivate Lance
+
+        AI->>AI: reload_table() [Invalidate in-memory table handles]
+        deactivate AI
+    end

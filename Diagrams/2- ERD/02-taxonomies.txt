@@ -1,0 +1,69 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    direction LR
+
+    %% 1. Taxonomy Hierarchies
+    Majors ||--o{ Specialties : "contains"
+
+    %% 2. Student Relationships (Actor -> Junction -> Lookup)
+    Students ||--o{ StudentMajors : "enrolled in"
+    StudentMajors }o--|| Majors : "belongs to"
+
+    Students ||--o{ StudentSpecialties : "specializes in"
+    StudentSpecialties }o--|| Specialties : "belongs to"
+
+    Students ||--o{ StudentSkills : "possesses"
+    StudentSkills }o--|| Skills : "indexed in"
+
+    %% 3. Professor Relationships (Actor -> Junction -> Lookup)
+    Professors ||--o{ ProfessorResearchInterests : "focuses on"
+    ProfessorResearchInterests }o--|| ResearchInterests : "tagged in"
+
+    %% ==========================================
+    %% Entity Definitions
+    %% ==========================================
+
+    %% Primary Actors
+    Students {
+        uuid id PK
+    }
+    Professors {
+        uuid id PK
+    }
+
+    %% Junction Tables
+    StudentMajors {
+        uuid student_id PK, FK
+        uuid major_id PK, FK
+    }
+    StudentSpecialties {
+        uuid student_id PK, FK
+        uuid specialty_id PK, FK
+    }
+    StudentSkills {
+        uuid student_id PK, FK
+        uuid skill_id PK, FK
+    }
+    ProfessorResearchInterests {
+        uuid professor_id PK, FK
+        uuid research_interest_id PK, FK
+    }
+
+    %% Lookups & Taxonomies
+    Majors {
+        uuid id PK
+        string name
+    }
+    Specialties {
+        uuid id PK
+        uuid major_id FK
+        string name
+    }
+    Skills {
+        uuid id PK
+        string name "UNIQUE"
+    }
+    ResearchInterests {
+        uuid id PK
+        string area
+    }

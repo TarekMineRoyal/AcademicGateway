@@ -1,0 +1,42 @@
+flowchart TB
+    subgraph AIMicroservice["FastAPI AI Microservice Architecture"]
+        subgraph Endpoints["FastAPI Endpoint Layer"]
+            SearchEP["Search Routes<br/><i>(/api/v1/search/*)</i>"]
+            SyncEP["Incremental Sync Routes<br/><i>(/api/v1/sync/*)</i>"]
+            BulkEP["Bulk Stream Routes<br/><i>(/api/v1/bulk/*)</i>"]
+        end
+
+        VectorEngine["Vectorization & Embeddings Engine<br/><i>(Text Vectorization & Similarity Math)</i>"]
+        SwapLogic["Table Swap Engine<br/><i>(lancedb_client.swap_tables())</i>"]
+
+        subgraph StorageTier["LanceDB Embedded File Store"]
+            LiveTables[("Live Production Tables<br/><i>(Serving Read Queries)</i>")]
+            SyncTables[("Temporary Sync Tables (*_sync)<br/><i>(Bulk Ingestion Target)</i>")]
+        end
+    end
+
+    Backend["ASP.NET Core Backend API"]
+
+    Backend <-->|"HTTP REST Read Queries"| SearchEP
+    Backend -->|"Incremental Event Payloads"| SyncEP
+    Backend ==>|"250 Chunked Payload Streams"| BulkEP
+
+    SearchEP --> VectorEngine
+    VectorEngine -->|"Vector Search Reads"| LiveTables
+
+    SyncEP --> VectorEngine
+    VectorEngine -->|"Upsert / Delete"| LiveTables
+
+    BulkEP --> VectorEngine
+    VectorEngine -->|"Batch Indexing"| SyncTables
+    SyncTables -->|"Ingestion Complete Trigger"| SwapLogic
+    SwapLogic -.->|"Atomically Promotes *_sync over Live"| LiveTables
+
+    %% Styling
+    classDef aiStyle fill:#F5EEF8,stroke:#8E44AD,stroke-width:2px,color:#4A235A;
+    classDef backendStyle fill:#F4F6F7,stroke:#34495E,stroke-width:2px,color:#2C3E50;
+    classDef dbStyle fill:#EAECEE,stroke:#7F8C8D,stroke-width:2px,color:#273746;
+
+    class AIMicroservice,Endpoints,SearchEP,SyncEP,BulkEP,VectorEngine,SwapLogic aiStyle;
+    class Backend backendStyle;
+    class LiveTables,SyncTables dbStyle;

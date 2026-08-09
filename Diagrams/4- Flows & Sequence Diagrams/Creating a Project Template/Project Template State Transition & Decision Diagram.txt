@@ -1,0 +1,58 @@
+flowchart TD
+    %% Node Definitions
+    A[Draft Project Template<br/><i>Include Milestones, Tasks & FS/SS Dependencies</i>]
+    B[Submit Template for Review]
+    C([State: Pending Review])
+    D{Reviewer Audit Decision?}
+    
+    E([State: Approved])
+    F([State: Rejected])
+    G([State: Changes Requested])
+    H([State: Pending Provider Acceptance])
+    
+    I[Provider Updates Template]
+    J{Provider Override Decision?}
+    
+    K[Accept Edits & Update Template]
+    L[Decline Edits & Force-Publish Original]
+    
+    M[Publish Template to Catalog]
+    N[Archive Action]
+    O([State: Archived])
+
+    %% Node Relationships
+    A --> B
+    B --> C
+    C --> D
+    
+    D -->|Path A: Direct Approval| E
+    D -->|Path B: Rejection| F
+    D -->|Path C: Optional Edits| H
+    D -->|Path D: Changes Requested| G
+    
+    G --> I
+    I --> B
+    
+    H --> J
+    J -->|Choice 1: Accept Edits| K
+    J -->|Choice 2: Decline Edits| L
+    
+    K --> E
+    L --> E
+    
+    E --> M
+    M --> N
+    N --> O
+
+    %% CSS Style Classes
+    classDef navy fill:#182B49,stroke:#182B49,color:#ffffff;
+    classDef blue fill:#2980B9,stroke:#2980B9,color:#ffffff;
+    classDef green fill:#27AE60,stroke:#27AE60,color:#ffffff;
+    classDef red fill:#C0392B,stroke:#C0392B,color:#ffffff;
+    classDef gray fill:#7F8C8D,stroke:#7F8C8D,color:#ffffff;
+
+    class D,J navy;
+    class C,G,H blue;
+    class E green;
+    class F red;
+    class O gray;

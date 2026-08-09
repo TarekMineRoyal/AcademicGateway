@@ -1,0 +1,143 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% 1. INFRASTRUCTURE SECURITY IDENTITY
+    %% ==========================================
+    class IdentityUser~TKey~ {
+        <<framework>>
+    }
+
+    class ApplicationUser {
+        +Guid Id
+    }
+
+    IdentityUser~Guid~ <|.. ApplicationUser
+
+    %% ==========================================
+    %% 2. DOMAIN PROFILE AGGREGATE ROLES
+    %% ==========================================
+    class Student {
+        +Guid Id
+        +string FullName
+        +string? AboutMe
+        +int? GraduationYear
+        +IReadOnlyCollection~StudentMajor~ StudentMajors
+        +IReadOnlyCollection~StudentSkill~ StudentSkills
+        +IReadOnlyCollection~StudentSpecialty~ StudentSpecialties
+        +UpdateFullName(string newFullName)
+        +UpdateAboutMe(string? aboutMe)
+        +UpdateGraduationYear(int? graduationYear)
+        +AddMajor(Guid majorId)
+        +RemoveMajor(Guid majorId)
+        +AddSkill(Guid skillId)
+        +RemoveSkill(Guid skillId)
+        +AddSpecialty(Guid specialtyId)
+        +RemoveSpecialty(Guid specialtyId)
+    }
+
+    class Professor {
+        +Guid Id
+        +string FullName
+        +string? AboutMe
+        +string Department
+        +string Rank
+        +int MaxSupervisionCapacity
+        +int CurrentProjectCount
+        +bool IsAcceptingProjects
+        +IReadOnlyCollection~ProfessorResearchInterest~ ResearchInterests
+        +UpdateFacultyDetails(string fullName, string department, string rank)
+        +UpdateAboutMe(string? aboutMe)
+        +UpdateSupervisionCapacity(int newCapacity)
+        +IncrementActiveProjects()
+        +DecrementActiveProjects()
+        +AddResearchInterest(Guid researchInterestId)
+        +RemoveResearchInterest(Guid researchInterestId)
+    }
+
+    class ProfessorResearchInterest {
+        +Guid ProfessorId
+        +Guid ResearchInterestId
+    }
+
+    class ResearchInterest {
+        +Guid Id
+        +string Area
+        +IReadOnlyCollection~ProfessorResearchInterest~ ProfessorLinks
+        +UpdateArea(string newArea)
+    }
+
+    class Reviewer {
+        +Guid Id
+        +string FullName
+        +IReadOnlyCollection~ProviderApplication~ ReviewedApplications
+        +UpdateFullName(string newFullName)
+    }
+
+    %% ==========================================
+    %% 3. PROVIDER ONBOARDING & MENTORSHIP
+    %% ==========================================
+    class Provider {
+        +Guid Id
+        +string CompanyName
+        +string CompanyDescription
+        +string WebsiteUrl
+        +bool IsVerified
+        +IReadOnlyCollection~ProjectTemplate~ ProjectTemplates
+        +UpdateCompanyName(string newCompanyName)
+        +UpdateProfileDetails(string description, string websiteUrl)
+        +VerifyProfile()
+        +RevokeVerification()
+    }
+
+    class TechSupportAccount {
+        +Guid Id
+        +Guid ProviderId
+        +string StaffNumber
+        +string SupportTier
+        +bool IsActive
+        +UpdateStaffDetails(string staffNumber, string supportTier)
+        +ActivateAccount()
+        +DeactivateAccount()
+    }
+
+    class ProviderApplicationStatus {
+        <<enumeration>>
+        Draft
+        PendingReview
+        Approved
+        Rejected
+    }
+
+    class ProviderApplication {
+        +Guid Id
+        +Guid ProviderId
+        +string CompanyDetails
+        +string VerificationDocumentsUrl
+        +ProviderApplicationStatus Status
+        +Guid? ReviewedById
+        +string? RejectionReason
+        +DateTime CreatedAt
+        +DateTime? ReviewedAt
+        +SubmitForReview()
+        +Resubmit(string details, string docsUrl)
+        +Approve(Guid reviewerId, DateTime approvedAt)
+        +Reject(Guid reviewerId, string reason, DateTime rejectedAt)
+    }
+
+    %% ==========================================
+    %% RELATIONSHIPS & BOUNDARIES
+    %% ==========================================
+    
+    ApplicationUser "1" ..> "1" Student : maps 1-to-1 identity
+    ApplicationUser "1" ..> "1" Professor : maps 1-to-1 identity
+    ApplicationUser "1" ..> "1" Provider : maps 1-to-1 identity
+    ApplicationUser "1" ..> "1" Reviewer : maps 1-to-1 identity
+    ApplicationUser "1" ..> "1" TechSupportAccount : maps 1-to-1 identity
+
+    Professor "1" -- "*" ProfessorResearchInterest : links faculty
+    ResearchInterest "1" -- "*" ProfessorResearchInterest : maps research area
+    Provider "1" *-- "*" TechSupportAccount : provisions corporate staff
+    Provider "1" *-- "*" ProviderApplication : submits verification workflow
+    ProviderApplication --> ProviderApplicationStatus : governed by
+    Reviewer "1" o-- "*" ProviderApplication : evaluates & audits

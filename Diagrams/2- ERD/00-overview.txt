@@ -1,0 +1,40 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    direction TB
+
+    %% 1. Identity & Role Profiles
+    AspNetUsers ||--o| Students : "profile"
+    AspNetUsers ||--o| Professors : "profile"
+    AspNetUsers ||--o| Providers : "profile"
+    AspNetUsers ||--o| Reviewers : "profile"
+    AspNetUsers ||--o| TechSupportAccounts : "profile"
+
+    %% 2. Taxonomies & Entity Attributes
+    Majors ||--o{ Specialties : "contains"
+    Students }o--o{ Majors : "enrolled"
+    Students }o--o{ Specialties : "specializes"
+    Students }o--o{ Skills : "possesses"
+    Professors }o--o{ ResearchInterests : "focuses"
+
+    %% 3. Provider Governance & Auditing
+    Providers ||--o{ ProviderApplications : "submits"
+    Reviewers ||--o{ ProviderApplications : "audits"
+
+    %% 4. Design-Time Templates
+    Providers ||--o{ ProjectTemplates : "authors"
+    Majors ||--o{ ProjectTemplates : "categorizes"
+    Specialties ||--o{ ProjectTemplates : "classifies"
+    ProjectTemplates }o--o{ Skills : "requires"
+
+    %% 5. Runtime Execution Core
+    ProjectTemplates ||--o{ ProjectInstances : "instantiates"
+    Students ||--o{ ProjectInstances : "owns"
+    Professors ||--o{ ProjectInstances : "supervises"
+    ProjectInstances }o--o{ Skills : "snapshots"
+    ProjectInstances ||--o{ LocalMilestones : "executes"
+
+    %% 6. Operational Support Workflows
+    ProjectInstances ||--o{ SupervisionRequests : "targets"
+    Professors ||--o{ SupervisionRequests : "evaluates"
+    ProjectInstances ||--o{ TechSupportProposals : "receives"
+    TechSupportAccounts ||--o{ TechSupportProposals : "proposes"

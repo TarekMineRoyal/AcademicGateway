@@ -1,0 +1,69 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    Providers ||--o{ ProjectTemplates : "authors"
+    Majors ||--o{ ProjectTemplates : "categorizes (optional)"
+    Specialties ||--o{ ProjectTemplates : "classifies (optional)"
+
+    ProjectTemplates ||--o{ ProjectTemplateSkills : "requires"
+    Skills ||--o{ ProjectTemplateSkills : "tagged in"
+
+    ProjectTemplates ||--o{ GlobalMilestones : "defines structure"
+    GlobalMilestones ||--o{ GlobalTasks : "contains template tasks"
+    GlobalMilestones ||--o{ TemplateMilestoneDependencies : "has inbound dependencies"
+
+    %% External Stubs
+    Providers {
+        uuid id PK
+    }
+    Majors {
+        uuid id PK
+    }
+    Specialties {
+        uuid id PK
+    }
+    Skills {
+        uuid id PK
+    }
+
+    ProjectTemplates {
+        uuid id PK
+        uuid provider_id FK
+        uuid major_id FK "nullable"
+        uuid specialty_id FK "nullable"
+        string title
+        string description
+        string status
+        string reviewer_feedback "nullable"
+        datetime created_at
+    }
+
+    ProjectTemplateSkills {
+        uuid project_template_id PK, FK
+        uuid skill_id PK, FK
+    }
+
+    GlobalMilestones {
+        uuid id PK
+        uuid project_template_id FK
+        string title
+        string description
+        decimal grading_weight
+        decimal wbs_weight
+        decimal expected_effort_in_hours
+    }
+
+    GlobalTasks {
+        uuid id PK
+        uuid global_milestone_id FK
+        string title
+        string description
+        decimal weight
+        string required_deliverable_type
+    }
+
+    TemplateMilestoneDependencies {
+        uuid predecessor_id PK, FK
+        uuid successor_id PK, FK
+        uuid global_milestone_id FK "nullable"
+        string type
+    }

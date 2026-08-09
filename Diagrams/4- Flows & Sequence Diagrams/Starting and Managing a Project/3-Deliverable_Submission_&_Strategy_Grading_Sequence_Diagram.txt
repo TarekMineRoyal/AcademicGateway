@@ -1,0 +1,101 @@
+sequenceDiagram
+    autonumber
+    actor S as Student
+    participant FE as React SPA
+    participant API as ASP.NET Core API
+    participant CQRS as Command Handlers
+    participant DB as Relational Database
+    actor P as Professor
+
+    rect rgb(240, 255, 240)
+        Note over S, DB: Deliverable Link Persistence
+        S->>FE: Modify local milestone timeline schedules
+        activate FE
+        FE->>API: PATCH /api/project-instances/{projectInstanceId}/milestones/{localMilestoneId}/timeline
+        activate API
+        API->>CQRS: Dispatch UpdateMilestoneTimelineCommand
+        activate CQRS
+        CQRS->>DB: Persist updated timeline dates
+        activate DB
+        DB-->>CQRS: Schedule saved
+        deactivate DB
+        CQRS-->>API: Timeline updated
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>S: Update UI milestone schedule
+        deactivate FE
+
+        S->>FE: Submit task deliverable payload
+        activate FE
+        FE->>API: POST /api/project-instances/{projectInstanceId}/milestones/{localMilestoneId}/tasks/{localTaskId}/submissions
+        activate API
+        API->>CQRS: Dispatch SubmitTaskDeliverableCommand
+        activate CQRS
+        Note over CQRS, DB: Task Deliverable Submission:<br/>Persist submission payload on LocalTask
+        CQRS->>DB: Persist deliverable payload on LocalTask
+        activate DB
+        DB-->>CQRS: Deliverable saved
+        deactivate DB
+        CQRS-->>API: Task deliverable submitted
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>S: Display task status as Submitted
+        deactivate FE
+    end
+
+    rect rgb(250, 240, 255)
+        Note over S, P: Completion & Strategy Pattern Evaluation
+        P->>FE: Review pending supervision request
+        activate FE
+        FE->>API: PUT /api/project-instances/{projectInstanceId}/supervision-requests/{supervisionRequestId}/review
+        activate API
+        API->>CQRS: Dispatch ReviewSupervisionRequestCommand (Accept = true)
+        activate CQRS
+        CQRS->>DB: Update SupervisionRequest state to Accepted & ProjectInstance to Active
+        activate DB
+        DB-->>CQRS: State saved
+        deactivate DB
+        CQRS-->>API: Supervision request accepted
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>P: Supervision confirmed
+        deactivate FE
+
+        S->>FE: Signal project completion via ConcludeProject
+        activate FE
+        FE->>API: POST /api/project-instances/{projectInstanceId}/conclude
+        activate API
+        API->>CQRS: Dispatch ConcludeProjectCommand
+        activate CQRS
+        CQRS->>DB: Update ProjectInstance status to Concluded
+        activate DB
+        DB-->>CQRS: Status saved
+        deactivate DB
+        CQRS-->>API: Project concluded
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>S: Display project state as Concluded
+        deactivate FE
+
+        P->>FE: Execute FinalizeProject using configured Grading Strategy
+        activate FE
+        FE->>API: POST /api/project-instances/{projectInstanceId}/finalize
+        activate API
+        API->>CQRS: Dispatch FinalizeProjectCommand
+        activate CQRS
+        Note over CQRS: Execute Pluggable Strategy Pattern<br/>(PassFailGradingStrategy vs PercentageGradingStrategy)
+        CQRS->>DB: Persist final grade & evaluation state
+        activate DB
+        DB-->>CQRS: Evaluation persisted
+        deactivate DB
+        CQRS-->>API: Project finalized with final evaluation
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>P: Display finalized project evaluation report
+        deactivate FE
+    end

@@ -1,0 +1,26 @@
+flowchart TB
+    subgraph PresentationTier["React SPA Frontend Architecture"]
+        UI["UI Components & Views<br/><i>(Pages, Forms, Dashboards)</i>"]
+        Router["React Router & Guard Layer<br/><i>(Client-Side Route Protection)</i>"]
+        AuthCtx["Auth Context & Claims Inspector<br/><i>(JWT Decoding & Session State)</i>"]
+        StateStore["State Management Layer<br/><i>(Application / UI State)</i>"]
+        APIService["API Service Layer / Axios<br/><i>(Interceptors & Bearer Injection)</i>"]
+        Storage[("Browser Storage<br/><i>(LocalStorage / SessionStorage)</i>")]
+    end
+
+    Backend["ASP.NET Core Backend API"]
+
+    UI --> Router
+    Router --> AuthCtx
+    UI --> StateStore
+    StateStore --> APIService
+    
+    AuthCtx <--> Storage
+    Storage -->|"1. Reads Stored JWT Token"| APIService
+    APIService <-->|"2. HTTPS / REST Requests (Bearer Token Attached)"| Backend
+
+    %% Styling
+    classDef reactStyle fill:#EBF5FB,stroke:#2980B9,stroke-width:2px,color:#1A5276;
+    classDef serverStyle fill:#F4F6F7,stroke:#34495E,stroke-width:2px,color:#2C3E50;
+    class PresentationTier,UI,Router,AuthCtx,StateStore,APIService,Storage reactStyle;
+    class Backend serverStyle;

@@ -1,0 +1,59 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    Providers ||--o{ ProviderApplications : "submits"
+    Reviewers |o--o{ ProviderApplications : "audits (optional)"
+
+    ProjectInstances ||--o{ SupervisionRequests : "targets"
+    Professors ||--o{ SupervisionRequests : "evaluates"
+
+    TechSupportAccounts ||--o{ TechSupportProposals : "submits"
+    ProjectInstances ||--o{ TechSupportProposals : "receives"
+
+    %% External Stubs
+    Providers {
+        uuid id PK
+    }
+    Reviewers {
+        uuid id PK
+    }
+    Professors {
+        uuid id PK
+    }
+    ProjectInstances {
+        uuid id PK
+    }
+    TechSupportAccounts {
+        uuid id PK
+    }
+
+    ProviderApplications {
+        uuid id PK
+        uuid provider_id FK
+        uuid reviewed_by_id FK "nullable"
+        string company_details
+        string verification_documents_url
+        string status
+        string rejection_reason "nullable"
+        datetime created_at
+        datetime reviewed_at "nullable"
+    }
+
+    SupervisionRequests {
+        uuid id PK
+        uuid project_instance_id FK
+        uuid professor_id FK
+        string pitch_text
+        string status
+        string rejection_reason "nullable"
+        datetime created_at
+        datetime reviewed_at "nullable"
+    }
+
+    TechSupportProposals {
+        uuid id PK
+        uuid project_instance_id FK
+        uuid tech_support_account_id FK
+        string status
+        string rejection_reason "nullable"
+        datetime created_at
+    }

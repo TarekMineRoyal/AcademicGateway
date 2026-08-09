@@ -1,0 +1,68 @@
+sequenceDiagram
+    autonumber
+    actor S as Student
+    participant FE as React SPA
+    participant API as ASP.NET Core API
+    participant CQRS as Command Handlers
+    participant DB as Relational Database
+    actor P as Professor
+
+    rect rgb(255, 250, 240)
+        Note over S, P: State Pattern: Supervision Request Lifecycle
+        S->>FE: Select Professor P & request supervision
+        activate FE
+        FE->>API: POST /api/project-instances/{projectInstanceId}/supervision-requests
+        activate API
+        API->>CQRS: Dispatch SubmitSupervisionRequestCommand
+        activate CQRS
+        CQRS->>DB: Create SupervisionRequest (Status = Pending)
+        activate DB
+        DB-->>CQRS: Record persisted
+        deactivate DB
+        CQRS-->>API: Return newly created Request ID
+        deactivate CQRS
+        API-->>FE: 201 Created (ResourceCreatedResponse)
+        deactivate API
+        FE-->>S: Display request state as Pending
+        deactivate FE
+
+        Note over P, DB: Professor Queue Fetch Flow
+        P->>FE: Open pending requests queue
+        activate FE
+        FE->>API: GET /api/supervision-requests/pending/{professorId}
+        activate API
+        API->>CQRS: Dispatch GetPendingSupervisionRequestsQuery
+        activate CQRS
+        CQRS->>DB: Query SupervisionRequests (Status = Pending)
+        activate DB
+        DB-->>CQRS: Pending requests retrieved
+        deactivate DB
+        CQRS-->>API: Return PaginatedResult<PendingSupervisionRequestDto>
+        deactivate CQRS
+        API-->>FE: 200 OK
+        deactivate API
+        FE-->>P: Render pending requests queue
+        deactivate FE
+    end
+
+    rect rgb(255, 240, 240)
+        Note over S, P: State Pattern: Timeout & Solo Track Transition
+        Note over P: Professor P delays response / times out
+        S->>FE: Trigger "Transition to Solo"
+        activate FE
+        FE->>API: POST /api/project-instances/{projectInstanceId}/transition-to-solo
+        activate API
+        API->>CQRS: Dispatch TransitionToSoloCommand
+        activate CQRS
+        Note over CQRS, DB: Solo Transition Logic:<br/>1. ProjectInstance Status: AwaitingSupervision -> Active (SupervisorId = null)<br/>2. Pending SupervisionRequests: Pending -> Rejected (Withdrawn)
+        CQRS->>DB: Update ProjectInstance (Status = Active) & SupervisionRequests (Status = Rejected)
+        activate DB
+        DB-->>CQRS: State changes persisted
+        deactivate DB
+        CQRS-->>API: Return Unit
+        deactivate CQRS
+        API-->>FE: 204 No Content
+        deactivate API
+        FE-->>S: Enable Solo track editing & execution
+        deactivate FE
+    end

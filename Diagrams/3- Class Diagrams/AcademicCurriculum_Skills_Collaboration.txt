@@ -1,0 +1,132 @@
+classDiagram
+    direction TB
+
+    %% ==========================================
+    %% 1. ACADEMIC CURRICULUM
+    %% ==========================================
+    class Major {
+        +Guid Id
+        +string Name
+        +IReadOnlyCollection~Specialty~ Specialties
+        +IReadOnlyCollection~StudentMajor~ StudentMajors
+        +UpdateName(string newName)
+        +AddSpecialty(string name)
+        +RemoveSpecialty(Guid specialtyId)
+    }
+
+    class Specialty {
+        +Guid Id
+        +string Name
+        +Guid MajorId
+        +IReadOnlyCollection~StudentSpecialty~ StudentSpecialties
+        +UpdateName(string newName)
+    }
+
+    Major "1" *-- "*" Specialty : contains
+
+    %% ==========================================
+    %% 2. SKILL TAXONOMY & JOIN INTERSECTIONS
+    %% ==========================================
+    class Skill {
+        +Guid Id
+        +string Name
+        +IReadOnlyCollection~StudentSkill~ StudentSkills
+        +UpdateName(string newName)
+    }
+
+    class StudentMajor {
+        +Guid StudentId
+        +Guid MajorId
+    }
+
+    class StudentSpecialty {
+        +Guid StudentId
+        +Guid SpecialtyId
+    }
+
+    class StudentSkill {
+        +Guid StudentId
+        +Guid SkillId
+    }
+
+    class ProjectTemplateSkill {
+        +Guid ProjectTemplateId
+        +Guid SkillId
+    }
+
+    class ProjectInstanceSkill {
+        +Guid ProjectInstanceId
+        +Guid SkillId
+    }
+
+    class ProfessorResearchInterest {
+        +Guid ProfessorId
+        +Guid ResearchInterestId
+    }
+
+    Major "1" -- "*" StudentMajor : links
+    Specialty "1" -- "*" StudentSpecialty : links
+    Skill "1" -- "*" StudentSkill : maps student competency
+    Skill "1" -- "*" ProjectTemplateSkill : maps template requirement
+    ProjectInstance "1" *-- "*" ProjectInstanceSkill : snapshots requirement
+    Professor "1" -- "*" ProfessorResearchInterest : links faculty
+    ResearchInterest "1" -- "*" ProfessorResearchInterest : maps research area
+
+    %% ==========================================
+    %% 3. MENTORSHIP & SUPERVISION MATCHMAKING
+    %% ==========================================
+    class SupervisionRequestStatus {
+        <<enumeration>>
+        Pending
+        Accepted
+        Rejected
+    }
+
+    class SupervisionRequest {
+        +Guid Id
+        +Guid ProjectInstanceId
+        +Guid ProfessorId
+        +string PitchText
+        +SupervisionRequestStatus Status
+        +string? RejectionReason
+        +DateTime CreatedAt
+        +DateTime? ReviewedAt
+        +RecordReview(SupervisionRequestStatus finalStatus, string? rejectionReason, DateTime reviewedAt)
+    }
+
+    class TechSupportProposalStatus {
+        <<enumeration>>
+        Pending
+        Accepted
+        Rejected
+    }
+
+    class TechSupportProposal {
+        +Guid Id
+        +Guid ProjectInstanceId
+        +Guid TechSupportAccountId
+        +TechSupportProposalStatus Status
+        +string? RejectionReason
+        +DateTime CreatedAt
+    }
+
+    SupervisionRequest --> SupervisionRequestStatus : governed by
+    TechSupportProposal --> TechSupportProposalStatus : governed by
+    ProjectInstance "1" *-- "*" SupervisionRequest : manages invites
+    Professor "1" -- "*" SupervisionRequest : receives requests
+    ProjectInstance "1" *-- "*" TechSupportProposal : receives offers
+    TechSupportAccount "1" -- "*" TechSupportProposal : attached to
+
+    %% ==========================================
+    %% 4. WORKSPACE COLLABORATION
+    %% ==========================================
+    class MilestoneComment {
+        +Guid Id
+        +Guid LocalMilestoneId
+        +Guid AuthorId
+        +string AuthorIdentitySnapshot
+        +string Content
+        +DateTime CreatedAt
+    }
+
+    LocalMilestone "1" *-- "*" MilestoneComment : contains discussion thread

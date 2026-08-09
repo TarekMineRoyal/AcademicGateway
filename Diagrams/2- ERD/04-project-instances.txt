@@ -1,0 +1,95 @@
+%%{init: {'theme': 'neutral'}}%%
+erDiagram
+    ProjectTemplates ||--o{ ProjectInstances : "instantiates (unconstrained)"
+    Students ||--o{ ProjectInstances : "owns"
+    Professors ||--o{ ProjectInstances : "supervises (optional)"
+    Providers ||--o{ ProjectInstances : "sponsors (unconstrained)"
+
+    ProjectInstances ||--o{ ProjectInstanceSkills : "captures skill snapshot"
+    Skills ||--o{ ProjectInstanceSkills : "referenced in"
+
+    ProjectInstances ||--o{ LocalMilestones : "owns detached"
+    LocalMilestones ||--o{ LocalTasks : "owns detached"
+    LocalMilestones ||--o{ MilestoneDependencies : "depends on"
+    LocalMilestones ||--o{ MilestoneComments : "contains feedback"
+
+    %% External Stubs
+    ProjectTemplates {
+        uuid id PK
+    }
+    Students {
+        uuid id PK
+    }
+    Professors {
+        uuid id PK
+    }
+    Providers {
+        uuid id PK
+    }
+    Skills {
+        uuid id PK
+    }
+
+    ProjectInstances {
+        uuid id PK
+        uuid template_id "unconstrained"
+        uuid student_id FK
+        uuid supervisor_id FK "nullable"
+        uuid provider_id "unconstrained"
+        string title_snapshot
+        string description_snapshot
+        string status
+        decimal overall_grade "nullable"
+        datetime created_at
+        datetime end_date "nullable"
+        datetime project_graded_at "nullable"
+    }
+
+    ProjectInstanceSkills {
+        uuid project_instance_id PK, FK
+        uuid skill_id PK, FK
+    }
+
+    LocalMilestones {
+        uuid id PK
+        uuid project_instance_id FK
+        string title_snapshot
+        string description_snapshot
+        string status
+        decimal grading_weight
+        decimal wbs_weight
+        decimal expected_effort_in_hours
+        datetime scheduled_start_date "nullable"
+        datetime scheduled_end_date "nullable"
+    }
+
+    LocalTasks {
+        uuid id PK
+        uuid local_milestone_id FK
+        string title_snapshot
+        string description_snapshot
+        string status
+        decimal weight
+        string required_deliverable_type
+        string submission_payload "nullable"
+        string evaluation_feedback "nullable"
+        decimal grade "nullable"
+        datetime submitted_at "nullable"
+        datetime graded_at "nullable"
+    }
+
+    MilestoneDependencies {
+        uuid local_milestone_id PK, FK
+        uuid predecessor_id PK
+        uuid successor_id
+        string type
+    }
+
+    MilestoneComments {
+        uuid id PK
+        uuid local_milestone_id FK
+        uuid author_id
+        string author_identity_snapshot
+        string content
+        datetime created_at
+    }

@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor S as Student
+    participant FE as React SPA
+    participant API as ASP.NET Core API
+    participant CQRS as StartProjectCommandHandler
+    participant DOM as ProjectTemplate & LocalMilestoneFactory
+    participant DB as Relational Database
+
+    rect rgb(240, 245, 255)
+        Note over S, DB: Prototype Pattern Deep-Copy Initialization
+        S->>FE: Select template & click "Start Project"
+        activate FE
+        FE->>API: POST /api/project-instances { templateId, professorId }
+        activate API
+        Note over API: Extract StudentId from ICurrentUserService
+        API->>CQRS: Dispatch StartProjectCommand
+        activate CQRS
+        
+        CQRS->>DB: Fetch ProjectTemplate with GlobalMilestones & GlobalTasks
+        activate DB
+        DB-->>CQRS: Return ProjectTemplate graph
+        deactivate DB
+
+        CQRS->>DOM: template.Instantiate(studentId, utcNow, factory, professorId)
+        activate DOM
+        Note over DOM: Prototype / Factory Pattern:<br/>Deep-copy GlobalMilestones & GlobalTasks<br/>into LocalMilestones & LocalTasks (preserving DAG)
+        DOM-->>CQRS: Return hydrated ProjectInstance aggregate
+        deactivate DOM
+
+        CQRS->>DB: Add ProjectInstance & SaveChangesAsync()
+        activate DB
+        DB-->>CQRS: Confirm persistence
+        deactivate DB
+
+        CQRS-->>API: Return ProjectInstance.Id
+        deactivate CQRS
+        API-->>FE: 201 Created { id: projectInstanceId }
+        deactivate API
+        FE-->>S: Render initialized project dashboard
+        deactivate FE
+    end
