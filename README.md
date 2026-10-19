@@ -12,7 +12,7 @@ The AcademicGateway platform is split across three dedicated micro-repositories:
 
 | Repository | Role | Tech Stack |
 | :--- | :--- | :--- |
-| 🗄️ **[AcademicGateway-Backend](https://github.com/TarekMineRoyal/AcademicGateway-Backend)** | Core API, Auth, Relational State & Business Workflows | Express / Node.js / PostgreSQL |
+| 🗄️ **[AcademicGateway-Backend](https://github.com/TarekMineRoyal/AcademicGateway-Backend)** | Core API, Auth, Relational State & Business Workflows | ASP.NET / PostgreSQL |
 | 🎨 **[AcademicGateway-Frontend](https://github.com/TarekMineRoyal/AcademicGateway-Frontend)** | User Web Application & UI Client | React / TypeScript |
 | 🤖 **[AcademicGateway-AI](https://github.com/TarekMineRoyal/AcademicGateway-AI)** | Vector Matchmaking & Semantic Search Microservice | FastAPI / LanceDB / PyTorch |
 
